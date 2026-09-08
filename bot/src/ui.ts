@@ -437,11 +437,14 @@ export function userDetail(
   ]);
   const rows: Btn[][] = [
     [
+      { text: t(lang, "sub_link"), url: links.base64, color: "primary", emoji: false },
+      { text: t(lang, "u_copy"), copy: links.base64, color: "gray", emoji: false },
+    ],
+    [
       { text: "📡 base64", url: links.base64, color: "primary", emoji: false },
       { text: "⛵ Clash", url: links.clash, color: "primary", emoji: false },
       { text: "📦 S-box", url: links.singbox, color: "primary", emoji: false },
     ],
-    [{ text: t(lang, "u_copy"), copy: links.base64, color: "gray", emoji: false }],
     [{ text: t(lang, "u_del"), cb: `udel:${x.id}`, color: "danger", emoji: false }],
     [{ text: t(lang, "back"), cb: `users:${pname}:${page}`, color: "gray", emoji: false }],
   ];

@@ -12,6 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const html = readFileSync(join(ROOT, "ui/index.html"), "utf8");
+const qrcodeLib = readFileSync(join(ROOT, "ui/qrcode.js"), "utf8");
 
 const result = await build({
   entryPoints: [join(ROOT, "src/worker.ts")],
@@ -24,6 +25,7 @@ const result = await build({
   define: {
     PANEL_HTML: JSON.stringify(html),
     NIKA_VERSION: JSON.stringify(pkg.version),
+    QRCODE_LIB: JSON.stringify(qrcodeLib),
   },
   legalComments: "none",
 });

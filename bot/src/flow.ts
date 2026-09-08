@@ -725,7 +725,10 @@ async function inUexp(env: Env, chatId: number, raw: string): Promise<void> {
   }
   const links = ui.subLinks(sess.base, r.json);
   const kb = tg.kb([
-    [{ text: t(L(s), "u_copy"), copy: links.base64, color: "primary", emoji: false }],
+    [
+      { text: t(L(s), "sub_link"), url: links.base64, color: "primary", emoji: false },
+      { text: t(L(s), "u_copy"), copy: links.base64, color: "gray", emoji: false },
+    ],
     [{ text: t(L(s), "back"), cb: `users:${pname}:${s.tmp.upage || 0}`, color: "gray", emoji: false }],
   ]);
   await tg.sendMessage(env, chatId, ui.party([

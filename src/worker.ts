@@ -17,6 +17,7 @@ import { handleVless } from "./protocols/vless";
 import { handleTrojan } from "./protocols/trojan";
 import { jsonResp } from "./protocols/common";
 import * as cf from "./cloudflare";
+import { renderSubPage } from "./subpage";
 
 declare const PANEL_HTML: string;
 const PANEL = PANEL_HTML; // single reference so esbuild inlines the HTML exactly once
@@ -261,6 +262,26 @@ async function handleSub(req: Request, env: Env, settings: Settings, path: strin
   const users = await store.getUsers(env);
   const user = users.find((u) => u.password === token || u.uuid.replace(/-/g, "").slice(0, 12) === token);
   if (!user) return jsonResp({ error: "invalid token" }, 404);
+
+  // browsers get a beautiful landing page; clients/apps get the raw config
+  const accept = req.headers.get("Accept") || "";
+  if (accept.includes("text/html")) {
+    const origin = new URL(req.url).origin;
+    return new Response(
+      renderSubPage({
+        name: user.name,
+        active: !!user.active,
+        quota: Number(user.quota) || 0,
+        used: Math.round((user.used || 0) * 100) / 100,
+        days: Number(user.days) || 0,
+        origin,
+        token,
+        version: CUR_VERSION,
+        protocols: settings.protocols,
+      }),
+      { headers: { "content-type": "text/html; charset=utf-8" } }
+    );
+  }
 
   const isClash = fmt === "yaml" || fmt === "yml";
   const isSingbox = fmt === "json";
