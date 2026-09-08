@@ -1,0 +1,42 @@
+// Nika Net Launcher — Telegram Bot API helpers
+import { Env } from "./types";
+
+export interface TgUser { id: number; first_name?: string; last_name?: string; username?: string }
+export interface TgChat { id: number; type?: string }
+export interface TgMessage { message_id: number; chat: TgChat; from?: TgUser; text?: string }
+export interface TgCallbackQuery { id: string; from: TgUser; message?: TgMessage; data?: string }
+export interface TgUpdate { update_id: number; message?: TgMessage; callback_query?: TgCallbackQuery }
+
+export type KbButton = { text: string; cb?: string; url?: string };
+export type Kb = { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> };
+
+export const kb = (rows: KbButton[][]): Kb => ({
+  inline_keyboard: rows.map((r) =>
+    r.map((b) => ({ text: b.text, ...(b.url ? { url: b.url } : { callback_data: b.cb }) }))
+  ),
+});
+
+const API = "https://api.telegram.org";
+
+export async function tgApi(env: Env, method: string, body: Record<string, unknown>): Promise<any> {
+  const res = await fetch(`${API}/bot${env.TELEGRAM_TOKEN}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+export function sendMessage(env: Env, chatId: number, text: string, markup?: Kb) {
+  return tgApi(env, "sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...(markup ? { reply_markup: markup } : {}),
+  });
+}
+
+export function answerCallback(env: Env, id: string, text?: string) {
+  return tgApi(env, "answerCallbackQuery", { callback_query_id: id, ...(text ? { text } : {}) });
+}

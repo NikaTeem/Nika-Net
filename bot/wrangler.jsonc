@@ -1,0 +1,10 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "nika-launcher",
+  "main": "dist/bot.js",
+  "compatibility_date": "2026-05-01",
+  "workers_dev": true,
+  "kv_namespaces": [
+    { "binding": "BOT_KV" }
+  ]
+}

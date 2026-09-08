@@ -124,6 +124,10 @@ nika-net/
 | `GET /<uuid>` | Config fetch by user UUID |
 | WS `?uuid=<u>&proto=vless\|trojan` | Proxy connection |
 
+## 🤖 Nika Net Launcher (Telegram bot)
+
+A companion Telegram bot, also running on Cloudflare Workers (free), that builds Nika Net panels for you — with a **direct token link** (permissions pre-selected), encrypted token storage, and one-tap panel deployment. See [bot/README.md](bot/README.md) and [bot/SETUP.fa.md](bot/SETUP.fa.md).
+
 ## 🗺️ Roadmap
 
 Fragment (anti-DPI), ISP presets (MCI/MTN/Rightel/TCI), in-panel clean-IP scanner, Telegram bot, JSON backup — see [ROADMAP.md](ROADMAP.md).
