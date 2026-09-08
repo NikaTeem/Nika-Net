@@ -93,6 +93,14 @@ async function main() {
   if (!up?.success) { log(false, `worker upload failed: ${up?.errors?.[0]?.message}`); process.exit(1); }
   log(true, `worker uploaded: ${BOT_NAME}`);
 
+  // enable workers.dev hostname (otherwise URL returns error 1042)
+  const en = await cf(`/accounts/${accountId}/workers/scripts/${BOT_NAME}/subdomain`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ enabled: true }),
+  });
+  log(!!en?.success, `workers.dev hostname enabled`);
+
   // 5) secrets
   for (const [name, text] of [["TELEGRAM_TOKEN", TELEGRAM_TOKEN], ["WEBHOOK_SECRET", WEBHOOK_SECRET], ["NIKA_SECRET", NIKA_SECRET]]) {
     const r = await cf(`/accounts/${accountId}/workers/scripts/${BOT_NAME}/secrets`, {

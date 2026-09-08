@@ -141,6 +141,9 @@ async function finishBuild(
   ]);
   if (!up.ok) throw new Error(up.err || "آپلود ورکر ناموفق بود");
 
+  const en = await cf.enableWorkersDev(token, accountId, name);
+  if (!en.ok) throw new Error(en.err || "فعال‌سازی آدرس workers.dev ناموفق بود");
+
   const s = await st.getState(env, chatId);
   s.panels.push({ name, url: `https://${name}.${sub}.workers.dev/admin`, account: accountId, createdAt: Date.now() });
   if (!s.saved) {

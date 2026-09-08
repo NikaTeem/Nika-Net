@@ -89,3 +89,18 @@ export async function uploadWorker(
   const j: any = await res.json();
   return { ok: !!j?.success, err: j?.errors?.[0]?.message || `HTTP ${res.status}` };
 }
+
+// workers.dev hostname is disabled by default for API-uploaded workers —
+// it must be enabled or the URL returns "error code: 1042".
+export async function enableWorkersDev(
+  token: string,
+  accountId: string,
+  name: string
+): Promise<{ ok: boolean; err?: string }> {
+  const r = await cfReq(token, `/accounts/${accountId}/workers/scripts/${name}/subdomain`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ enabled: true }),
+  });
+  return { ok: !!r?.success, err: r?.errors?.[0]?.message };
+}
