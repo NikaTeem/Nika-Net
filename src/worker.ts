@@ -1,9 +1,9 @@
 // Nika Net — Cloudflare Worker entry point.
 // Routes:
 //   /admin                → panel UI (PANEL_HTML injected at build time)
+//   /api/info             → public info (is the panel set up?)
 //   /api/*                → admin API (JSON, session-authenticated)
 //   /sub/<token>          → user subscription (base64 bundle)
-//   /<token>/vless|trojan → per-protocol config links
 //   /<uuid>/...           → client config fetch (v2rayNG style) by user uuid
 //   websocket upgrade     → VLESS/Trojan proxy handler
 //   anything else         → camouflage redirect
@@ -12,6 +12,7 @@ import { Settings, User, Env, DEFAULTS } from "./types";
 import * as store from "./settings";
 import * as auth from "./auth";
 import * as gen from "./generators";
+import * as metrics from "./metrics";
 import { handleVless } from "./protocols/vless";
 import { handleTrojan } from "./protocols/trojan";
 import { jsonResp } from "./protocols/common";
@@ -30,6 +31,9 @@ function cors(res: Response): Response {
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
+      metrics.bumpRequest();
+      ctx.waitUntil(metrics.flush(env));
+
       const url = new URL(req.url);
       const path = url.pathname;
       const settings = await store.getSettings(env);
@@ -48,7 +52,7 @@ export default {
       // 4) user subscription
       if (path.startsWith("/sub/")) return handleSub(req, env, settings, path);
 
-      // 5) client config fetch by uuid or token
+      // 5) client config fetch by uuid
       const m = path.match(/^\/([0-9a-fA-F-]{36})\/?$/);
       if (m) return handleClientConfig(env, settings, m[1]);
 
@@ -71,11 +75,12 @@ async function handleWebsocket(req: Request, env: Env, settings: Settings): Prom
   const users = await store.getUsers(env);
   const uuid = url.searchParams.get("uuid") || "";
 
-  const user = users.find((u) => u.uuid.toLowerCase() === uuid.toLowerCase()) || users[0];
-  if (!user || !user.active) return jsonResp({ error: "no active user" }, 403);
+  const user = users.find((u) => u.uuid.toLowerCase() === uuid.toLowerCase());
+  if (!user) return jsonResp({ error: "no user for this uuid" }, 403);
+  if (!user.active) return jsonResp({ error: "user inactive" }, 403);
 
-  if (proto === "trojan") return handleTrojan(req, user, settings);
-  return handleVless(req, user, settings);
+  if (proto === "trojan") return handleTrojan(req, user, settings, env);
+  return handleVless(req, user, settings, env);
 }
 
 /* ---------------------- admin API ---------------------- */
@@ -83,12 +88,21 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
   const op = url.pathname.replace("/api/", "");
   const method = req.method.toUpperCase();
 
+  // public: is the panel set up? (no auth needed)
+  if (op === "info") {
+    return jsonResp({
+      name: settings.title,
+      setup: !settings.adminPassHash,
+      protocols: settings.protocols,
+    });
+  }
+
   // login
   if (op === "login" && method === "POST") {
     const body = (await req.json().catch(() => ({}))) as { password?: string };
     const pass = body.password || "";
-    if (!settings.adminPassHash) {
-      // first-run: set password
+    const firstRun = !settings.adminPassHash;
+    if (firstRun) {
       if (!pass || pass.length < 4) return jsonResp({ error: "password too short" }, 400);
       settings.adminPassHash = await auth.sha256Hex(pass);
       await store.saveSettings(env, settings);
@@ -96,7 +110,12 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
     const ok = settings.adminPassHash === (await auth.sha256Hex(pass));
     if (!ok) return jsonResp({ error: "wrong password" }, 401);
     const token = await auth.signSession(settings.sessionSecret, JSON.stringify({ t: Date.now() }));
-    const res = jsonResp({ ok: true });
+    await metrics.appendActivity(env, {
+      icon: firstRun ? "🛠" : "🔐",
+      text: firstRun ? "نصب اولیه پنل — رمز ادمین ثبت شد" : "ورود ادمین به پنل",
+      time: Date.now(),
+    });
+    const res = jsonResp({ ok: true, setup: firstRun });
     res.headers.set("set-cookie", `${auth.SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`);
     return res;
   }
@@ -115,10 +134,15 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
       const users = await store.getUsers(env);
       return jsonResp({
         title: settings.title,
+        setup: false,
         users: users.length,
         active: users.filter((u) => u.active).length,
+        usedGb: Math.round(users.reduce((a, u) => a + (u.used || 0), 0) * 100) / 100,
+        requestsToday: await metrics.getRequestsToday(env),
+        requestsTotal: await metrics.getRequestsTotal(env),
         protocols: settings.protocols,
-        used: users.reduce((a, u) => a + u.used, 0),
+        activity: await metrics.getActivity(env),
+        traffic7d: await metrics.getTraffic7d(env),
       });
     }
 
@@ -140,15 +164,34 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         };
         users.push(u);
         await store.saveUsers(env, users);
+        await metrics.appendActivity(env, { icon: "👤", text: `کاربر ساخته شد — ${u.name}`, time: Date.now() });
         return jsonResp(u);
       }
       if (method === "DELETE") {
         const id = url.searchParams.get("id");
+        const victim = users.find((u) => u.id === id);
         const next = users.filter((u) => u.id !== id);
         await store.saveUsers(env, next);
+        await metrics.appendActivity(env, { icon: "🗑", text: `کاربر حذف شد — ${victim?.name || id}`, time: Date.now() });
         return jsonResp({ ok: true });
       }
       break;
+    }
+
+    case "users/toggle": {
+      if (method !== "POST") break;
+      const b = (await req.json().catch(() => ({}))) as { id?: string };
+      const users = await store.getUsers(env);
+      const u = users.find((x) => x.id === b.id);
+      if (!u) return jsonResp({ error: "not found" }, 404);
+      u.active = !u.active;
+      await store.saveUsers(env, users);
+      await metrics.appendActivity(env, {
+        icon: u.active ? "🟢" : "⛔",
+        text: `${u.name} ${u.active ? "فعال" : "غیرفعال"} شد`,
+        time: Date.now(),
+      });
+      return jsonResp({ ok: true, active: u.active });
     }
 
     case "settings": {
@@ -163,18 +206,19 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (Array.isArray(b.cleanIps)) next.cleanIps = b.cleanIps;
         if (b.protocols) next.protocols = { ...settings.protocols, ...b.protocols };
         await store.saveSettings(env, next);
+        await metrics.appendActivity(env, { icon: "⚙️", text: "تنظیمات پنل به‌روزرسانی شد", time: Date.now() });
         return jsonResp({ ok: true });
       }
       break;
     }
 
     case "gen": {
-      // per-user subscription preview (admin-side)
       const id = url.searchParams.get("id");
       const users = await store.getUsers(env);
-      const u = users.find((x) => x.id === id) || users[0];
+      const u = users.find((x) => x.id === id);
       if (!u) return jsonResp({ error: "user not found" }, 404);
       return jsonResp({
+        user: { id: u.id, name: u.name, quota: u.quota, used: Math.round((u.used || 0) * 100) / 100, days: u.days, active: u.active },
         base64: gen.buildBase64Bundle(u, settings),
         clash: gen.buildClashYaml(u, settings),
         singbox: gen.buildSingboxJson(u, settings),

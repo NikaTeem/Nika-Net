@@ -3,9 +3,10 @@
 
 import { connect } from "cloudflare:sockets";
 import { makeReadableWebSocketStream, wsAccept } from "./common";
-import { User, Settings } from "../types";
+import { User, Settings, Env } from "../types";
+import * as metrics from "../metrics";
 
-export async function handleTrojan(req: Request, user: User, settings: Settings): Promise<Response> {
+export async function handleTrojan(req: Request, user: User, settings: Settings, env: Env): Promise<Response> {
   const ws = wsAccept(req);
   ws.binaryType = "arraybuffer";
 
@@ -13,6 +14,9 @@ export async function handleTrojan(req: Request, user: User, settings: Settings)
   const { stream, removeEarlyData } = makeReadableWebSocketStream(ws, earlyDataHeader, () => {});
 
   const sendToClient = (d: Uint8Array) => { try { ws.send(d as unknown as ArrayBuffer); } catch { /* noop */ } };
+
+  let up = 0;
+  let down = 0;
 
   stream.pipeTo(
     new WritableStream<Uint8Array>({
@@ -30,14 +34,33 @@ export async function handleTrojan(req: Request, user: User, settings: Settings)
             const w = socket.writable.getWriter();
             await w.write(h.payload);
             w.releaseLock();
+            up += h.payload.length;
           }
-          stream.pipeTo(socket.writable).catch(() => {});
-          socket.readable.pipeTo(
-            new WritableStream<Uint8Array>({ write: (d) => sendToClient(d) })
-          ).catch(() => { try { ws.close(); } catch {} });
+
+          stream.pipeTo(
+            new WritableStream<Uint8Array>({
+              async write(d) {
+                up += d.byteLength;
+                const w = socket.writable.getWriter();
+                try { await w.write(d); } finally { w.releaseLock(); }
+              },
+            })
+          ).catch(() => { try { socket.close(); } catch {} });
+
+          socket.readable
+            .pipeTo(
+              new WritableStream<Uint8Array>({
+                write(d) { down += d.byteLength; sendToClient(d); },
+              })
+            )
+            .catch(() => { try { ws.close(); } catch {} })
+            .finally(() => {
+              metrics.recordTraffic(env, user.id, up, down).catch(() => {});
+            });
         } catch (e) {
           try { socket?.close(); } catch {}
           try { ws.close(); } catch {}
+          metrics.recordTraffic(env, user.id, up, down).catch(() => {});
         }
       },
     })

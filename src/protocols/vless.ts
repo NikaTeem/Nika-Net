@@ -1,12 +1,13 @@
 // Nika Net — VLESS over WebSocket handler.
 // Protocol: VLESS request in sec-websocket-protocol (early data) + WS stream payload.
-// We connect out via cloudflare:sockets and pipe bytes both ways.
+// We connect out via cloudflare:sockets, pipe bytes both ways, and meter real traffic.
 
 import { connect } from "cloudflare:sockets";
 import { makeReadableWebSocketStream, wsAccept } from "./common";
-import { User, Settings } from "../types";
+import { User, Settings, Env } from "../types";
+import * as metrics from "../metrics";
 
-export async function handleVless(req: Request, user: User, settings: Settings): Promise<Response> {
+export async function handleVless(req: Request, user: User, settings: Settings, env: Env): Promise<Response> {
   const ws = wsAccept(req);
   ws.binaryType = "arraybuffer";
 
@@ -15,41 +16,66 @@ export async function handleVless(req: Request, user: User, settings: Settings):
 
   const sendToClient = (d: Uint8Array) => { try { ws.send(d as unknown as ArrayBuffer); } catch { /* noop */ } };
 
+  let up = 0;
+  let down = 0;
+
   stream.pipeTo(
     new WritableStream<Uint8Array>({
       async write(chunk) {
         let socket: any = null;
         try {
-          // Parse VLESS header (first bytes of first chunk + early data).
           const early = removeEarlyData();
           const buf = early && early.length ? merge(early, chunk) : chunk;
           const h = parseVlessHeader(buf, user);
           if (!h) { ws.close(); return; }
 
           socket = connect({ hostname: h.address, port: h.port });
-          // reply VLESS response header: ver=0, addonsLen=0
           sendToClient(new Uint8Array([0, 0]));
 
           if (h.payload.length) {
             const w = socket.writable.getWriter();
             await w.write(h.payload);
             w.releaseLock();
+            up += h.payload.length;
           }
-          // pipe remaining client→remote
-          stream.pipeTo(socket.writable).catch(() => {});
-          // pipe remote→client
-          socket.readable.pipeTo(
-            new WritableStream<Uint8Array>({ write: (d) => sendToClient(d) })
-          ).catch(() => { try { ws.close(); } catch {} });
+
+          // client → remote (upload)
+          stream.pipeTo(
+            new WritableStream<Uint8Array>({
+              async write(d) {
+                up += d.byteLength;
+                const w = socket.writable.getWriter();
+                try { await w.write(d); } finally { w.releaseLock(); }
+              },
+            })
+          ).catch(() => { try { socket.close(); } catch {} });
+
+          // remote → client (download)
+          socket.readable
+            .pipeTo(
+              new WritableStream<Uint8Array>({
+                write(d) { down += d.byteLength; sendToClient(d); },
+              })
+            )
+            .catch(() => { try { ws.close(); } catch {} })
+            .finally(() => {
+              ctxWait(env, user.id, up, down);
+            });
         } catch (e) {
           try { socket?.close(); } catch {}
           try { ws.close(); } catch {}
+          ctxWait(env, user.id, up, down);
         }
       },
     })
   ).catch(() => { try { ws.close(); } catch {} });
 
   return new Response(null, { status: 101, webSocket: ws });
+}
+
+// fire-and-forget traffic persistence
+function ctxWait(env: Env, userId: string, up: number, down: number): void {
+  metrics.recordTraffic(env, userId, up, down).catch(() => {});
 }
 
 function merge(a: Uint8Array, b: Uint8Array): Uint8Array {

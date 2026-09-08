@@ -67,3 +67,28 @@ export async function getUsers(env: Env): Promise<User[]> {
 export async function saveUsers(env: Env, users: User[]): Promise<void> {
   await rawPut(env, "users", JSON.stringify(users));
 }
+
+/* ---------- counters (real metrics) ---------- */
+export async function getCounter(env: Env, key: string): Promise<number> {
+  const raw = await rawGet(env, key);
+  const n = parseInt(raw || "0", 10);
+  return isNaN(n) ? 0 : n;
+}
+
+export async function incrementCounter(env: Env, key: string, delta: number): Promise<number> {
+  const cur = await getCounter(env, key);
+  const next = cur + delta;
+  await rawPut(env, key, String(next));
+  return next;
+}
+
+/* ---------- json helpers (activity log) ---------- */
+export async function getJson<T>(env: Env, key: string): Promise<T | null> {
+  const raw = await rawGet(env, key);
+  if (!raw) return null;
+  try { return JSON.parse(raw) as T; } catch { return null; }
+}
+
+export async function putJson(env: Env, key: string, value: unknown): Promise<void> {
+  await rawPut(env, key, JSON.stringify(value));
+}

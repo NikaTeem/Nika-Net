@@ -213,7 +213,7 @@
     </div>
     <div class="error" id="loginError"></div>
     <button class="btn btn-primary" id="loginBtn" data-i18n="login.enter">ورود به پنل</button>
-    <div class="hint" id="demoHint">🔓 حالت دمو فعال است — رمز پیش‌فرض: <b>admin</b></div>
+    <div class="hint" id="demoHint"></div>
   </div>
 </div>
 
@@ -272,22 +272,22 @@
         <div class="card stat">
           <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/></svg></div>
           <div class="val" id="stUsers">0</div><div class="lbl" data-i18n="stat.users">کاربران</div>
-          <div class="trend up" id="stUsersT" data-i18n="stat.active">فعال</div>
+          <div class="trend" id="stUsersT"></div>
         </div>
         <div class="card stat">
           <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 11-13h-7l1-7z"/></svg></div>
           <div class="val" id="stReq">0</div><div class="lbl" data-i18n="stat.req">درخواست امروز</div>
-          <div class="trend up" id="stReqT">+18%</div>
+          <div class="trend" id="stReqT"></div>
         </div>
         <div class="card stat">
           <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></div>
           <div class="val" id="stGig">0</div><div class="lbl" data-i18n="stat.gig">گیگابایت مصرف</div>
-          <div class="trend up">GB</div>
+          <div class="trend" id="stGigT"></div>
         </div>
         <div class="card stat">
           <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
           <div class="val" id="stProto">3</div><div class="lbl" data-i18n="stat.proto">پروتکل فعال</div>
-          <div class="trend up">VLESS·Trojan·WARP</div>
+          <div class="trend" id="stProtoT"></div>
         </div>
       </div>
       <div class="grid two-col">
@@ -301,6 +301,7 @@
             <path class="area" id="areaPath" d=""/>
             <path class="line" id="linePath" d=""/>
           </svg>
+          <div class="empty hidden" id="chartEmpty"></div>
           <div class="legend"><span><i style="background:#8a8a93"></i><span data-i18n="dash.usage">مصرف</span></span></div>
         </div>
         <div class="card">
@@ -334,6 +335,8 @@
     <section id="page-subscription" class="hidden">
       <div class="card" style="margin-bottom:16px">
         <div class="card-title"><span>✎ <span data-i18n="sub.title">ساخت کانفیگ اشتراک</span></span></div>
+        <div class="row"><div><div class="k" data-i18n="sub.user">کاربر</div><div class="d" data-i18n="sub.userD">انتخاب کاربر برای نمایش کانفیگ</div></div>
+          <select class="input" id="subUserSel" style="width:auto;max-width:230px" onchange="state.selectedUserId=this.value;loadGen()"></select></div>
         <div class="row"><div><div class="k" data-i18n="sub.vless">VLESS</div><div class="d" data-i18n="sub.vlessD">پروتکل اصلی — روی WebSocket + TLS</div></div><div class="toggle on" data-p="vless" onclick="toggleProto(this)"></div></div>
         <div class="row"><div><div class="k" data-i18n="sub.trojan">Trojan</div><div class="d" data-i18n="sub.trojanD">پروتکل دوم — استتار بهتر</div></div><div class="toggle on" data-p="trojan" onclick="toggleProto(this)"></div></div>
         <div class="row"><div><div class="k" data-i18n="sub.warp">WARP</div><div class="d" data-i18n="sub.warpD">پشتیبانی از تماس‌ها (UDP) و شرایط بحرانی</div></div><div class="toggle on" data-p="warp" onclick="toggleProto(this)"></div></div>
@@ -382,221 +385,341 @@
 
 <script>
 /* ================================================================
-   Nika Net — Panel (demo-capable). When served by the Nika Worker,
-   it calls real /api/* endpoints; in the in-app preview it runs in
-   demo mode with a localStorage/memory store + client-side config
-   generation so the whole UX is testable.
+   Nika Net — Panel logic (API-first).
+   When served by the Nika worker, it talks to /api/* and shows real
+   data (users, usage, requests, activity). When opened as a static
+   preview (no server), it shows an honest "preview" notice and nothing
+   fake.
    ================================================================ */
 "use strict";
-const $ = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 
-/* ---------- safe storage (sandboxed iframe safe) ---------- */
+/* ---------- safe storage (theme/lang only) ---------- */
 const store = (() => {
   let mem = {};
-  try { localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return localStorage; }
-  catch(e){ return { getItem:k=>k in mem?mem[k]:null, setItem:(k,v)=>{mem[k]=String(v)}, removeItem:k=>{delete mem[k]} }; }
+  try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return localStorage; }
+  catch (e) {
+    return {
+      getItem: (k) => (k in mem ? mem[k] : null),
+      setItem: (k, v) => { mem[k] = String(v); },
+      removeItem: (k) => { delete mem[k]; },
+    };
+  }
 })();
 
 /* ---------- i18n ---------- */
 const I18N = {
-  fa:{ dir:"rtl", lang:"fa",
-    "login.title":"Nika Net","login.sub":"پنل مدیریت پروکسی — روی Cloudflare Workers","login.password":"رمز عبور ادمین",
-    "login.passwordPh":"رمز عبور","login.enter":"ورود به پنل",
-    "nav.dash":"داشبورد","nav.users":"کاربران","nav.sub":"اشتراک","nav.settings":"تنظیمات",
-    "stat.users":"کاربران","stat.active":"فعال","stat.req":"درخواست امروز","stat.gig":"گیگابایت مصرف","stat.proto":"پروتکل فعال",
-    "dash.traffic":"ترافیک (۷ روز اخیر)","dash.gb":"بر حسب گیگابایت","dash.usage":"مصرف","dash.activity":"فعالیت‌های اخیر",
-    "users.title":"مدیریت کاربران","users.add":"+ کاربر جدید","users.name":"نام","users.status":"وضعیت","users.used":"مصرف","users.expiry":"انقضا",
-    "sub.title":"ساخت کانفیگ اشتراک","sub.vless":"VLESS","sub.vlessD":"پروتکل اصلی — روی WebSocket + TLS",
-    "sub.trojan":"Trojan","sub.trojanD":"پروتکل دوم — استتار بهتر","sub.warp":"WARP","sub.warpD":"پشتیبانی از تماس‌ها (UDP) و شرایط بحرانی",
-    "sub.preview":"پیش‌نمایش کانفیگ","sub.previewD":"خروجی برای کلاینت‌ها","sub.copy":"کپی","sub.gen":"تولید مجدد",
-    "set.general":"عمومی","set.title":"عنوان پنل","set.host":"دامنه / Host ورکر","set.sni":"SNI / Host جعلی",
-    "set.wsPath":"مسیر WebSocket","set.security":"امنیت","set.newpass":"رمز عبور جدید","set.brute":"محافظت Brute-Force",
-    "set.bruteD":"مسدودسازی موقت بعد از تلاش ناموفق","set.cleanip":"IP های تمیز","set.cleanipD":"هر خط یک IP","set.save":"ذخیره تنظیمات",
-    "u.active":"فعال","u.inactive":"غیرفعال","u.actions":"عملیات","u.sub":"اشتراک","u.del":"حذف",
-    "m.addUser":"کاربر جدید","m.name":"نام کاربر","m.namePh":"مثلاً: علی","m.quota":"سهمیه (GB)","m.days":"مدت (روز)",
-    "m.save":"ذخیره","m.cancel":"انصراف",
-    "toast.copied":"کپی شد ✓","toast.saved":"ذخیره شد ✓","toast.deleted":"حذف شد","toast.gen":"کانفیگ جدید تولید شد ✓",
-    "page.dash":"داشبورد","page.dashD":"نمای کلی وضعیت پنل","page.users":"کاربران","page.usersD":"مدیریت کاربران و اشتراک‌ها",
-    "page.sub":"اشتراک","page.subD":"ساخت و پیش‌نمایش کانفیگ","page.set":"تنظیمات","page.setD":"پیکربندی پنل و امنیت"
+  fa: {
+    dir: "rtl", lang: "fa",
+    "login.title": "Nika Net", "login.sub": "پنل مدیریت پروکسی — روی Cloudflare Workers",
+    "login.password": "رمز عبور ادمین", "login.passwordPh": "رمز عبور", "login.enter": "ورود به پنل",
+    "login.hintFirst": "🔓 اولین ورود — رمزی که انتخاب می‌کنی به‌عنوان رمز ادمین ثبت می‌شود (حداقل ۴ کاراکتر)",
+    "login.hintPass": "رمز عبور ادمین را وارد کن",
+    "login.hintPreview": "این پیش‌نمایش فایل است — برای دادهٔ واقعی، پنل را از آدرس زندهٔ ورکر باز کن",
+    "login.wrong": "رمز اشتباه است", "login.short": "رمز باید حداقل ۴ کاراکتر باشد",
+    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات",
+    "stat.users": "کاربران", "stat.active": "فعال", "stat.req": "درخواست امروز", "stat.gig": "گیگابایت مصرف", "stat.proto": "پروتکل فعال",
+    "dash.traffic": "ترافیک (۷ روز اخیر)", "dash.gb": "بر حسب گیگابایت", "dash.usage": "مصرف", "dash.activity": "فعالیت‌های اخیر",
+    "dash.today": "امروز", "dash.nochart": "هنوز دادهٔ ترافیکی ثبت نشده است", "act.empty": "هنوز فعالیتی ثبت نشده است",
+    "users.title": "مدیریت کاربران", "users.add": "+ کاربر جدید", "users.name": "نام", "users.status": "وضعیت", "users.used": "مصرف", "users.expiry": "انقضا",
+    "users.empty": "هنوز کاربری نیست — اول یک کاربر بساز",
+    "u.active": "فعال", "u.inactive": "غیرفعال", "u.expired": "منقضی", "u.sub": "اشتراک", "u.del": "حذف",
+    "sub.title": "ساخت کانفیگ اشتراک", "sub.user": "کاربر", "sub.userD": "انتخاب کاربر برای نمایش کانفیگ",
+    "sub.vless": "VLESS", "sub.vlessD": "پروتکل اصلی — روی WebSocket + TLS",
+    "sub.trojan": "Trojan", "sub.trojanD": "پروتکل دوم — استتار بهتر",
+    "sub.warp": "WARP", "sub.warpD": "پشتیبانی از تماس‌ها (UDP) و شرایط بحرانی",
+    "sub.preview": "پیش‌نمایش کانفیگ", "sub.previewD": "خروجی برای کلاینت‌ها", "sub.copy": "کپی", "sub.gen": "تولید مجدد",
+    "sub.empty": "هنوز کاربری نساختی — اول از بخش «کاربران» یک کاربر بساز",
+    "set.general": "عمومی", "set.title": "عنوان پنل", "set.host": "دامنه / Host ورکر", "set.sni": "SNI / Host جعلی",
+    "set.wsPath": "مسیر WebSocket", "set.security": "امنیت", "set.newpass": "رمز عبور جدید", "set.brute": "محافظت Brute-Force",
+    "set.bruteD": "مسدودسازی موقت بعد از تلاش ناموفق", "set.cleanip": "IP های تمیز", "set.cleanipD": "هر خط یک IP", "set.save": "ذخیره تنظیمات",
+    "m.addUser": "کاربر جدید", "m.name": "نام کاربر", "m.namePh": "مثلاً: علی", "m.quota": "سهمیه (GB)", "m.days": "مدت (روز)",
+    "m.save": "ذخیره", "m.cancel": "انصراف",
+    "toast.copied": "کپی شد ✓", "toast.saved": "ذخیره شد ✓", "toast.deleted": "حذف شد", "toast.gen": "کانفیگ به‌روز شد ✓",
+    "toast.toggled": "وضعیت تغییر کرد", "toast.preview": "در پیش‌نمایش، اتصال به سرور نیست",
+    "common.error": "خطا در دریافت اطلاعات", "common.loading": "در حال بارگذاری…",
+    "page.dash": "داشبورد", "page.dashD": "نمای کلی وضعیت پنل", "page.users": "کاربران", "page.usersD": "مدیریت کاربران و اشتراک‌ها",
+    "page.sub": "اشتراک", "page.subD": "ساخت و پیش‌نمایش کانفیگ", "page.set": "تنظیمات", "page.setD": "پیکربندی پنل و امنیت",
   },
-  en:{ dir:"ltr", lang:"en",
-    "login.title":"Nika Net","login.sub":"Proxy control panel — on Cloudflare Workers","login.password":"Admin password",
-    "login.passwordPh":"Password","login.enter":"Sign in",
-    "nav.dash":"Dashboard","nav.users":"Users","nav.sub":"Subscription","nav.settings":"Settings",
-    "stat.users":"Users","stat.active":"active","stat.req":"Requests today","stat.gig":"GB used","stat.proto":"Active protocols",
-    "dash.traffic":"Traffic (last 7 days)","dash.gb":"in gigabytes","dash.usage":"Usage","dash.activity":"Recent activity",
-    "users.title":"User management","users.add":"+ Add user","users.name":"Name","users.status":"Status","users.used":"Usage","users.expiry":"Expiry",
-    "sub.title":"Build subscription config","sub.vless":"VLESS","sub.vlessD":"Primary protocol — over WebSocket + TLS",
-    "sub.trojan":"Trojan","sub.trojanD":"Secondary protocol — better stealth","sub.warp":"WARP","sub.warpD":"Calls (UDP) support & critical situations",
-    "sub.preview":"Config preview","sub.previewD":"Output for clients","sub.copy":"Copy","sub.gen":"Regenerate",
-    "set.general":"General","set.title":"Panel title","set.host":"Worker domain / host","set.sni":"Fake SNI / Host",
-    "set.wsPath":"WebSocket path","set.security":"Security","set.newpass":"New password","set.brute":"Brute-force protection",
-    "set.bruteD":"Temporary block after failed attempts","set.cleanip":"Clean IPs","set.cleanipD":"One IP per line","set.save":"Save settings",
-    "u.active":"Active","u.inactive":"Inactive","u.actions":"Actions","u.sub":"Sub","u.del":"Delete",
-    "m.addUser":"New user","m.name":"Name","m.namePh":"e.g. Ali","m.quota":"Quota (GB)","m.days":"Days",
-    "m.save":"Save","m.cancel":"Cancel",
-    "toast.copied":"Copied ✓","toast.saved":"Saved ✓","toast.deleted":"Deleted","toast.gen":"New config generated ✓",
-    "page.dash":"Dashboard","page.dashD":"Panel status overview","page.users":"Users","page.usersD":"Manage users & subscriptions",
-    "page.sub":"Subscription","page.subD":"Build & preview configs","page.set":"Settings","page.setD":"Panel config & security"
-  }
+  en: {
+    dir: "ltr", lang: "en",
+    "login.title": "Nika Net", "login.sub": "Proxy control panel — on Cloudflare Workers",
+    "login.password": "Admin password", "login.passwordPh": "Password", "login.enter": "Sign in",
+    "login.hintFirst": "🔓 First sign-in — the password you choose becomes the admin password (min 4 chars)",
+    "login.hintPass": "Enter the admin password",
+    "login.hintPreview": "This is a static preview — open the live panel URL for real data",
+    "login.wrong": "Wrong password", "login.short": "Password must be at least 4 characters",
+    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings",
+    "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
+    "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
+    "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
+    "users.title": "User management", "users.add": "+ Add user", "users.name": "Name", "users.status": "Status", "users.used": "Usage", "users.expiry": "Expiry",
+    "users.empty": "No users yet — create your first user",
+    "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.sub": "Sub", "u.del": "Delete",
+    "sub.title": "Build subscription config", "sub.user": "User", "sub.userD": "Pick a user to show their config",
+    "sub.vless": "VLESS", "sub.vlessD": "Primary protocol — over WebSocket + TLS",
+    "sub.trojan": "Trojan", "sub.trojanD": "Secondary protocol — better stealth",
+    "sub.warp": "WARP", "sub.warpD": "Calls (UDP) support & critical situations",
+    "sub.preview": "Config preview", "sub.previewD": "Output for clients", "sub.copy": "Copy", "sub.gen": "Regenerate",
+    "sub.empty": "No users yet — create one under Users first",
+    "set.general": "General", "set.title": "Panel title", "set.host": "Worker domain / host", "set.sni": "Fake SNI / Host",
+    "set.wsPath": "WebSocket path", "set.security": "Security", "set.newpass": "New password", "set.brute": "Brute-force protection",
+    "set.bruteD": "Temporary block after failed attempts", "set.cleanip": "Clean IPs", "set.cleanipD": "One IP per line", "set.save": "Save settings",
+    "m.addUser": "New user", "m.name": "Name", "m.namePh": "e.g. Ali", "m.quota": "Quota (GB)", "m.days": "Days",
+    "m.save": "Save", "m.cancel": "Cancel",
+    "toast.copied": "Copied ✓", "toast.saved": "Saved ✓", "toast.deleted": "Deleted", "toast.gen": "Config refreshed ✓",
+    "toast.toggled": "Status changed", "toast.preview": "No server connection in preview mode",
+    "common.error": "Failed to load", "common.loading": "Loading…",
+    "page.dash": "Dashboard", "page.dashD": "Panel status overview", "page.users": "Users", "page.usersD": "Manage users & subscriptions",
+    "page.sub": "Subscription", "page.subD": "Build & preview configs", "page.set": "Settings", "page.setD": "Panel config & security",
+  },
 };
 let LANG = store.getItem("nn_lang") || "fa";
-const t = k => (I18N[LANG][k] ?? I18N.fa[k] ?? k);
-function applyLang(){
+const t = (k) => (I18N[LANG] && I18N[LANG][k]) || I18N.fa[k] || k;
+const escHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const num = (n) => (n == null ? 0 : n).toLocaleString(LANG === "fa" ? "fa-IR" : "en-US");
+
+function applyLang() {
   const d = I18N[LANG];
   document.documentElement.lang = d.lang;
   document.documentElement.dir = d.dir;
-  $$("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
-  $$("[data-i18n-ph]").forEach(el => el.placeholder = t(el.dataset.i18nPh));
-  $("#demoHint").innerHTML = LANG==="fa" ? "🔓 حالت دمو فعال است — رمز پیش‌فرض: <b>admin</b>" : "🔓 Demo mode is active — default password: <b>admin</b>";
+  $$("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  $$("[data-i18n-ph]").forEach((el) => (el.placeholder = t(el.dataset.i18nPh)));
   setPage(currentPage);
 }
 
-/* ---------- تم ---------- */
+/* ---------- theme ---------- */
 let THEME = store.getItem("nn_theme") || "dark";
-function applyTheme(){
+function applyTheme() {
   document.documentElement.dataset.theme = THEME;
-  $("#iconMoon").classList.toggle("hidden", THEME!=="dark");
-  $("#iconSun").classList.toggle("hidden", THEME!=="light");
+  $("#iconMoon").classList.toggle("hidden", THEME !== "dark");
+  $("#iconSun").classList.toggle("hidden", THEME !== "light");
 }
-$("#themeBtn").onclick = () => { THEME = THEME==="dark"?"light":"dark"; store.setItem("nn_theme",THEME); applyTheme(); };
-$("#langBtn").onclick = () => { LANG = LANG==="fa"?"en":"fa"; store.setItem("nn_lang",LANG); applyLang(); };
+$("#themeBtn").onclick = () => { THEME = THEME === "dark" ? "light" : "dark"; store.setItem("nn_theme", THEME); applyTheme(); };
+$("#langBtn").onclick = () => { LANG = LANG === "fa" ? "en" : "fa"; store.setItem("nn_lang", LANG); applyLang(); };
 
-/* ---------- state (demo seed) ---------- */
-const uuid4 = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==="x"?r:(r&0x3|0x8)).toString(16)}));
-let state = {
-  settings:{ title:"Nika Net", host:"nika.example.workers.dev", sni:"www.speedtest.net", wsPath:"/nika-ws", ips:"1.0.0.1\n104.16.132.229\n188.114.96.9" },
-  users: JSON.parse(store.getItem("nn_users") || "null") || [
-    { id:"u1", name:"علی", uuid:uuid4(), pass:uuid4(), quota:50, used:12.4, days:30, active:true },
-    { id:"u2", name:"مریم", uuid:uuid4(), pass:uuid4(), quota:100, used:3.1, days:90, active:true },
-    { id:"u3", name:"رضا", uuid:uuid4(), pass:uuid4(), quota:10, used:9.8, days:0, active:false }
-  ]
-};
-function persistUsers(){ store.setItem("nn_users", JSON.stringify(state.users)); }
+/* ---------- state ---------- */
+let MODE = "preview"; // "live" | "preview"
+let SETUP = false;
+let currentPage = "dashboard";
+let currentFmt = "base64";
+let proto = { vless: true, trojan: true, warp: true };
+const state = { status: null, users: [], settings: null, selectedUserId: null, gen: null };
+
+/* ---------- api ---------- */
+async function api(path, opts = {}) {
+  const init = { method: opts.method || "GET", headers: {} };
+  if (opts.body !== undefined) {
+    init.headers["content-type"] = "application/json";
+    init.body = JSON.stringify(opts.body);
+  }
+  return fetch(path, init); // same-origin: cookies included automatically
+}
 
 /* ---------- toast ---------- */
 let toastTimer;
-function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("show"),1800); }
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
 
-/* ---------- مولد کانفیگ (آینهٔ سمت ورکر) ---------- */
-const esc = s => String(s).replace(/\\/g,"\\\\").replace(/"/g,'\\"');
-function vlessLink(u, s){
-  const host = pickIp(s) || s.host;
-  const q = new URLSearchParams({ encryption:"none", security:"tls", sni:s.sni, fp:"chrome", type:"ws", host:s.sni, path:s.wsPath+"?ed=2048" });
-  return `vless://${u.uuid}@${host}:443?${q.toString()}#NikaNet-${encodeURIComponent(u.name)}`;
+/* ---------- boot ---------- */
+async function init() {
+  applyTheme();
+  applyLang();
+  try {
+    const res = await api("/api/info");
+    const info = await res.json();
+    if (res.ok && info && typeof info.setup === "boolean") {
+      MODE = "live";
+      SETUP = info.setup;
+      if (info.protocols) proto = info.protocols;
+      await checkSession();
+      return;
+    }
+  } catch (e) { /* fall through to preview */ }
+  MODE = "preview";
+  $("#demoHint").textContent = t("login.hintPreview");
+  showLogin();
 }
-function trojanLink(u, s){
-  const host = pickIp(s) || s.host;
-  const q = new URLSearchParams({ security:"tls", sni:s.sni, fp:"chrome", type:"ws", host:s.sni, path:s.wsPath+"?ed=2048" });
-  return `trojan://${u.pass}@${host}:443?${q.toString()}#NikaNet-${encodeURIComponent(u.name)}`;
-}
-function pickIp(s){
-  const list = (s.ips||"").split("\n").map(x=>x.trim()).filter(Boolean);
-  return list.length ? list[Math.floor(Math.random()*list.length)] : null;
-}
-function base64Bundle(u, s){
-  const parts = [];
-  if (proto.vless) parts.push(vlessLink(u,s));
-  if (proto.trojan) parts.push(trojanLink(u,s));
-  return btoa(parts.join("\n")).replace(/=+$/,"");
-}
-function clashYaml(u, s){
-  const host = pickIp(s) || s.host;
-  let out = `# Nika Net — ${u.name}\nmixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: info\n`+
-    `dns:\n  enable: true\n  enhanced-mode: fake-ip\n  nameserver: [1.1.1.1, 8.8.8.8]\nproxies:\n`;
-  if (proto.vless) out += `  - name: "NikaNet-VLESS-${u.name}"\n    type: vless\n    server: ${host}\n    port: 443\n    uuid: ${u.uuid}\n    network: ws\n    tls: true\n    udp: true\n    servername: ${s.sni}\n    client-fingerprint: chrome\n    ws-opts:\n      path: "${s.wsPath}?ed=2048"\n      headers: { Host: "${s.sni}" }\n`;
-  if (proto.trojan) out += `  - name: "NikaNet-Trojan-${u.name}"\n    type: trojan\n    server: ${host}\n    port: 443\n    password: ${u.pass}\n    network: ws\n    tls: true\n    udp: true\n    sni: ${s.sni}\n    client-fingerprint: chrome\n    ws-opts:\n      path: "${s.wsPath}?ed=2048"\n      headers: { Host: "${s.sni}" }\n`;
-  out += `proxy-groups:\n  - name: "NikaNet"\n    type: select\n    proxies: [${["NikaNet-VLESS-"+u.name, "NikaNet-Trojan-"+u.name].filter((_,i)=>i===0?proto.vless:proto.trojan).map(n=>'"'+n+'"').join(", ")}]\nrules:\n  - GEOIP,IR,DIRECT\n  - MATCH,NikaNet\n`;
-  return out;
-}
-function singboxJson(u, s){
-  const host = pickIp(s) || s.host;
-  const outbounds = [];
-  if (proto.vless) outbounds.push({ tag:"NikaNet-VLESS", type:"vless", server:host, server_port:443, uuid:u.uuid, network:"ws", tls:{enabled:true, server_name:s.sni, utls:{enabled:true, fingerprint:"chrome"}}, transport:{type:"ws", path:s.wsPath+"?ed=2048", headers:{Host:s.sni}} });
-  if (proto.trojan) outbounds.push({ tag:"NikaNet-Trojan", type:"trojan", server:host, server_port:443, password:u.pass, network:"ws", tls:{enabled:true, server_name:s.sni, utls:{enabled:true, fingerprint:"chrome"}}, transport:{type:"ws", path:s.wsPath+"?ed=2048", headers:{Host:s.sni}} });
-  return JSON.stringify({ log:{level:"info"}, dns:{servers:[{tag:"cf",address:"https://1.1.1.1/dns-query",detour:"select"}]},
-    outbounds: outbounds.concat([{ tag:"select", type:"selector", outbounds: outbounds.map(o=>o.tag) }, { tag:"direct", type:"direct" }]),
-    route:{ rules:[{geoip:"ir",outbound:"direct"},{protocol:"dns",outbound:"cf"}], final:"select" } }, null, 2);
-}
-function warpConfig(u){
-  return `[Interface]\nPrivateKey = ${u.pass.slice(0,43)}\nAddress = 172.16.0.2/32, 2606:4700:110:8f3e:1c5e:9a2b:7d4f::/128\nDNS = 1.1.1.1\nMTU = 1280\n\n[Peer]\nPublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = engage.cloudflareclient.com:2408\n`;
-}
-let proto = { vless:true, trojan:true, warp:true };
-function toggleProto(el){ el.classList.toggle("on"); const p=el.dataset.p; proto[p]=el.classList.contains("on"); renderConfig(); }
-function renderConfig(){
-  const u = state.users[0] || { name:"demo", uuid:uuid4(), pass:uuid4() };
-  const s = state.settings;
-  const fmt = currentFmt;
-  let out = "";
-  if (fmt==="base64") out = "vmess://"+base64Bundle(u,s)+"\n\n# لینک جداگانه:\n"+[proto.vless?vlessLink(u,s):"", proto.trojan?trojanLink(u,s):""].filter(Boolean).join("\n");
-  else if (fmt==="clash") out = clashYaml(u,s);
-  else if (fmt==="singbox") out = singboxJson(u,s);
-  else if (fmt==="warp") out = warpConfig(u);
-  $("#fmtOut").textContent = out;
-}
-let currentFmt = "base64";
 
-/* ---------- ناوبری ---------- */
-let currentPage = "dashboard";
-const PAGES = { dashboard:"page.dash", users:"page.users", subscription:"page.sub", settings:"page.set" };
-const DESCS = { dashboard:"page.dashD", users:"page.usersD", subscription:"page.subD", settings:"page.setD" };
-function setPage(p){
+async function checkSession() {
+  const res = await api("/api/status");
+  if (res.ok) {
+    await loadAll();
+    showApp();
+  } else {
+    $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
+    showLogin();
+  }
+}
+
+function showLogin() { $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); }
+function showApp() { $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden"); }
+
+/* ---------- auth ---------- */
+async function doLogin() {
+  if (MODE !== "live") { toast(t("toast.preview")); return; }
+  const pass = $("#loginPass").value;
+  if (!pass) { $("#loginError").textContent = t("login.short"); return; }
+  const res = await api("/api/login", { method: "POST", body: { password: pass } });
+  const data = await res.json().catch(() => ({}));
+  if (res.ok) {
+    if (data.setup) SETUP = false;
+    $("#loginPass").value = "";
+    $("#loginError").textContent = "";
+    await loadAll();
+    showApp();
+  } else {
+    $("#loginError").textContent = data.error === "password too short" ? t("login.short") : t("login.wrong");
+  }
+}
+$("#loginBtn").onclick = doLogin;
+$("#loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+
+$("#logoutBtn").onclick = async () => {
+  if (MODE === "live") { try { await api("/api/logout", { method: "POST" }); } catch (e) {} }
+  state.status = null; state.users = []; state.settings = null; state.selectedUserId = null; state.gen = null;
+  showLogin();
+};
+
+/* ---------- data ---------- */
+async function loadAll() {
+  try {
+    const [st, us, se] = await Promise.all([
+      api("/api/status").then((r) => r.json()),
+      api("/api/users").then((r) => r.json()),
+      api("/api/settings").then((r) => r.json()),
+    ]);
+    state.status = st;
+    state.users = Array.isArray(us) ? us : [];
+    state.settings = se;
+    if (se && se.protocols) proto = se.protocols;
+    syncProtoToggles();
+    if (!state.selectedUserId && state.users.length) state.selectedUserId = state.users[0].id;
+    if (state.selectedUserId && !state.users.find((u) => u.id === state.selectedUserId)) state.selectedUserId = state.users[0] ? state.users[0].id : null;
+    renderDashboard();
+    renderUsers();
+    renderSub();
+  } catch (e) {
+    toast(t("common.error"));
+  }
+}
+
+/* ---------- navigation ---------- */
+const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set" };
+const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD" };
+function setPage(p) {
   currentPage = p;
-  $$("#nav .nav-item").forEach(b => b.classList.toggle("active", b.dataset.page===p));
-  ["dashboard","users","subscription","settings"].forEach(x => $("#page-"+x).classList.toggle("hidden", x!==p));
+  $$("#nav .nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === p));
+  ["dashboard", "users", "subscription", "settings"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
   $("#pageTitle").textContent = t(PAGES[p]);
   $("#pageDesc").textContent = t(DESCS[p]);
-  if (p==="settings") fillSettingsForm();
+  if (p === "settings") fillSettingsForm();
 }
-$$("#nav .nav-item").forEach(b => b.onclick = () => setPage(b.dataset.page));
+$$("#nav .nav-item").forEach((b) => (b.onclick = () => setPage(b.dataset.page)));
 
-/* ---------- داشبورد ---------- */
-function renderDashboard(){
-  $("#stUsers").textContent = state.users.length;
-  $("#stReq").textContent = (2840 + Math.floor(Math.random()*400)).toLocaleString(LANG==="fa"?"fa-IR":"en-US");
-  const gb = state.users.reduce((a,u)=>a+u.used,0);
-  $("#stGig").textContent = gb.toFixed(1);
-  drawChart();
-  const acts = state.users.slice().reverse().slice(0,5);
-  $("#activity").innerHTML = acts.map(u=>`<div class="row"><div><div class="k">${u.name}</div><div class="d">${LANG==="fa"?"اتصال جدید":"new connection"} — ${new Date().toLocaleTimeString(LANG==="fa"?"fa-IR":"en-US",{hour:"2-digit",minute:"2-digit"})}</div></div><span class="badge ${u.active?"ok":"off"}"><span class="dot"></span>${t(u.active?"u.active":"u.inactive")}</span></div>`).join("") || `<div class="empty">—</div>`;
+/* ---------- dashboard ---------- */
+function renderDashboard() {
+  const st = state.status || {};
+  $("#stUsers").textContent = num(st.users);
+  $("#stUsersT").textContent = `${t("stat.active")}: ${num(st.active)}`;
+  $("#stReq").textContent = num(st.requestsToday);
+  $("#stReqT").textContent = t("dash.today");
+  $("#stGig").textContent = (st.usedGb || 0).toFixed(2);
+  $("#stGigT").textContent = "GB";
+  const enabled = ["vless", "trojan", "warp"].filter((p) => st.protocols && st.protocols[p]);
+  $("#stProto").textContent = enabled.length;
+  $("#stProtoT").textContent = enabled.map((p) => p.toUpperCase()).join("·") || "—";
+  drawChart(st.traffic7d);
+  renderActivity(st.activity);
 }
-function drawChart(){
-  const data = [3.2,4.1,2.8,5.6,6.9,5.2,7.8];
-  const W=560,H=190,P=8, max=Math.max(...data)*1.2;
-  const pts = data.map((v,i)=>[P+i*(W-2*P)/(data.length-1), H-P-(v/max)*(H-2*P)]);
-  const line = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+
+function drawChart(series) {
+  const el = $("#chart");
+  const empty = $("#chartEmpty");
+  if (!series || !series.length || series.every((p) => (p.gb || 0) === 0)) {
+    el.classList.add("hidden");
+    empty.classList.remove("hidden");
+    empty.textContent = t("dash.nochart");
+    return;
+  }
+  el.classList.remove("hidden");
+  empty.classList.add("hidden");
+  const data = series.map((p) => p.gb || 0);
+  const W = 560, H = 190, P = 8;
+  const max = Math.max(...data, 0.01) * 1.2;
+  const pts = data.map((v, i) => [P + (i * (W - 2 * P)) / (data.length - 1), H - P - (v / max) * (H - 2 * P)]);
+  const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
   $("#linePath").setAttribute("d", line);
-  $("#areaPath").setAttribute("d", line + ` L${pts[pts.length-1][0]},${H-P} L${pts[0][0]},${H-P} Z`);
+  $("#areaPath").setAttribute("d", line + ` L${pts[pts.length - 1][0]},${H - P} L${pts[0][0]},${H - P} Z`);
 }
 
-/* ---------- کاربران ---------- */
-function renderUsers(){
+function renderActivity(list) {
+  const el = $("#activity");
+  if (!list || !list.length) { el.innerHTML = `<div class="empty">${t("act.empty")}</div>`; return; }
+  el.innerHTML = list
+    .slice(0, 8)
+    .map((a) => {
+      const when = new Date(a.time).toLocaleString(LANG === "fa" ? "fa-IR" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      return `<div class="row"><div><div class="k">${a.icon ? a.icon + " " : ""}${escHtml(a.text)}</div><div class="d">${when}</div></div></div>`;
+    })
+    .join("");
+}
+
+/* ---------- users ---------- */
+function renderUsers() {
   const tb = $("#usersBody");
-  if (!state.users.length){ tb.innerHTML = `<tr><td colspan="5"><div class="empty">${LANG==="fa"?"هنوز کاربری نیست":"no users yet"}</div></td></tr>`; return; }
-  tb.innerHTML = state.users.map(u=>{
-    const pct = Math.min(100, u.used/u.quota*100);
-    const exp = u.days>0 ? u.days+" "+t("m.days").toLowerCase() : t("u.inactive");
-    return `<tr>
-      <td><b>${u.name}</b></td>
-      <td><span class="badge ${u.active?"ok":"off"}"><span class="dot"></span>${t(u.active?"u.active":"u.inactive")}</span></td>
-      <td><div>${u.used} / ${u.quota} GB</div><div class="progress"><div style="width:${pct}%"></div></div></td>
-      <td>${exp}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost" style="padding:7px 12px;font-size:11.5px" onclick="subFor('${u.id}')">🔗 ${t("u.sub")}</button>
-        <button class="btn btn-danger" style="padding:7px 12px;font-size:11.5px" onclick="delUser('${u.id}')">✕</button>
-      </td></tr>`;
-  }).join("");
-}
-function delUser(id){ state.users = state.users.filter(u=>u.id!==id); persistUsers(); renderUsers(); renderDashboard(); toast(t("toast.deleted")); }
-function subFor(id){
-  const u = state.users.find(x=>x.id===id);
-  state.users.unshift(state.users.splice(state.users.indexOf(u),1)[0]); // move to top so preview uses it
-  setPage("subscription"); renderConfig(); toast(u.name + " — " + t("sub.preview"));
+  if (!state.users.length) {
+    tb.innerHTML = `<tr><td colspan="5"><div class="empty">${t("users.empty")}</div></td></tr>`;
+    return;
+  }
+  tb.innerHTML = state.users
+    .map((u) => {
+      const quota = Number(u.quota) || 0;
+      const used = Number(u.used) || 0;
+      const pct = quota > 0 ? Math.min(100, (used / quota) * 100) : 0;
+      const exp = (Number(u.days) || 0) > 0 ? `${u.days} ${t("m.days").toLowerCase()}` : t("u.expired");
+      return `<tr>
+        <td><b>${escHtml(u.name)}</b></td>
+        <td><span class="badge ${u.active ? "ok" : "off"}" style="cursor:pointer" onclick="toggleUser('${u.id}')"><span class="dot"></span>${t(u.active ? "u.active" : "u.inactive")}</span></td>
+        <td><div>${used.toFixed(2)} / ${quota} GB</div><div class="progress"><div style="width:${pct}%"></div></div></td>
+        <td>${exp}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost" style="padding:7px 12px;font-size:11.5px" onclick="subFor('${u.id}')">🔗 ${t("u.sub")}</button>
+          <button class="btn btn-danger" style="padding:7px 12px;font-size:11.5px" onclick="delUser('${u.id}')">✕</button>
+        </td></tr>`;
+    })
+    .join("");
 }
 
-/* ---------- مودال کاربر جدید ---------- */
-function openAddUser(){
+async function toggleUser(id) {
+  if (MODE !== "live") { toast(t("toast.preview")); return; }
+  const res = await api("/api/users/toggle", { method: "POST", body: { id } });
+  if (res.ok) { toast(t("toast.toggled")); await loadAll(); }
+  else toast(t("common.error"));
+}
+
+async function delUser(id) {
+  if (MODE !== "live") { toast(t("toast.preview")); return; }
+  const res = await api("/api/users?id=" + encodeURIComponent(id), { method: "DELETE" });
+  if (res.ok) { toast(t("toast.deleted")); await loadAll(); }
+  else toast(t("common.error"));
+}
+
+function subFor(id) {
+  state.selectedUserId = id;
+  setPage("subscription");
+  renderSub();
+}
+
+/* ---------- add user modal ---------- */
+function openAddUser() {
+  if (MODE !== "live") { toast(t("toast.preview")); return; }
   $("#modalBack").classList.remove("hidden");
   $("#modalBack").innerHTML = `<div class="modal">
     <h3 data-i18n="m.addUser">کاربر جدید</h3>
@@ -612,50 +735,116 @@ function openAddUser(){
   </div>`;
   applyLang();
   $("#mCancel").onclick = () => $("#modalBack").classList.add("hidden");
-  $("#mSave").onclick = () => {
-    const name = $("#mName").value.trim() || "کاربر";
-    const quota = +$("#mQuota").value || 50, days = +$("#mDays").value || 30;
-    state.users.push({ id:"u"+Date.now(), name, uuid:uuid4(), pass:uuid4(), quota, used:0, days, active:true });
-    persistUsers(); $("#modalBack").classList.add("hidden"); renderUsers(); renderDashboard(); toast(t("toast.saved"));
+  $("#mSave").onclick = async () => {
+    const name = $("#mName").value.trim() || t("m.namePh");
+    const quota = +$("#mQuota").value || 50;
+    const days = +$("#mDays").value || 30;
+    const res = await api("/api/users", { method: "POST", body: { name, quota, days } });
+    if (res.ok) { toast(t("toast.saved")); $("#modalBack").classList.add("hidden"); await loadAll(); }
+    else toast(t("common.error"));
   };
 }
 $("#addUserBtn").onclick = openAddUser;
-$("#modalBack").onclick = e => { if (e.target.id==="modalBack") $("#modalBack").classList.add("hidden"); };
+$("#modalBack").onclick = (e) => { if (e.target.id === "modalBack") $("#modalBack").classList.add("hidden"); };
 
-/* ---------- صفحه اشتراک ---------- */
-$$("#fmtTabs .tab").forEach(b => b.onclick = () => { currentFmt=b.dataset.fmt; $$("#fmtTabs .tab").forEach(x=>x.classList.toggle("active",x===b)); renderConfig(); });
-$("#copyBtn").onclick = async () => { try{ await navigator.clipboard.writeText($("#fmtOut").textContent); toast(t("toast.copied")); }catch(e){ toast("✕"); } };
-$("#refreshBtn").onclick = () => { renderConfig(); toast(t("toast.gen")); };
-
-/* ---------- تنظیمات ---------- */
-function fillSettingsForm(){
-  $("#setTitle").value = state.settings.title;
-  $("#setHost").value = state.settings.host;
-  $("#setSni").value = state.settings.sni;
-  $("#setWsPath").value = state.settings.wsPath;
-  $("#setIps").value = state.settings.ips;
+/* ---------- subscription ---------- */
+async function renderSub() {
+  syncProtoToggles();
+  const sel = $("#subUserSel");
+  if (sel) {
+    sel.innerHTML = state.users.map((u) => `<option value="${u.id}">${escHtml(u.name)}</option>`).join("");
+    if (state.selectedUserId) sel.value = state.selectedUserId;
+  }
+  if (!state.users.length) {
+    $("#fmtOut").textContent = t("sub.empty");
+    $("#copyBtn").disabled = true;
+    return;
+  }
+  $("#copyBtn").disabled = false;
+  await loadGen();
 }
-$("#saveBtn").onclick = () => {
-  state.settings.title = $("#setTitle").value || "Nika Net";
-  state.settings.host = $("#setHost").value; state.settings.sni = $("#setSni").value;
-  state.settings.wsPath = $("#setWsPath").value || "/nika-ws"; state.settings.ips = $("#setIps").value;
-  toast(t("toast.saved")); renderConfig();
+
+async function loadGen() {
+  const id = state.selectedUserId || (state.users[0] && state.users[0].id);
+  if (!id) return;
+  try {
+    const res = await api("/api/gen?id=" + encodeURIComponent(id));
+    if (!res.ok) { $("#fmtOut").textContent = t("common.error"); return; }
+    state.gen = await res.json();
+    renderFmt();
+  } catch (e) {
+    $("#fmtOut").textContent = t("common.error");
+  }
+}
+
+function renderFmt() {
+  const g = state.gen || {};
+  const map = {
+    base64: "vmess://" + (g.base64 || ""),
+    clash: g.clash || "",
+    singbox: g.singbox || "",
+    warp: g.warp || `# WARP ${LANG === "fa" ? "غیرفعال است" : "disabled"}`,
+  };
+  $("#fmtOut").textContent = map[currentFmt] || "";
+}
+
+function syncProtoToggles() {
+  $$(".toggle[data-p]").forEach((el) => {
+    const p = el.dataset.p;
+    el.classList.toggle("on", !!proto[p]);
+  });
+}
+
+async function toggleProto(el) {
+  const p = el.dataset.p;
+  el.classList.toggle("on");
+  proto[p] = el.classList.contains("on");
+  if (MODE === "live") {
+    const res = await api("/api/settings", { method: "POST", body: { protocols: proto } });
+    if (res.ok) { toast(t("toast.saved")); await loadGen(); }
+    else { el.classList.toggle("on"); proto[p] = !proto[p]; }
+  }
+}
+
+$$("#fmtTabs .tab").forEach((b) => (b.onclick = () => {
+  currentFmt = b.dataset.fmt;
+  $$("#fmtTabs .tab").forEach((x) => x.classList.toggle("active", x === b));
+  renderFmt();
+}));
+$("#copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#fmtOut").textContent); toast(t("toast.copied")); }
+  catch (e) { toast("✕"); }
+};
+$("#refreshBtn").onclick = () => { loadGen(); toast(t("toast.gen")); };
+
+/* ---------- settings ---------- */
+function fillSettingsForm() {
+  $("#setTitle").value = (state.settings && state.settings.title) || "";
+  $("#setHost").value = (state.settings && state.settings.host) || "";
+  $("#setSni").value = (state.settings && state.settings.sni) || "";
+  $("#setWsPath").value = (state.settings && state.settings.wsPath) || "";
+  $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("
+");
+}
+$("#saveBtn").onclick = async () => {
+  if (MODE !== "live") { toast(t("toast.preview")); return; }
+  const body = {
+    title: $("#setTitle").value || "Nika Net",
+    host: $("#setHost").value,
+    sni: $("#setSni").value,
+    wsPath: $("#setWsPath").value || "/nika-ws",
+    cleanIps: $("#setIps").value.split("
+").map((x) => x.trim()).filter(Boolean),
+    protocols: proto,
+  };
+  const res = await api("/api/settings", { method: "POST", body });
+  if (res.ok) { toast(t("toast.saved")); await loadAll(); }
+  else toast(t("common.error"));
 };
 
-/* ---------- ورود ---------- */
-$("#loginBtn").onclick = doLogin;
-$("#loginPass").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
-$("#logoutBtn").onclick = () => { $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); };
-function doLogin(){
-  const p = $("#loginPass").value;
-  if (p === "admin" || p === state.settings.title){ // demo accepts "admin"
-    $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
-    renderDashboard(); renderUsers(); renderConfig();
-  } else { $("#loginError").textContent = LANG==="fa"?"رمز اشتباه است":"Wrong password"; }
-}
+/* ---------- boot ---------- */
+init();
 
-/* ---------- شروع ---------- */
-applyTheme(); applyLang(); renderDashboard(); renderUsers(); renderConfig();
 </script>
 </body>
 </html>
