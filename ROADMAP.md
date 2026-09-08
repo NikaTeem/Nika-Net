@@ -25,9 +25,9 @@
 - [ ] بکاپ/ریستور کامل JSON
 
 ### فاز ۴ — حرفه‌ای‌سازی
-- [ ] به‌روزرسانی خودکار (فایل version + GitHub Action مثل Nova)
+- [x] به‌روزرسانی خودکار پنل — بخش «بروزرسانی» + `GET /api/update/check` + `POST /api/update/apply` (مقایسه با `version.json` مخزن، استقرار مجدد `dist/worker.js` با حفظ KV)
 - [ ] PWA + آیکن + حالت AMOLED (مثل ZEUS)
-- [ ] OTA Update از مخزن رسمی
+- [x] OTA Update از مخزن رسمی + اعلان همگانی ربات (`/broadcast` + منوی «🔄 بروزرسانی پنل‌ها»)
 - [ ] DoH خصوصی + بلاک تبلیغ/NSFW
 - [ ] Chain Proxy (زنجیره‌کردن پروکسی خروجی)
 - [ ] مانیتورینگ زندهٔ سهمیهٔ ۱۰۰هزار درخواست Cloudflare
