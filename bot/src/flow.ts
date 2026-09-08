@@ -12,6 +12,7 @@ import { UserState, TokenRecord } from "./state";
 
 declare const PANEL_BUNDLE: string;
 const BUNDLE = PANEL_BUNDLE;
+const GITHUB_RAW = "https://raw.githubusercontent.com/NikaTeem/Nika-Net/main";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const SPIN = ui.SPIN;
@@ -21,6 +22,90 @@ const BUILD_COOLDOWN = 300_000;
 
 const L = (s: UserState): Lang => (s.lang === "en" ? "en" : "fa");
 const randName = () => `nika-${1000 + Math.floor(Math.random() * 9000)}`;
+
+/* ---------------- release / auto-announce 🚀 ---------------- */
+
+function cmpVersion(a: string, b: string): number {
+  const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+async function fetchLatestVersion(): Promise<{ version: string; notes?: string } | null> {
+  try {
+    const r = await fetch(`${GITHUB_RAW}/version.json`, { cf: { cacheTtl: 120 } } as RequestInit);
+    if (!r.ok) return null;
+    const j = (await r.json()) as { version?: string; notes?: string };
+    if (!j.version) return null;
+    return { version: j.version, notes: j.notes };
+  } catch {
+    return null;
+  }
+}
+
+// the freshest panel bundle straight from the repo — keeps the bot
+// version-agnostic: new panels & updates always deploy the latest build.
+let bundleCache: { code: string; at: number } | null = null;
+async function fetchLatestBundle(): Promise<string> {
+  if (bundleCache && Date.now() - bundleCache.at < 300_000) return bundleCache.code;
+  try {
+    const r = await fetch(`${GITHUB_RAW}/dist/worker.js`, { cf: { cacheTtl: 300 } } as RequestInit);
+    if (r.ok) {
+      const t = await r.text();
+      if (t.length > 10_000) {
+        bundleCache = { code: t, at: Date.now() };
+        return t;
+      }
+    }
+  } catch {
+    /* fall back to embedded bundle */
+  }
+  return BUNDLE;
+}
+
+async function announceUpdate(env: Env, version: string, notes: string): Promise<{ sent: number; total: number }> {
+  const ids = await tg.listUserChatIds(env);
+  const text = ui.updateAnnouncement(version, notes);
+  const kb = tg.kb([[{ text: "🔄 بروزرسانی پنل‌ها", cb: "upd:all", color: "primary", emoji: false }]]);
+  let sent = 0;
+  for (const id of ids) {
+    try {
+      await tg.sendMessage(env, id, text, kb);
+      sent++;
+    } catch {
+      /* skip blocked/unreachable */
+    }
+  }
+  await env.BOT_KV.put("announcedVersion", version);
+  return { sent, total: ids.length };
+}
+
+// compare repo version.json against the last announced version and, if a new
+// release is out, push the update notification to every user (idempotent).
+export async function announceLatest(
+  env: Env
+): Promise<{ announced: boolean; version: string; sent: number; total: number }> {
+  const latest = await fetchLatestVersion();
+  if (!latest) return { announced: false, version: "", sent: 0, total: 0 };
+  const last = (await env.BOT_KV.get("announcedVersion")) || "";
+  if (last && cmpVersion(last, latest.version) >= 0) {
+    return { announced: false, version: latest.version, sent: 0, total: 0 };
+  }
+  const r = await announceUpdate(env, latest.version, latest.notes || "");
+  return { announced: true, version: latest.version, ...r };
+}
+
+export async function handleScheduled(env: Env): Promise<void> {
+  try {
+    await announceLatest(env);
+  } catch (e) {
+    console.error("scheduled error", e);
+  }
+}
 
 export async function handleUpdate(env: Env, update: tg.TgUpdate): Promise<void> {
   try {
@@ -429,7 +514,7 @@ async function doBuild(env: Env, chatId: number, msgId: number): Promise<void> {
       await step(0, true);
 
       await step(1);
-      const up = await cf.uploadWorker(tok, accountId, name, BUNDLE, [
+      const up = await cf.uploadWorker(tok, accountId, name, await fetchLatestBundle(), [
         { type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId },
       ]);
       if (!up.ok) throw new Error(up.err || "upload failed");
@@ -491,7 +576,7 @@ async function updateAll(env: Env, chatId: number, msgId?: number): Promise<void
     try {
       const kvId = p.kvId || (await cf.findKvId(tok, p.account, [`nika-${p.name}-kv`, `${p.name}-kv`]));
       const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
-      const up = await cf.uploadWorker(tok, p.account, p.name, BUNDLE, bindings);
+      const up = await cf.uploadWorker(tok, p.account, p.name, await fetchLatestBundle(), bindings);
       if (!up.ok) {
         results.push({ name: p.name, ok: false });
         continue;
@@ -536,7 +621,7 @@ async function panelUpdate(env: Env, chatId: number, msgId: number, name: string
       await step(0);
       const kvId = p.kvId || (await cf.findKvId(token, p.account, [`nika-${name}-kv`, `${name}-kv`]));
       const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
-      const up = await cf.uploadWorker(token, p.account, p.name, BUNDLE, bindings);
+      const up = await cf.uploadWorker(token, p.account, p.name, await fetchLatestBundle(), bindings);
       if (!up.ok) throw new Error(up.err || "upload failed");
       await cf.enableWorkersDev(token, p.account, p.name);
       await step(0, true);

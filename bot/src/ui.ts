@@ -601,3 +601,16 @@ export const pingResult = (s: UserState, ms: number): string =>
 
 export const tokenSavedBanner = (s: UserState, acc: string): string =>
   makeText("🔐", t(L(s), "tok_saved", { acc: esc(acc) }), null, null, "ok");
+
+/* ---------- update announcement (sent to every user on release) ---------- */
+export function updateAnnouncement(version: string, notes: string): string {
+  const body = notes ? `\n${esc(notes)}\n` : "\n";
+  return (
+    `🚀 <b>اپدیت جدید اومد دوست من!</b> ✏️\n\n` +
+    `نسخهٔ <b>${esc(version)}</b> پنل <b>Nika Net</b> آماده‌ست.${body}` +
+    `میتونی همین الان پنلت رو بروز کنی:\n` +
+    `🖥 از داخل پنل → بخش «بروزرسانی»\n` +
+    `🤖 یا ربات → دکمهٔ زیر ⬇️\n\n` +
+    `با مهر، تیم Nika Net 💜`
+  );
+}

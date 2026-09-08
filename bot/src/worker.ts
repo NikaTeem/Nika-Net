@@ -2,7 +2,7 @@
 
 import { Env } from "./types";
 import * as tg from "./telegram";
-import { handleUpdate, broadcastAll } from "./flow";
+import { handleUpdate, broadcastAll, announceLatest, handleScheduled } from "./flow";
 
 const infoHtml = `<!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8"/><title>Nika Net Launcher</title>
@@ -35,10 +35,23 @@ export default {
       return new Response(JSON.stringify({ ok: true, ...r }), { headers: { "content-type": "application/json" } });
     }
 
+    // admin-triggered update announcement (checks GitHub version.json → notifies everyone)
+    if (req.method === "POST" && url.pathname === "/announce") {
+      const key = req.headers.get("x-admin-key") || "";
+      if (!env.BOT_ADMIN_KEY || key !== env.BOT_ADMIN_KEY) return new Response("unauthorized", { status: 401 });
+      const r = await announceLatest(env);
+      return new Response(JSON.stringify({ ok: true, ...r }), { headers: { "content-type": "application/json" } });
+    }
+
     if (url.pathname === "/" || url.pathname === "/health") {
       return new Response(infoHtml, { headers: { "content-type": "text/html; charset=utf-8" } });
     }
 
     return new Response("not found", { status: 404 });
+  },
+
+  // cron trigger → auto-detect a new panel release and notify every user
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(handleScheduled(env));
   },
 };
