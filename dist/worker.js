@@ -562,10 +562,6 @@ body{
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14.5c2.6 0 4.5 1.5 5.3 4"/></svg>
         <span data-i18n="nav.users">\u06A9\u0627\u0631\u0628\u0631\u0627\u0646</span>
       </button>
-      <button class="nav-item" data-page="subscription">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
-        <span data-i18n="nav.sub">\u0627\u0634\u062A\u0631\u0627\u06A9</span>
-      </button>
       <button class="nav-item" data-page="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
         <span data-i18n="nav.settings">\u062A\u0646\u0638\u06CC\u0645\u0627\u062A</span>
@@ -661,30 +657,6 @@ body{
           <tbody id="usersBody"></tbody>
         </table>
         </div>
-      </div>
-    </section>
-
-    <!-- \u0627\u0634\u062A\u0631\u0627\u06A9 -->
-    <section id="page-subscription" class="hidden">
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title"><span>\u270E <span data-i18n="sub.title">\u0633\u0627\u062E\u062A \u06A9\u0627\u0646\u0641\u06CC\u06AF \u0627\u0634\u062A\u0631\u0627\u06A9</span></span></div>
-        <div class="row"><div><div class="k" data-i18n="sub.user">\u06A9\u0627\u0631\u0628\u0631</div><div class="d" data-i18n="sub.userD">\u0627\u0646\u062A\u062E\u0627\u0628 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0631\u0627\u06CC \u0646\u0645\u0627\u06CC\u0634 \u06A9\u0627\u0646\u0641\u06CC\u06AF</div></div>
-          <select class="input" id="subUserSel" style="width:auto;max-width:230px" onchange="state.selectedUserId=this.value;loadGen()"></select></div>
-        <div class="row"><div><div class="k" data-i18n="sub.vless">VLESS</div><div class="d" data-i18n="sub.vlessD">\u067E\u0631\u0648\u062A\u06A9\u0644 \u0627\u0635\u0644\u06CC \u2014 \u0631\u0648\u06CC WebSocket + TLS</div></div><div class="toggle on" data-p="vless" onclick="toggleProto(this)"></div></div>
-        <div class="row"><div><div class="k" data-i18n="sub.trojan">Trojan</div><div class="d" data-i18n="sub.trojanD">\u067E\u0631\u0648\u062A\u06A9\u0644 \u062F\u0648\u0645 \u2014 \u0627\u0633\u062A\u062A\u0627\u0631 \u0628\u0647\u062A\u0631</div></div><div class="toggle on" data-p="trojan" onclick="toggleProto(this)"></div></div>
-        <div class="row"><div><div class="k" data-i18n="sub.warp">WARP</div><div class="d" data-i18n="sub.warpD">\u067E\u0634\u062A\u06CC\u0628\u0627\u0646\u06CC \u0627\u0632 \u062A\u0645\u0627\u0633\u200C\u0647\u0627 (UDP) \u0648 \u0634\u0631\u0627\u06CC\u0637 \u0628\u062D\u0631\u0627\u0646\u06CC</div></div><div class="toggle on" data-p="warp" onclick="toggleProto(this)"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><span>\u270E <span data-i18n="sub.preview">\u067E\u06CC\u0634\u200C\u0646\u0645\u0627\u06CC\u0634 \u06A9\u0627\u0646\u0641\u06CC\u06AF</span></span><span class="mini" data-i18n="sub.previewD">\u062E\u0631\u0648\u062C\u06CC \u0628\u0631\u0627\u06CC \u06A9\u0644\u0627\u06CC\u0646\u062A\u200C\u0647\u0627</span></div>
-        <div class="tabs" id="fmtTabs">
-          <button class="tab active" data-fmt="base64">Base64 (v2rayNG)</button>
-          <button class="tab" data-fmt="clash">Clash / Mihomo</button>
-          <button class="tab" data-fmt="singbox">Sing-box</button>
-          <button class="tab" data-fmt="warp">WireGuard (WARP)</button>
-        </div>
-        <pre class="code" id="fmtOut" dir="ltr"></pre>
-        <div class="copy-row"><button class="btn btn-ghost" id="copyBtn">\u{1F4CB} <span data-i18n="sub.copy">\u06A9\u067E\u06CC</span></button>
-        <button class="btn btn-ghost" id="refreshBtn">\u{1F504} <span data-i18n="sub.gen">\u062A\u0648\u0644\u06CC\u062F \u0645\u062C\u062F\u062F</span></button></div>
       </div>
     </section>
 
@@ -840,19 +812,13 @@ const I18N = {
     "login.hintPass": "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u0627\u062F\u0645\u06CC\u0646 \u0631\u0627 \u0648\u0627\u0631\u062F \u06A9\u0646",
     "login.hintPreview": "\u0627\u06CC\u0646 \u067E\u06CC\u0634\u200C\u0646\u0645\u0627\u06CC\u0634 \u0641\u0627\u06CC\u0644 \u0627\u0633\u062A \u2014 \u0628\u0631\u0627\u06CC \u062F\u0627\u062F\u0647\u0654 \u0648\u0627\u0642\u0639\u06CC\u060C \u067E\u0646\u0644 \u0631\u0627 \u0627\u0632 \u0622\u062F\u0631\u0633 \u0632\u0646\u062F\u0647\u0654 \u0648\u0631\u06A9\u0631 \u0628\u0627\u0632 \u06A9\u0646",
     "login.wrong": "\u0631\u0645\u0632 \u0627\u0634\u062A\u0628\u0627\u0647 \u0627\u0633\u062A", "login.short": "\u0631\u0645\u0632 \u0628\u0627\u06CC\u062F \u062D\u062F\u0627\u0642\u0644 \u06F4 \u06A9\u0627\u0631\u0627\u06A9\u062A\u0631 \u0628\u0627\u0634\u062F",
-    "nav.dash": "\u062F\u0627\u0634\u0628\u0648\u0631\u062F", "nav.users": "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "nav.sub": "\u0627\u0634\u062A\u0631\u0627\u06A9", "nav.settings": "\u062A\u0646\u0638\u06CC\u0645\u0627\u062A", "nav.scan": "\u0627\u0633\u06A9\u0646\u0631 IP", "nav.upd": "\u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC",
+    "nav.dash": "\u062F\u0627\u0634\u0628\u0648\u0631\u062F", "nav.users": "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "nav.settings": "\u062A\u0646\u0638\u06CC\u0645\u0627\u062A", "nav.scan": "\u0627\u0633\u06A9\u0646\u0631 IP", "nav.upd": "\u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC",
     "stat.users": "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "stat.active": "\u0641\u0639\u0627\u0644", "stat.req": "\u062F\u0631\u062E\u0648\u0627\u0633\u062A \u0627\u0645\u0631\u0648\u0632", "stat.gig": "\u06AF\u06CC\u06AF\u0627\u0628\u0627\u06CC\u062A \u0645\u0635\u0631\u0641", "stat.proto": "\u067E\u0631\u0648\u062A\u06A9\u0644 \u0641\u0639\u0627\u0644",
     "dash.traffic": "\u062A\u0631\u0627\u0641\u06CC\u06A9 (\u06F7 \u0631\u0648\u0632 \u0627\u062E\u06CC\u0631)", "dash.gb": "\u0628\u0631 \u062D\u0633\u0628 \u06AF\u06CC\u06AF\u0627\u0628\u0627\u06CC\u062A", "dash.usage": "\u0645\u0635\u0631\u0641", "dash.activity": "\u0641\u0639\u0627\u0644\u06CC\u062A\u200C\u0647\u0627\u06CC \u0627\u062E\u06CC\u0631",
     "dash.today": "\u0627\u0645\u0631\u0648\u0632", "dash.nochart": "\u0647\u0646\u0648\u0632 \u062F\u0627\u062F\u0647\u0654 \u062A\u0631\u0627\u0641\u06CC\u06A9\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A", "act.empty": "\u0647\u0646\u0648\u0632 \u0641\u0639\u0627\u0644\u06CC\u062A\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A",
     "users.title": "\u0645\u062F\u06CC\u0631\u06CC\u062A \u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "users.add": "+ \u06A9\u0627\u0631\u0628\u0631 \u062C\u062F\u06CC\u062F", "users.name": "\u0646\u0627\u0645", "users.status": "\u0648\u0636\u0639\u06CC\u062A", "users.used": "\u0645\u0635\u0631\u0641", "users.expiry": "\u0627\u0646\u0642\u0636\u0627",
     "users.empty": "\u0647\u0646\u0648\u0632 \u06A9\u0627\u0631\u0628\u0631\u06CC \u0646\u06CC\u0633\u062A \u2014 \u0627\u0648\u0644 \u06CC\u06A9 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0633\u0627\u0632",
-    "u.active": "\u0641\u0639\u0627\u0644", "u.inactive": "\u063A\u06CC\u0631\u0641\u0639\u0627\u0644", "u.expired": "\u0645\u0646\u0642\u0636\u06CC", "u.sub": "\u0627\u0634\u062A\u0631\u0627\u06A9", "u.del": "\u062D\u0630\u0641",
-    "sub.title": "\u0633\u0627\u062E\u062A \u06A9\u0627\u0646\u0641\u06CC\u06AF \u0627\u0634\u062A\u0631\u0627\u06A9", "sub.user": "\u06A9\u0627\u0631\u0628\u0631", "sub.userD": "\u0627\u0646\u062A\u062E\u0627\u0628 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0631\u0627\u06CC \u0646\u0645\u0627\u06CC\u0634 \u06A9\u0627\u0646\u0641\u06CC\u06AF",
-    "sub.vless": "VLESS", "sub.vlessD": "\u067E\u0631\u0648\u062A\u06A9\u0644 \u0627\u0635\u0644\u06CC \u2014 \u0631\u0648\u06CC WebSocket + TLS",
-    "sub.trojan": "Trojan", "sub.trojanD": "\u067E\u0631\u0648\u062A\u06A9\u0644 \u062F\u0648\u0645 \u2014 \u0627\u0633\u062A\u062A\u0627\u0631 \u0628\u0647\u062A\u0631",
-    "sub.warp": "WARP", "sub.warpD": "\u067E\u0634\u062A\u06CC\u0628\u0627\u0646\u06CC \u0627\u0632 \u062A\u0645\u0627\u0633\u200C\u0647\u0627 (UDP) \u0648 \u0634\u0631\u0627\u06CC\u0637 \u0628\u062D\u0631\u0627\u0646\u06CC",
-    "sub.preview": "\u067E\u06CC\u0634\u200C\u0646\u0645\u0627\u06CC\u0634 \u06A9\u0627\u0646\u0641\u06CC\u06AF", "sub.previewD": "\u062E\u0631\u0648\u062C\u06CC \u0628\u0631\u0627\u06CC \u06A9\u0644\u0627\u06CC\u0646\u062A\u200C\u0647\u0627", "sub.copy": "\u06A9\u067E\u06CC", "sub.gen": "\u062A\u0648\u0644\u06CC\u062F \u0645\u062C\u062F\u062F",
-    "sub.empty": "\u0647\u0646\u0648\u0632 \u06A9\u0627\u0631\u0628\u0631\u06CC \u0646\u0633\u0627\u062E\u062A\u06CC \u2014 \u0627\u0648\u0644 \u0627\u0632 \u0628\u062E\u0634 \xAB\u06A9\u0627\u0631\u0628\u0631\u0627\u0646\xBB \u06CC\u06A9 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0633\u0627\u0632",
+    "u.active": "\u0641\u0639\u0627\u0644", "u.inactive": "\u063A\u06CC\u0631\u0641\u0639\u0627\u0644", "u.expired": "\u0645\u0646\u0642\u0636\u06CC", "u.openStatus": "\u0628\u0627\u0632 \u06A9\u0631\u062F\u0646 \u0635\u0641\u062D\u0647 \u0648\u0636\u0639\u06CC\u062A \u06A9\u0627\u0631\u0628\u0631", "u.del": "\u062D\u0630\u0641",
     "set.general": "\u0639\u0645\u0648\u0645\u06CC", "set.title": "\u0639\u0646\u0648\u0627\u0646 \u067E\u0646\u0644", "set.host": "\u062F\u0627\u0645\u0646\u0647 / Host \u0648\u0631\u06A9\u0631", "set.sni": "SNI / Host \u062C\u0639\u0644\u06CC",
     "set.wsPath": "\u0645\u0633\u06CC\u0631 WebSocket", "set.security": "\u0627\u0645\u0646\u06CC\u062A", "set.newpass": "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062C\u062F\u06CC\u062F", "set.brute": "\u0645\u062D\u0627\u0641\u0638\u062A Brute-Force",
     "set.bruteD": "\u0645\u0633\u062F\u0648\u062F\u0633\u0627\u0632\u06CC \u0645\u0648\u0642\u062A \u0628\u0639\u062F \u0627\u0632 \u062A\u0644\u0627\u0634 \u0646\u0627\u0645\u0648\u0641\u0642", "set.cleanip": "IP \u0647\u0627\u06CC \u062A\u0645\u06CC\u0632", "set.cleanipD": "\u0647\u0631 \u062E\u0637 \u06CC\u06A9 IP", "set.save": "\u0630\u062E\u06CC\u0631\u0647 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A",
@@ -861,8 +827,8 @@ const I18N = {
     "toast.copied": "\u06A9\u067E\u06CC \u0634\u062F \u2713", "toast.saved": "\u0630\u062E\u06CC\u0631\u0647 \u0634\u062F \u2713", "toast.deleted": "\u062D\u0630\u0641 \u0634\u062F", "toast.gen": "\u06A9\u0627\u0646\u0641\u06CC\u06AF \u0628\u0647\u200C\u0631\u0648\u0632 \u0634\u062F \u2713",
     "toast.toggled": "\u0648\u0636\u0639\u06CC\u062A \u062A\u063A\u06CC\u06CC\u0631 \u06A9\u0631\u062F", "toast.preview": "\u062F\u0631 \u067E\u06CC\u0634\u200C\u0646\u0645\u0627\u06CC\u0634\u060C \u0627\u062A\u0635\u0627\u0644 \u0628\u0647 \u0633\u0631\u0648\u0631 \u0646\u06CC\u0633\u062A",
     "common.error": "\u062E\u0637\u0627 \u062F\u0631 \u062F\u0631\u06CC\u0627\u0641\u062A \u0627\u0637\u0644\u0627\u0639\u0627\u062A", "common.loading": "\u062F\u0631 \u062D\u0627\u0644 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC\u2026",
-    "page.dash": "\u062F\u0627\u0634\u0628\u0648\u0631\u062F", "page.dashD": "\u0646\u0645\u0627\u06CC \u06A9\u0644\u06CC \u0648\u0636\u0639\u06CC\u062A \u067E\u0646\u0644", "page.users": "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "page.usersD": "\u0645\u062F\u06CC\u0631\u06CC\u062A \u06A9\u0627\u0631\u0628\u0631\u0627\u0646 \u0648 \u0627\u0634\u062A\u0631\u0627\u06A9\u200C\u0647\u0627",
-    "page.sub": "\u0627\u0634\u062A\u0631\u0627\u06A9", "page.subD": "\u0633\u0627\u062E\u062A \u0648 \u067E\u06CC\u0634\u200C\u0646\u0645\u0627\u06CC\u0634 \u06A9\u0627\u0646\u0641\u06CC\u06AF", "page.set": "\u062A\u0646\u0638\u06CC\u0645\u0627\u062A", "page.setD": "\u067E\u06CC\u06A9\u0631\u0628\u0646\u062F\u06CC \u067E\u0646\u0644 \u0648 \u0627\u0645\u0646\u06CC\u062A",
+    "page.dash": "\u062F\u0627\u0634\u0628\u0648\u0631\u062F", "page.dashD": "\u0646\u0645\u0627\u06CC \u06A9\u0644\u06CC \u0648\u0636\u0639\u06CC\u062A \u067E\u0646\u0644", "page.users": "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "page.usersD": "Manage users & their status",
+    "page.set": "\u062A\u0646\u0638\u06CC\u0645\u0627\u062A", "page.setD": "\u067E\u06CC\u06A9\u0631\u0628\u0646\u062F\u06CC \u067E\u0646\u0644 \u0648 \u0627\u0645\u0646\u06CC\u062A",
   },
   en: {
     dir: "ltr", lang: "en",
@@ -872,19 +838,13 @@ const I18N = {
     "login.hintPass": "Enter the admin password",
     "login.hintPreview": "This is a static preview \u2014 open the live panel URL for real data",
     "login.wrong": "Wrong password", "login.short": "Password must be at least 4 characters",
-    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings", "nav.scan": "IP Scanner", "nav.upd": "Update",
+    "nav.dash": "Dashboard", "nav.users": "Users", "nav.settings": "Settings", "nav.scan": "IP Scanner", "nav.upd": "Update",
     "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
     "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
     "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
     "users.title": "User management", "users.add": "+ Add user", "users.name": "Name", "users.status": "Status", "users.used": "Usage", "users.expiry": "Expiry",
     "users.empty": "No users yet \u2014 create your first user",
-    "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.sub": "Sub", "u.del": "Delete",
-    "sub.title": "Build subscription config", "sub.user": "User", "sub.userD": "Pick a user to show their config",
-    "sub.vless": "VLESS", "sub.vlessD": "Primary protocol \u2014 over WebSocket + TLS",
-    "sub.trojan": "Trojan", "sub.trojanD": "Secondary protocol \u2014 better stealth",
-    "sub.warp": "WARP", "sub.warpD": "Calls (UDP) support & critical situations",
-    "sub.preview": "Config preview", "sub.previewD": "Output for clients", "sub.copy": "Copy", "sub.gen": "Regenerate",
-    "sub.empty": "No users yet \u2014 create one under Users first",
+    "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.openStatus": "Open user status page", "u.del": "Delete",
     "set.general": "General", "set.title": "Panel title", "set.host": "Worker domain / host", "set.sni": "Fake SNI / Host",
     "set.wsPath": "WebSocket path", "set.security": "Security", "set.newpass": "New password", "set.brute": "Brute-force protection",
     "set.bruteD": "Temporary block after failed attempts", "set.cleanip": "Clean IPs", "set.cleanipD": "One IP per line", "set.save": "Save settings",
@@ -894,7 +854,7 @@ const I18N = {
     "toast.toggled": "Status changed", "toast.preview": "No server connection in preview mode",
     "common.error": "Failed to load", "common.loading": "Loading\u2026",
     "page.dash": "Dashboard", "page.dashD": "Panel status overview", "page.users": "Users", "page.usersD": "Manage users & subscriptions",
-    "page.sub": "Subscription", "page.subD": "Build & preview configs", "page.set": "Settings", "page.setD": "Panel config & security",
+    "page.set": "Settings", "page.setD": "Panel config & security",
   },
 };
 let LANG = store.getItem("nn_lang") || "fa";
@@ -994,9 +954,8 @@ $("#langBtn").onclick = () => { LANG = LANG === "fa" ? "en" : "fa"; store.setIte
 let MODE = "preview"; // "live" | "preview"
 let SETUP = false;
 let currentPage = "dashboard";
-let currentFmt = "base64";
 let proto = { vless: true, trojan: true, warp: true };
-const state = { status: null, users: [], settings: null, selectedUserId: null, gen: null };
+const state = { status: null, users: [], settings: null };
 
 /* ---------- api ---------- */
 async function api(path, opts = {}) {
@@ -1074,7 +1033,7 @@ $("#loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") doLo
 
 $("#logoutBtn").onclick = async () => {
   if (MODE === "live") { try { await api("/api/logout", { method: "POST" }); } catch (e) {} }
-  state.status = null; state.users = []; state.settings = null; state.selectedUserId = null; state.gen = null;
+  state.status = null; state.users = []; state.settings = null;
   showLogin();
 };
 
@@ -1090,24 +1049,20 @@ async function loadAll() {
     state.users = Array.isArray(us) ? us : [];
     state.settings = se;
     if (se && se.protocols) proto = se.protocols;
-    syncProtoToggles();
-    if (!state.selectedUserId && state.users.length) state.selectedUserId = state.users[0].id;
-    if (state.selectedUserId && !state.users.find((u) => u.id === state.selectedUserId)) state.selectedUserId = state.users[0] ? state.users[0].id : null;
     renderDashboard();
     renderUsers();
-    renderSub();
   } catch (e) {
     toast(t("common.error"));
   }
 }
 
 /* ---------- navigation ---------- */
-const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set", scanner: "page.scanner", update: "page.update" };
-const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD", scanner: "page.scannerD", update: "page.updateD" };
+const PAGES = { dashboard: "page.dash", users: "page.users", settings: "page.set", scanner: "page.scanner", update: "page.update" };
+const DESCS = { dashboard: "page.dashD", users: "page.usersD", settings: "page.setD", scanner: "page.scannerD", update: "page.updateD" };
 function setPage(p) {
   currentPage = p;
   $$("#nav .nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === p));
-  ["dashboard", "users", "subscription", "settings", "scanner", "update"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
+  ["dashboard", "users", "settings", "scanner", "update"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
   $("#pageTitle").textContent = t(PAGES[p]);
   $("#pageDesc").textContent = t(DESCS[p]);
   if (p === "settings") fillSettingsForm();
@@ -1178,12 +1133,11 @@ function renderUsers() {
       const pct = quota > 0 ? Math.min(100, (used / quota) * 100) : 0;
       const exp = (Number(u.days) || 0) > 0 ? \`\${u.days} \${t("m.days").toLowerCase()}\` : t("u.expired");
       return \`<tr>
-        <td><b>\${escHtml(u.name)}</b></td>
+        <td><b>\${escHtml(u.name)}</b><div style="margin-top:6px"><a class="btn btn-ghost" style="padding:6px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;text-decoration:none" href="/sub/\${escHtml(userToken(u))}" target="_blank" rel="noopener">\u{1F441} <span>\${t("u.openStatus")}</span></a></div></td>
         <td><span class="badge \${u.active ? "ok" : "off"}" style="cursor:pointer" onclick="toggleUser('\${u.id}')"><span class="dot"></span>\${t(u.active ? "u.active" : "u.inactive")}</span></td>
         <td><div>\${used.toFixed(2)} / \${quota} GB</div><div class="progress"><div style="width:\${pct}%"></div></div></td>
         <td>\${exp}</td>
         <td style="white-space:nowrap">
-          <button class="btn btn-ghost" style="padding:7px 12px;font-size:11.5px" onclick="subFor('\${u.id}')">\u{1F517} \${t("u.sub")}</button>
           <button class="btn btn-danger" style="padding:7px 12px;font-size:11.5px" onclick="delUser('\${u.id}')">\u2715</button>
         </td></tr>\`;
     })
@@ -1204,10 +1158,10 @@ async function delUser(id) {
   else toast(t("common.error"));
 }
 
-function subFor(id) {
-  state.selectedUserId = id;
-  setPage("subscription");
-  renderSub();
+function userToken(u) {
+  const pw = (u.password && String(u.password).trim()) || "";
+  if (pw) return pw;
+  return String(u.uuid || "").replace(/-/g, "").slice(0, 12);
 }
 
 /* ---------- add user modal ---------- */
@@ -1239,76 +1193,6 @@ function openAddUser() {
 }
 $("#addUserBtn").onclick = openAddUser;
 $("#modalBack").onclick = (e) => { if (e.target.id === "modalBack") $("#modalBack").classList.add("hidden"); };
-
-/* ---------- subscription ---------- */
-async function renderSub() {
-  syncProtoToggles();
-  const sel = $("#subUserSel");
-  if (sel) {
-    sel.innerHTML = state.users.map((u) => \`<option value="\${u.id}">\${escHtml(u.name)}</option>\`).join("");
-    if (state.selectedUserId) sel.value = state.selectedUserId;
-  }
-  if (!state.users.length) {
-    $("#fmtOut").textContent = t("sub.empty");
-    $("#copyBtn").disabled = true;
-    return;
-  }
-  $("#copyBtn").disabled = false;
-  await loadGen();
-}
-
-async function loadGen() {
-  const id = state.selectedUserId || (state.users[0] && state.users[0].id);
-  if (!id) return;
-  try {
-    const res = await api("/api/gen?id=" + encodeURIComponent(id));
-    if (!res.ok) { $("#fmtOut").textContent = t("common.error"); return; }
-    state.gen = await res.json();
-    renderFmt();
-  } catch (e) {
-    $("#fmtOut").textContent = t("common.error");
-  }
-}
-
-function renderFmt() {
-  const g = state.gen || {};
-  const map = {
-    base64: "vmess://" + (g.base64 || ""),
-    clash: g.clash || "",
-    singbox: g.singbox || "",
-    warp: g.warp || \`# WARP \${LANG === "fa" ? "\u063A\u06CC\u0631\u0641\u0639\u0627\u0644 \u0627\u0633\u062A" : "disabled"}\`,
-  };
-  $("#fmtOut").textContent = map[currentFmt] || "";
-}
-
-function syncProtoToggles() {
-  $$(".toggle[data-p]").forEach((el) => {
-    const p = el.dataset.p;
-    el.classList.toggle("on", !!proto[p]);
-  });
-}
-
-async function toggleProto(el) {
-  const p = el.dataset.p;
-  el.classList.toggle("on");
-  proto[p] = el.classList.contains("on");
-  if (MODE === "live") {
-    const res = await api("/api/settings", { method: "POST", body: { protocols: proto } });
-    if (res.ok) { toast(t("toast.saved")); await loadGen(); }
-    else { el.classList.toggle("on"); proto[p] = !proto[p]; }
-  }
-}
-
-$$("#fmtTabs .tab").forEach((b) => (b.onclick = () => {
-  currentFmt = b.dataset.fmt;
-  $$("#fmtTabs .tab").forEach((x) => x.classList.toggle("active", x === b));
-  renderFmt();
-}));
-$("#copyBtn").onclick = async () => {
-  try { await navigator.clipboard.writeText($("#fmtOut").textContent); toast(t("toast.copied")); }
-  catch (e) { toast("\u2715"); }
-};
-$("#refreshBtn").onclick = () => { loadGen(); toast(t("toast.gen")); };
 
 /* ---------- settings ---------- */
 function fillSettingsForm() {
@@ -1761,4 +1645,4 @@ SCANNER.initUI();
 <\/script>
 </body>
 </html>
-`,Q="0.5.0",Bt=(e,t=200)=>new Response(e,{status:t,headers:{"content-type":"text/html; charset=utf-8"}});function re(e){return e.headers.set("access-control-allow-origin","*"),e}var Le={async fetch(e,t,r){try{pt(),r.waitUntil(dt(t));let a=new URL(e.url),n=a.pathname,c=await rt(t);if((e.headers.get("Upgrade")||"").toLowerCase()==="websocket")return ne(e,t,c);if(n==="/admin"||n==="/admin/")return Bt(Rt);if(n.startsWith("/api/"))return re(await ae(e,t,c,a));if(n.startsWith("/sub/"))return se(e,t,c,n);let o=n.match(/^\/([0-9a-fA-F-]{36})\/?$/);return o?oe(t,c,o[1]):n==="/health"?g({ok:!0,name:c.title}):c.host===L.host?Bt(Rt):Response.redirect("https://www.cloudflare.com",302)}catch(a){return g({error:String(a)},500)}}};async function ne(e,t,r){let a=new URL(e.url),n=a.searchParams.get("proto")||e.headers.get("x-nika-proto")||"",c=await b(t),o=a.searchParams.get("uuid")||"",s=c.find(i=>i.uuid.toLowerCase()===o.toLowerCase());return s?s.active?n==="trojan"?wt(e,s,r,t):xt(e,s,r,t):g({error:"user inactive"},403):g({error:"no user for this uuid"},403)}async function ae(e,t,r,a){let n=a.pathname.replace("/api/",""),c=e.method.toUpperCase();if(n==="info")return g({name:r.title,setup:!r.adminPassHash,protocols:r.protocols,version:Q});if(n==="update/check"){let o=await ie();return g({current:Q,latest:o.version,notes:o.notes||"",upToDate:ce(Q,o.version)>=0})}if(n==="login"&&c==="POST"){let s=(await e.json().catch(()=>({}))).password||"",i=!r.adminPassHash;if(i){if(!s||s.length<4)return g({error:"password too short"},400);r.adminPassHash=await J(s),await W(t,r)}if(!(r.adminPassHash===await J(s)))return g({error:"wrong password"},401);let l=await j(r.sessionSecret,JSON.stringify({t:Date.now()}));await I(t,{icon:i?"\u{1F6E0}":"\u{1F510}",text:i?"\u0646\u0635\u0628 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0646\u0644 \u2014 \u0631\u0645\u0632 \u0627\u062F\u0645\u06CC\u0646 \u062B\u0628\u062A \u0634\u062F":"\u0648\u0631\u0648\u062F \u0627\u062F\u0645\u06CC\u0646 \u0628\u0647 \u067E\u0646\u0644",time:Date.now()});let d=g({ok:!0,setup:i});return d.headers.set("set-cookie",`${z}=${encodeURIComponent(l)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),d}if(n==="logout"){let o=g({ok:!0});return o.headers.set("set-cookie",`${z}=; HttpOnly; Path=/; Max-Age=0`),o}if(!await ot(e,r))return g({error:"unauthorized"},401);switch(n){case"status":{let o=await b(t);return g({title:r.title,setup:!1,users:o.length,active:o.filter(s=>s.active).length,usedGb:Math.round(o.reduce((s,i)=>s+(i.used||0),0)*100)/100,requestsToday:await gt(t),requestsTotal:await ut(t),protocols:r.protocols,activity:await mt(t),traffic7d:await ft(t)})}case"users":{let o=await b(t);if(c==="GET")return g(o);if(c==="POST"){let s=await e.json().catch(()=>({})),i={id:crypto.randomUUID(),name:s.name||"\u06A9\u0627\u0631\u0628\u0631",uuid:crypto.randomUUID(),password:st(),quota:Number(s.quota)||50,used:0,days:Number(s.days)||30,active:!0,createdAt:Date.now()};return o.push(i),await v(t,o),await I(t,{icon:"\u{1F464}",text:`\u06A9\u0627\u0631\u0628\u0631 \u0633\u0627\u062E\u062A\u0647 \u0634\u062F \u2014 ${i.name}`,time:Date.now()}),g(i)}if(c==="DELETE"){let s=a.searchParams.get("id"),i=o.find(l=>l.id===s),p=o.filter(l=>l.id!==s);return await v(t,p),await I(t,{icon:"\u{1F5D1}",text:`\u06A9\u0627\u0631\u0628\u0631 \u062D\u0630\u0641 \u0634\u062F \u2014 ${i?.name||s}`,time:Date.now()}),g({ok:!0})}break}case"users/toggle":{if(c!=="POST")break;let o=await e.json().catch(()=>({})),s=await b(t),i=s.find(p=>p.id===o.id);return i?(i.active=!i.active,await v(t,s),await I(t,{icon:i.active?"\u{1F7E2}":"\u26D4",text:`${i.name} ${i.active?"\u0641\u0639\u0627\u0644":"\u063A\u06CC\u0631\u0641\u0639\u0627\u0644"} \u0634\u062F`,time:Date.now()}),g({ok:!0,active:i.active})):g({error:"not found"},404)}case"settings":{if(c==="GET")return g(r);if(c==="POST"){let o=await e.json().catch(()=>({})),s={...r};return typeof o.title=="string"&&(s.title=o.title),typeof o.host=="string"&&(s.host=o.host),typeof o.sni=="string"&&(s.sni=o.sni),typeof o.wsPath=="string"&&(s.wsPath=o.wsPath),Array.isArray(o.cleanIps)&&(s.cleanIps=o.cleanIps),o.protocols&&(s.protocols={...r.protocols,...o.protocols}),await W(t,s),await I(t,{icon:"\u2699\uFE0F",text:"\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),g({ok:!0})}break}case"gen":{let o=a.searchParams.get("id"),i=(await b(t)).find(p=>p.id===o);return i?g({user:{id:i.id,name:i.name,quota:i.quota,used:Math.round((i.used||0)*100)/100,days:i.days,active:i.active},base64:O(i,r),clash:Z(i,r),singbox:X(i,r),warp:r.protocols.warp?it(i):null}):g({error:"user not found"},404)}case"update/apply":{if(c!=="POST")break;let o=await e.json().catch(()=>({})),s=await le(t,r,o.token||"");return g(s,s.ok?200:400)}}return g({error:"not found"},404)}async function se(e,t,r,a){let n=a.replace("/sub/",""),c=n.split("/")[0].split(".")[0],o=n.split(".").pop()?.toLowerCase()||"",i=(await b(t)).find(f=>f.password===c||f.uuid.replace(/-/g,"").slice(0,12)===c);if(!i)return g({error:"invalid token"},404);if((e.headers.get("Accept")||"").includes("text/html")){let f=new URL(e.url).origin;return new Response(Ut({name:i.name,active:!!i.active,quota:Number(i.quota)||0,used:Math.round((i.used||0)*100)/100,days:Number(i.days)||0,origin:f,token:c,version:Q,protocols:r.protocols}),{headers:{"content-type":"text/html; charset=utf-8"}})}let l=o==="yaml"||o==="yml",d=o==="json",u=l?Z(i,r):d?X(i,r):"vmess://"+O(i,r);return new Response(u,{headers:{"content-type":l?"text/yaml":d?"application/json":"text/plain"}})}async function oe(e,t,r){let n=(await b(e)).find(o=>o.uuid.toLowerCase()===r.toLowerCase());if(!n)return g({error:"unknown uuid"},404);let c="vmess://"+O(n,t);return new Response(c,{headers:{"content-type":"text/plain"}})}var Ht="https://raw.githubusercontent.com/NikaTeem/Nika-Net/main",_=null,Ct=0;async function ie(){if(_&&Date.now()-Ct<3e5)return _;try{let e=await fetch(`${Ht}/version.json`,{cf:{cacheTtl:300}});if(!e.ok)throw new Error("fetch failed");let t=await e.json();return _=t,Ct=Date.now(),t}catch{return{version:Q,notes:""}}}function ce(e,t){let r=e.split(".").map(n=>parseInt(n,10)||0),a=t.split(".").map(n=>parseInt(n,10)||0);for(let n=0;n<3;n++){let c=(r[n]||0)-(a[n]||0);if(c!==0)return c}return 0}async function le(e,t,r){if(!r||r.length<20)return{ok:!1,error:"token required"};let a=await H(r,"/user/tokens/verify");if(!a?.success)return{ok:!1,error:a?.errors?.[0]?.message||"\u062A\u0648\u06A9\u0646 \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A"};let c=(await H(r,"/accounts?per_page=50"))?.result?.[0]?.id;if(!c)return{ok:!1,error:"\u0627\u06A9\u0627\u0646\u062A\u06CC \u0628\u0627 \u0627\u06CC\u0646 \u062A\u0648\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F"};let o=(t.host||"").split(".")[0];if(!o)return{ok:!1,error:"\u0627\u0628\u062A\u062F\u0627 Host \u0648\u0631\u06A9\u0631 \u0631\u0627 \u062F\u0631 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0648\u0627\u0631\u062F \u06A9\u0646"};let s=await yt(r,c,[`nika-${o}-kv`,`${o}-kv`]),i=await fetch(`${Ht}/dist/worker.js`);if(!i.ok)return{ok:!1,error:"\u062F\u0631\u06CC\u0627\u0641\u062A \u0622\u062E\u0631\u06CC\u0646 \u0646\u0633\u062E\u0647 \u0645\u0645\u06A9\u0646 \u0646\u0634\u062F"};let p=await i.text(),d=await At(r,c,o,p,s?[{type:"kv_namespace",name:"NIKA_KV",namespace_id:s}]:[]);return d.ok?(await Et(r,c,o),await I(e,{icon:"\u{1F504}",text:"\u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),{ok:!0}):{ok:!1,error:d.err}}export{Le as default};
+`,Q="0.5.1",Bt=(e,t=200)=>new Response(e,{status:t,headers:{"content-type":"text/html; charset=utf-8"}});function re(e){return e.headers.set("access-control-allow-origin","*"),e}var Le={async fetch(e,t,r){try{pt(),r.waitUntil(dt(t));let a=new URL(e.url),n=a.pathname,c=await rt(t);if((e.headers.get("Upgrade")||"").toLowerCase()==="websocket")return ne(e,t,c);if(n==="/admin"||n==="/admin/")return Bt(Rt);if(n.startsWith("/api/"))return re(await ae(e,t,c,a));if(n.startsWith("/sub/"))return se(e,t,c,n);let o=n.match(/^\/([0-9a-fA-F-]{36})\/?$/);return o?oe(t,c,o[1]):n==="/health"?g({ok:!0,name:c.title}):c.host===L.host?Bt(Rt):Response.redirect("https://www.cloudflare.com",302)}catch(a){return g({error:String(a)},500)}}};async function ne(e,t,r){let a=new URL(e.url),n=a.searchParams.get("proto")||e.headers.get("x-nika-proto")||"",c=await b(t),o=a.searchParams.get("uuid")||"",s=c.find(i=>i.uuid.toLowerCase()===o.toLowerCase());return s?s.active?n==="trojan"?wt(e,s,r,t):xt(e,s,r,t):g({error:"user inactive"},403):g({error:"no user for this uuid"},403)}async function ae(e,t,r,a){let n=a.pathname.replace("/api/",""),c=e.method.toUpperCase();if(n==="info")return g({name:r.title,setup:!r.adminPassHash,protocols:r.protocols,version:Q});if(n==="update/check"){let o=await ie();return g({current:Q,latest:o.version,notes:o.notes||"",upToDate:ce(Q,o.version)>=0})}if(n==="login"&&c==="POST"){let s=(await e.json().catch(()=>({}))).password||"",i=!r.adminPassHash;if(i){if(!s||s.length<4)return g({error:"password too short"},400);r.adminPassHash=await J(s),await W(t,r)}if(!(r.adminPassHash===await J(s)))return g({error:"wrong password"},401);let l=await j(r.sessionSecret,JSON.stringify({t:Date.now()}));await I(t,{icon:i?"\u{1F6E0}":"\u{1F510}",text:i?"\u0646\u0635\u0628 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0646\u0644 \u2014 \u0631\u0645\u0632 \u0627\u062F\u0645\u06CC\u0646 \u062B\u0628\u062A \u0634\u062F":"\u0648\u0631\u0648\u062F \u0627\u062F\u0645\u06CC\u0646 \u0628\u0647 \u067E\u0646\u0644",time:Date.now()});let d=g({ok:!0,setup:i});return d.headers.set("set-cookie",`${z}=${encodeURIComponent(l)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),d}if(n==="logout"){let o=g({ok:!0});return o.headers.set("set-cookie",`${z}=; HttpOnly; Path=/; Max-Age=0`),o}if(!await ot(e,r))return g({error:"unauthorized"},401);switch(n){case"status":{let o=await b(t);return g({title:r.title,setup:!1,users:o.length,active:o.filter(s=>s.active).length,usedGb:Math.round(o.reduce((s,i)=>s+(i.used||0),0)*100)/100,requestsToday:await gt(t),requestsTotal:await ut(t),protocols:r.protocols,activity:await mt(t),traffic7d:await ft(t)})}case"users":{let o=await b(t);if(c==="GET")return g(o);if(c==="POST"){let s=await e.json().catch(()=>({})),i={id:crypto.randomUUID(),name:s.name||"\u06A9\u0627\u0631\u0628\u0631",uuid:crypto.randomUUID(),password:st(),quota:Number(s.quota)||50,used:0,days:Number(s.days)||30,active:!0,createdAt:Date.now()};return o.push(i),await v(t,o),await I(t,{icon:"\u{1F464}",text:`\u06A9\u0627\u0631\u0628\u0631 \u0633\u0627\u062E\u062A\u0647 \u0634\u062F \u2014 ${i.name}`,time:Date.now()}),g(i)}if(c==="DELETE"){let s=a.searchParams.get("id"),i=o.find(l=>l.id===s),p=o.filter(l=>l.id!==s);return await v(t,p),await I(t,{icon:"\u{1F5D1}",text:`\u06A9\u0627\u0631\u0628\u0631 \u062D\u0630\u0641 \u0634\u062F \u2014 ${i?.name||s}`,time:Date.now()}),g({ok:!0})}break}case"users/toggle":{if(c!=="POST")break;let o=await e.json().catch(()=>({})),s=await b(t),i=s.find(p=>p.id===o.id);return i?(i.active=!i.active,await v(t,s),await I(t,{icon:i.active?"\u{1F7E2}":"\u26D4",text:`${i.name} ${i.active?"\u0641\u0639\u0627\u0644":"\u063A\u06CC\u0631\u0641\u0639\u0627\u0644"} \u0634\u062F`,time:Date.now()}),g({ok:!0,active:i.active})):g({error:"not found"},404)}case"settings":{if(c==="GET")return g(r);if(c==="POST"){let o=await e.json().catch(()=>({})),s={...r};return typeof o.title=="string"&&(s.title=o.title),typeof o.host=="string"&&(s.host=o.host),typeof o.sni=="string"&&(s.sni=o.sni),typeof o.wsPath=="string"&&(s.wsPath=o.wsPath),Array.isArray(o.cleanIps)&&(s.cleanIps=o.cleanIps),o.protocols&&(s.protocols={...r.protocols,...o.protocols}),await W(t,s),await I(t,{icon:"\u2699\uFE0F",text:"\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),g({ok:!0})}break}case"gen":{let o=a.searchParams.get("id"),i=(await b(t)).find(p=>p.id===o);return i?g({user:{id:i.id,name:i.name,quota:i.quota,used:Math.round((i.used||0)*100)/100,days:i.days,active:i.active},base64:O(i,r),clash:Z(i,r),singbox:X(i,r),warp:r.protocols.warp?it(i):null}):g({error:"user not found"},404)}case"update/apply":{if(c!=="POST")break;let o=await e.json().catch(()=>({})),s=await le(t,r,o.token||"");return g(s,s.ok?200:400)}}return g({error:"not found"},404)}async function se(e,t,r,a){let n=a.replace("/sub/",""),c=n.split("/")[0].split(".")[0],o=n.split(".").pop()?.toLowerCase()||"",i=(await b(t)).find(f=>f.password===c||f.uuid.replace(/-/g,"").slice(0,12)===c);if(!i)return g({error:"invalid token"},404);if((e.headers.get("Accept")||"").includes("text/html")){let f=new URL(e.url).origin;return new Response(Ut({name:i.name,active:!!i.active,quota:Number(i.quota)||0,used:Math.round((i.used||0)*100)/100,days:Number(i.days)||0,origin:f,token:c,version:Q,protocols:r.protocols}),{headers:{"content-type":"text/html; charset=utf-8"}})}let l=o==="yaml"||o==="yml",d=o==="json",u=l?Z(i,r):d?X(i,r):"vmess://"+O(i,r);return new Response(u,{headers:{"content-type":l?"text/yaml":d?"application/json":"text/plain"}})}async function oe(e,t,r){let n=(await b(e)).find(o=>o.uuid.toLowerCase()===r.toLowerCase());if(!n)return g({error:"unknown uuid"},404);let c="vmess://"+O(n,t);return new Response(c,{headers:{"content-type":"text/plain"}})}var Ht="https://raw.githubusercontent.com/NikaTeem/Nika-Net/main",_=null,Ct=0;async function ie(){if(_&&Date.now()-Ct<3e5)return _;try{let e=await fetch(`${Ht}/version.json`,{cf:{cacheTtl:300}});if(!e.ok)throw new Error("fetch failed");let t=await e.json();return _=t,Ct=Date.now(),t}catch{return{version:Q,notes:""}}}function ce(e,t){let r=e.split(".").map(n=>parseInt(n,10)||0),a=t.split(".").map(n=>parseInt(n,10)||0);for(let n=0;n<3;n++){let c=(r[n]||0)-(a[n]||0);if(c!==0)return c}return 0}async function le(e,t,r){if(!r||r.length<20)return{ok:!1,error:"token required"};let a=await H(r,"/user/tokens/verify");if(!a?.success)return{ok:!1,error:a?.errors?.[0]?.message||"\u062A\u0648\u06A9\u0646 \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A"};let c=(await H(r,"/accounts?per_page=50"))?.result?.[0]?.id;if(!c)return{ok:!1,error:"\u0627\u06A9\u0627\u0646\u062A\u06CC \u0628\u0627 \u0627\u06CC\u0646 \u062A\u0648\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F"};let o=(t.host||"").split(".")[0];if(!o)return{ok:!1,error:"\u0627\u0628\u062A\u062F\u0627 Host \u0648\u0631\u06A9\u0631 \u0631\u0627 \u062F\u0631 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0648\u0627\u0631\u062F \u06A9\u0646"};let s=await yt(r,c,[`nika-${o}-kv`,`${o}-kv`]),i=await fetch(`${Ht}/dist/worker.js`);if(!i.ok)return{ok:!1,error:"\u062F\u0631\u06CC\u0627\u0641\u062A \u0622\u062E\u0631\u06CC\u0646 \u0646\u0633\u062E\u0647 \u0645\u0645\u06A9\u0646 \u0646\u0634\u062F"};let p=await i.text(),d=await At(r,c,o,p,s?[{type:"kv_namespace",name:"NIKA_KV",namespace_id:s}]:[]);return d.ok?(await Et(r,c,o),await I(e,{icon:"\u{1F504}",text:"\u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),{ok:!0}):{ok:!1,error:d.err}}export{Le as default};

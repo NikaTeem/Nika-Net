@@ -32,19 +32,13 @@ const I18N = {
     "login.hintPass": "رمز عبور ادمین را وارد کن",
     "login.hintPreview": "این پیش‌نمایش فایل است — برای دادهٔ واقعی، پنل را از آدرس زندهٔ ورکر باز کن",
     "login.wrong": "رمز اشتباه است", "login.short": "رمز باید حداقل ۴ کاراکتر باشد",
-    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات", "nav.scan": "اسکنر IP", "nav.upd": "بروزرسانی",
+    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.settings": "تنظیمات", "nav.scan": "اسکنر IP", "nav.upd": "بروزرسانی",
     "stat.users": "کاربران", "stat.active": "فعال", "stat.req": "درخواست امروز", "stat.gig": "گیگابایت مصرف", "stat.proto": "پروتکل فعال",
     "dash.traffic": "ترافیک (۷ روز اخیر)", "dash.gb": "بر حسب گیگابایت", "dash.usage": "مصرف", "dash.activity": "فعالیت‌های اخیر",
     "dash.today": "امروز", "dash.nochart": "هنوز دادهٔ ترافیکی ثبت نشده است", "act.empty": "هنوز فعالیتی ثبت نشده است",
     "users.title": "مدیریت کاربران", "users.add": "+ کاربر جدید", "users.name": "نام", "users.status": "وضعیت", "users.used": "مصرف", "users.expiry": "انقضا",
     "users.empty": "هنوز کاربری نیست — اول یک کاربر بساز",
-    "u.active": "فعال", "u.inactive": "غیرفعال", "u.expired": "منقضی", "u.sub": "اشتراک", "u.del": "حذف",
-    "sub.title": "ساخت کانفیگ اشتراک", "sub.user": "کاربر", "sub.userD": "انتخاب کاربر برای نمایش کانفیگ",
-    "sub.vless": "VLESS", "sub.vlessD": "پروتکل اصلی — روی WebSocket + TLS",
-    "sub.trojan": "Trojan", "sub.trojanD": "پروتکل دوم — استتار بهتر",
-    "sub.warp": "WARP", "sub.warpD": "پشتیبانی از تماس‌ها (UDP) و شرایط بحرانی",
-    "sub.preview": "پیش‌نمایش کانفیگ", "sub.previewD": "خروجی برای کلاینت‌ها", "sub.copy": "کپی", "sub.gen": "تولید مجدد",
-    "sub.empty": "هنوز کاربری نساختی — اول از بخش «کاربران» یک کاربر بساز",
+    "u.active": "فعال", "u.inactive": "غیرفعال", "u.expired": "منقضی", "u.openStatus": "باز کردن صفحه وضعیت کاربر", "u.del": "حذف",
     "set.general": "عمومی", "set.title": "عنوان پنل", "set.host": "دامنه / Host ورکر", "set.sni": "SNI / Host جعلی",
     "set.wsPath": "مسیر WebSocket", "set.security": "امنیت", "set.newpass": "رمز عبور جدید", "set.brute": "محافظت Brute-Force",
     "set.bruteD": "مسدودسازی موقت بعد از تلاش ناموفق", "set.cleanip": "IP های تمیز", "set.cleanipD": "هر خط یک IP", "set.save": "ذخیره تنظیمات",
@@ -53,8 +47,8 @@ const I18N = {
     "toast.copied": "کپی شد ✓", "toast.saved": "ذخیره شد ✓", "toast.deleted": "حذف شد", "toast.gen": "کانفیگ به‌روز شد ✓",
     "toast.toggled": "وضعیت تغییر کرد", "toast.preview": "در پیش‌نمایش، اتصال به سرور نیست",
     "common.error": "خطا در دریافت اطلاعات", "common.loading": "در حال بارگذاری…",
-    "page.dash": "داشبورد", "page.dashD": "نمای کلی وضعیت پنل", "page.users": "کاربران", "page.usersD": "مدیریت کاربران و اشتراک‌ها",
-    "page.sub": "اشتراک", "page.subD": "ساخت و پیش‌نمایش کانفیگ", "page.set": "تنظیمات", "page.setD": "پیکربندی پنل و امنیت",
+    "page.dash": "داشبورد", "page.dashD": "نمای کلی وضعیت پنل", "page.users": "کاربران", "page.usersD": "Manage users & their status",
+    "page.set": "تنظیمات", "page.setD": "پیکربندی پنل و امنیت",
   },
   en: {
     dir: "ltr", lang: "en",
@@ -64,19 +58,13 @@ const I18N = {
     "login.hintPass": "Enter the admin password",
     "login.hintPreview": "This is a static preview — open the live panel URL for real data",
     "login.wrong": "Wrong password", "login.short": "Password must be at least 4 characters",
-    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings", "nav.scan": "IP Scanner", "nav.upd": "Update",
+    "nav.dash": "Dashboard", "nav.users": "Users", "nav.settings": "Settings", "nav.scan": "IP Scanner", "nav.upd": "Update",
     "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
     "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
     "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
     "users.title": "User management", "users.add": "+ Add user", "users.name": "Name", "users.status": "Status", "users.used": "Usage", "users.expiry": "Expiry",
     "users.empty": "No users yet — create your first user",
-    "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.sub": "Sub", "u.del": "Delete",
-    "sub.title": "Build subscription config", "sub.user": "User", "sub.userD": "Pick a user to show their config",
-    "sub.vless": "VLESS", "sub.vlessD": "Primary protocol — over WebSocket + TLS",
-    "sub.trojan": "Trojan", "sub.trojanD": "Secondary protocol — better stealth",
-    "sub.warp": "WARP", "sub.warpD": "Calls (UDP) support & critical situations",
-    "sub.preview": "Config preview", "sub.previewD": "Output for clients", "sub.copy": "Copy", "sub.gen": "Regenerate",
-    "sub.empty": "No users yet — create one under Users first",
+    "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.openStatus": "Open user status page", "u.del": "Delete",
     "set.general": "General", "set.title": "Panel title", "set.host": "Worker domain / host", "set.sni": "Fake SNI / Host",
     "set.wsPath": "WebSocket path", "set.security": "Security", "set.newpass": "New password", "set.brute": "Brute-force protection",
     "set.bruteD": "Temporary block after failed attempts", "set.cleanip": "Clean IPs", "set.cleanipD": "One IP per line", "set.save": "Save settings",
@@ -86,7 +74,7 @@ const I18N = {
     "toast.toggled": "Status changed", "toast.preview": "No server connection in preview mode",
     "common.error": "Failed to load", "common.loading": "Loading…",
     "page.dash": "Dashboard", "page.dashD": "Panel status overview", "page.users": "Users", "page.usersD": "Manage users & subscriptions",
-    "page.sub": "Subscription", "page.subD": "Build & preview configs", "page.set": "Settings", "page.setD": "Panel config & security",
+    "page.set": "Settings", "page.setD": "Panel config & security",
   },
 };
 let LANG = store.getItem("nn_lang") || "fa";
@@ -186,9 +174,8 @@ $("#langBtn").onclick = () => { LANG = LANG === "fa" ? "en" : "fa"; store.setIte
 let MODE = "preview"; // "live" | "preview"
 let SETUP = false;
 let currentPage = "dashboard";
-let currentFmt = "base64";
 let proto = { vless: true, trojan: true, warp: true };
-const state = { status: null, users: [], settings: null, selectedUserId: null, gen: null };
+const state = { status: null, users: [], settings: null };
 
 /* ---------- api ---------- */
 async function api(path, opts = {}) {
@@ -266,7 +253,7 @@ $("#loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") doLo
 
 $("#logoutBtn").onclick = async () => {
   if (MODE === "live") { try { await api("/api/logout", { method: "POST" }); } catch (e) {} }
-  state.status = null; state.users = []; state.settings = null; state.selectedUserId = null; state.gen = null;
+  state.status = null; state.users = []; state.settings = null;
   showLogin();
 };
 
@@ -282,24 +269,20 @@ async function loadAll() {
     state.users = Array.isArray(us) ? us : [];
     state.settings = se;
     if (se && se.protocols) proto = se.protocols;
-    syncProtoToggles();
-    if (!state.selectedUserId && state.users.length) state.selectedUserId = state.users[0].id;
-    if (state.selectedUserId && !state.users.find((u) => u.id === state.selectedUserId)) state.selectedUserId = state.users[0] ? state.users[0].id : null;
     renderDashboard();
     renderUsers();
-    renderSub();
   } catch (e) {
     toast(t("common.error"));
   }
 }
 
 /* ---------- navigation ---------- */
-const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set", scanner: "page.scanner", update: "page.update" };
-const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD", scanner: "page.scannerD", update: "page.updateD" };
+const PAGES = { dashboard: "page.dash", users: "page.users", settings: "page.set", scanner: "page.scanner", update: "page.update" };
+const DESCS = { dashboard: "page.dashD", users: "page.usersD", settings: "page.setD", scanner: "page.scannerD", update: "page.updateD" };
 function setPage(p) {
   currentPage = p;
   $$("#nav .nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === p));
-  ["dashboard", "users", "subscription", "settings", "scanner", "update"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
+  ["dashboard", "users", "settings", "scanner", "update"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
   $("#pageTitle").textContent = t(PAGES[p]);
   $("#pageDesc").textContent = t(DESCS[p]);
   if (p === "settings") fillSettingsForm();
@@ -370,12 +353,11 @@ function renderUsers() {
       const pct = quota > 0 ? Math.min(100, (used / quota) * 100) : 0;
       const exp = (Number(u.days) || 0) > 0 ? `${u.days} ${t("m.days").toLowerCase()}` : t("u.expired");
       return `<tr>
-        <td><b>${escHtml(u.name)}</b></td>
+        <td><b>${escHtml(u.name)}</b><div style="margin-top:6px"><a class="btn btn-ghost" style="padding:6px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;text-decoration:none" href="/sub/${escHtml(userToken(u))}" target="_blank" rel="noopener">👁 <span>${t("u.openStatus")}</span></a></div></td>
         <td><span class="badge ${u.active ? "ok" : "off"}" style="cursor:pointer" onclick="toggleUser('${u.id}')"><span class="dot"></span>${t(u.active ? "u.active" : "u.inactive")}</span></td>
         <td><div>${used.toFixed(2)} / ${quota} GB</div><div class="progress"><div style="width:${pct}%"></div></div></td>
         <td>${exp}</td>
         <td style="white-space:nowrap">
-          <button class="btn btn-ghost" style="padding:7px 12px;font-size:11.5px" onclick="subFor('${u.id}')">🔗 ${t("u.sub")}</button>
           <button class="btn btn-danger" style="padding:7px 12px;font-size:11.5px" onclick="delUser('${u.id}')">✕</button>
         </td></tr>`;
     })
@@ -396,10 +378,10 @@ async function delUser(id) {
   else toast(t("common.error"));
 }
 
-function subFor(id) {
-  state.selectedUserId = id;
-  setPage("subscription");
-  renderSub();
+function userToken(u) {
+  const pw = (u.password && String(u.password).trim()) || "";
+  if (pw) return pw;
+  return String(u.uuid || "").replace(/-/g, "").slice(0, 12);
 }
 
 /* ---------- add user modal ---------- */
@@ -431,76 +413,6 @@ function openAddUser() {
 }
 $("#addUserBtn").onclick = openAddUser;
 $("#modalBack").onclick = (e) => { if (e.target.id === "modalBack") $("#modalBack").classList.add("hidden"); };
-
-/* ---------- subscription ---------- */
-async function renderSub() {
-  syncProtoToggles();
-  const sel = $("#subUserSel");
-  if (sel) {
-    sel.innerHTML = state.users.map((u) => `<option value="${u.id}">${escHtml(u.name)}</option>`).join("");
-    if (state.selectedUserId) sel.value = state.selectedUserId;
-  }
-  if (!state.users.length) {
-    $("#fmtOut").textContent = t("sub.empty");
-    $("#copyBtn").disabled = true;
-    return;
-  }
-  $("#copyBtn").disabled = false;
-  await loadGen();
-}
-
-async function loadGen() {
-  const id = state.selectedUserId || (state.users[0] && state.users[0].id);
-  if (!id) return;
-  try {
-    const res = await api("/api/gen?id=" + encodeURIComponent(id));
-    if (!res.ok) { $("#fmtOut").textContent = t("common.error"); return; }
-    state.gen = await res.json();
-    renderFmt();
-  } catch (e) {
-    $("#fmtOut").textContent = t("common.error");
-  }
-}
-
-function renderFmt() {
-  const g = state.gen || {};
-  const map = {
-    base64: "vmess://" + (g.base64 || ""),
-    clash: g.clash || "",
-    singbox: g.singbox || "",
-    warp: g.warp || `# WARP ${LANG === "fa" ? "غیرفعال است" : "disabled"}`,
-  };
-  $("#fmtOut").textContent = map[currentFmt] || "";
-}
-
-function syncProtoToggles() {
-  $$(".toggle[data-p]").forEach((el) => {
-    const p = el.dataset.p;
-    el.classList.toggle("on", !!proto[p]);
-  });
-}
-
-async function toggleProto(el) {
-  const p = el.dataset.p;
-  el.classList.toggle("on");
-  proto[p] = el.classList.contains("on");
-  if (MODE === "live") {
-    const res = await api("/api/settings", { method: "POST", body: { protocols: proto } });
-    if (res.ok) { toast(t("toast.saved")); await loadGen(); }
-    else { el.classList.toggle("on"); proto[p] = !proto[p]; }
-  }
-}
-
-$$("#fmtTabs .tab").forEach((b) => (b.onclick = () => {
-  currentFmt = b.dataset.fmt;
-  $$("#fmtTabs .tab").forEach((x) => x.classList.toggle("active", x === b));
-  renderFmt();
-}));
-$("#copyBtn").onclick = async () => {
-  try { await navigator.clipboard.writeText($("#fmtOut").textContent); toast(t("toast.copied")); }
-  catch (e) { toast("✕"); }
-};
-$("#refreshBtn").onclick = () => { loadGen(); toast(t("toast.gen")); };
 
 /* ---------- settings ---------- */
 function fillSettingsForm() {
