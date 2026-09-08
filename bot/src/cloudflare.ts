@@ -45,6 +45,14 @@ export async function registerSubdomain(
   return { ok: !!r?.success, err: r?.errors?.[0]?.message };
 }
 
+export async function findKvId(token: string, accountId: string, titles: string[]): Promise<string | null> {
+  const r = await cfReq(token, `/accounts/${accountId}/storage/kv/namespaces?per_page=100`);
+  for (const ns of r?.result || []) {
+    if (titles.includes(ns.title)) return ns.id;
+  }
+  return null;
+}
+
 export async function createKvNamespace(
   token: string,
   accountId: string,

@@ -4,4 +4,5 @@ export interface Env {
   WEBHOOK_SECRET: string;
   NIKA_SECRET: string;
   BOT_KV: KVNamespace;
+  BOT_ADMIN_KEY?: string;
 }

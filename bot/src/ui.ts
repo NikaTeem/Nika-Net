@@ -42,7 +42,7 @@ export function menu(s: UserState, firstName?: string): { text: string; kb: Kb }
     `🛠 <b>پنل‌های ساخته‌شده:</b> ${s.panels.length}\n`;
   const kbRows: Kb = kb([
     [{ text: "🔑 لینک مستقیم توکن", url: tokenUrl() }],
-    [{ text: "🚀 ساخت پنل جدید", cb: "build" }],
+    [{ text: "🚀 ساخت پنل جدید", cb: "build" }, { text: "🔄 بروزرسانی پنل‌ها", cb: "update" }],
     [{ text: "🗂 پنل‌های من", cb: "panels" }, { text: "🛠 تنظیمات", cb: "settings" }],
     [{ text: "ℹ️ راهنما", cb: "help" }],
   ]);
@@ -171,6 +171,23 @@ export function settings(s: UserState): { text: string; kb: Kb } {
 }
 
 export const tokenDeleted = (): string => `🗑 توکن ذخیره‌شده حذف شد.\nبرای ساخت پنل بعدی دوباره توکن می‌خوام.`;
+
+/* ---------- بروزرسانی پنل‌ها ---------- */
+export const updateUpgrading = (n: number): string =>
+  `🔄 <b>در حال بروزرسانی ${n} پنل…</b>\n${DIV}\nچند ثانیه طول می‌کشه ✏️`;
+
+export function updateDone(results: Array<{ name: string; ok: boolean }>): string {
+  const lines = results
+    .map((r) => `${r.ok ? "✅" : "❌"} <code>${esc(r.name)}</code>`)
+    .join("\n");
+  const okCount = results.filter((r) => r.ok).length;
+  return `🔄 <b>نتیجهٔ بروزرسانی</b>\n${DIV}\n${lines}\n\n${okCount} از ${results.length} پنل با موفقیت به‌روزرسانی شد.`;
+}
+
+export const updateNoPanels = (): { text: string; kb: Kb } => ({
+  text: `🗂 هنوز پنلی نساختی که بخواد بروزرسانی بشه!\nاول «🚀 ساخت پنل جدید» بزن.`,
+  kb: kb([[{ text: "🚀 ساخت پنل جدید", cb: "build" }], [{ text: "🔙 منوی اصلی", cb: "menu" }]]),
+});
 
 /* ---------- راهنما ---------- */
 export const help = (): { text: string; kb: Kb } => ({

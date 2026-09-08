@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { build } from "esbuild";
+import pkg from "../package.json" with { type: "json" };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -22,6 +23,7 @@ const result = await build({
   external: ["cloudflare:sockets"],
   define: {
     PANEL_HTML: JSON.stringify(html),
+    NIKA_VERSION: JSON.stringify(pkg.version),
   },
   legalComments: "none",
 });

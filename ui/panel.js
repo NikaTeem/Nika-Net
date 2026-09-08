@@ -32,7 +32,7 @@ const I18N = {
     "login.hintPass": "رمز عبور ادمین را وارد کن",
     "login.hintPreview": "این پیش‌نمایش فایل است — برای دادهٔ واقعی، پنل را از آدرس زندهٔ ورکر باز کن",
     "login.wrong": "رمز اشتباه است", "login.short": "رمز باید حداقل ۴ کاراکتر باشد",
-    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات", "nav.scan": "اسکنر IP",
+    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات", "nav.scan": "اسکنر IP", "nav.upd": "بروزرسانی",
     "stat.users": "کاربران", "stat.active": "فعال", "stat.req": "درخواست امروز", "stat.gig": "گیگابایت مصرف", "stat.proto": "پروتکل فعال",
     "dash.traffic": "ترافیک (۷ روز اخیر)", "dash.gb": "بر حسب گیگابایت", "dash.usage": "مصرف", "dash.activity": "فعالیت‌های اخیر",
     "dash.today": "امروز", "dash.nochart": "هنوز دادهٔ ترافیکی ثبت نشده است", "act.empty": "هنوز فعالیتی ثبت نشده است",
@@ -64,7 +64,7 @@ const I18N = {
     "login.hintPass": "Enter the admin password",
     "login.hintPreview": "This is a static preview — open the live panel URL for real data",
     "login.wrong": "Wrong password", "login.short": "Password must be at least 4 characters",
-    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings", "nav.scan": "IP Scanner",
+    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings", "nav.scan": "IP Scanner", "nav.upd": "Update",
     "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
     "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
     "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
@@ -93,6 +93,75 @@ let LANG = store.getItem("nn_lang") || "fa";
 const t = (k) => (I18N[LANG] && I18N[LANG][k]) || I18N.fa[k] || k;
 const escHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const num = (n) => (n == null ? 0 : n).toLocaleString(LANG === "fa" ? "fa-IR" : "en-US");
+
+/* ---------- update page i18n ---------- */
+I18N.fa["upd.title"] = "بروزرسانی پنل";
+I18N.fa["upd.current"] = "نسخه فعلی";
+I18N.fa["upd.latest"] = "آخرین نسخه";
+I18N.fa["upd.notes"] = "تغییرات";
+I18N.fa["upd.check"] = "بررسی بروزرسانی";
+I18N.fa["upd.uptodate"] = "پنل به‌روز است ✓";
+I18N.fa["upd.available"] = "بروزرسانی جدید موجود است!";
+I18N.fa["upd.apply"] = "بروزرسانی کن";
+I18N.fa["upd.applying"] = "در حال بروزرسانی…";
+I18N.fa["upd.done"] = "بروزرسانی انجام شد ✓";
+I18N.fa["upd.err"] = "خطا در بروزرسانی";
+I18N.fa["upd.token"] = "توکن Cloudflare";
+I18N.fa["upd.tokenD"] = "برای بروزرسانی خودکار، توکن اکانت Cloudflare را وارد کن";
+I18N.fa["upd.bot"] = "یا از طریق ربات بروزرسانی کن";
+I18N.fa["page.update"] = "بروزرسانی";
+I18N.fa["page.updateD"] = "بررسی و نصب آخرین نسخهٔ پنل";
+I18N.en["upd.title"] = "Panel update";
+I18N.en["upd.current"] = "Current version";
+I18N.en["upd.latest"] = "Latest version";
+I18N.en["upd.notes"] = "What's new";
+I18N.en["upd.check"] = "Check for updates";
+I18N.en["upd.uptodate"] = "Panel is up to date ✓";
+I18N.en["upd.available"] = "New update available!";
+I18N.en["upd.apply"] = "Update now";
+I18N.en["upd.applying"] = "Updating…";
+I18N.en["upd.done"] = "Update complete ✓";
+I18N.en["upd.err"] = "Update failed";
+I18N.en["upd.token"] = "Cloudflare token";
+I18N.en["upd.tokenD"] = "To self-update, paste your Cloudflare account token";
+I18N.en["upd.bot"] = "Or update via the bot";
+I18N.en["page.update"] = "Update";
+I18N.en["page.updateD"] = "Check & install the latest panel version";
+
+let updState = { current: "—", latest: "—", upToDate: false, notes: "" };
+async function checkUpdate() {
+  if (MODE !== "live") { updState = { current: "preview", latest: "—", upToDate: true, notes: t("toast.preview") }; renderUpdate(); return; }
+  try {
+    const res = await api("/api/update/check");
+    const d = await res.json().catch(() => ({}));
+    updState = d;
+    renderUpdate();
+  } catch (e) { updState = { current: "—", latest: "—", upToDate: false, notes: t("common.error") }; renderUpdate(); }
+}
+function renderUpdate() {
+  $("#updCurrent").textContent = updState.current || "—";
+  $("#updLatest").textContent = updState.latest || "—";
+  $("#updNotes").textContent = updState.notes || "—";
+  const st = $("#updStatus");
+  st.textContent = updState.upToDate ? t("upd.uptodate") : t("upd.available");
+  st.className = "upd-status " + (updState.upToDate ? "ok" : "warn");
+  $("#updApply").disabled = !!updState.upToDate;
+}
+async function applyUpdate() {
+  if (MODE !== "live") { toast(t("toast.preview")); return; }
+  const token = $("#updToken").value.trim();
+  if (!token) { toast(t("upd.token")); return; }
+  const btn = $("#updApply"); btn.disabled = true;
+  $("#updApplyLbl").textContent = t("upd.applying");
+  try {
+    const res = await api("/api/update/apply", { method: "POST", body: { token } });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok && d.ok) { toast(t("upd.done")); await checkUpdate(); }
+    else toast(d.error || t("upd.err"));
+  } catch (e) { toast(t("upd.err")); }
+  btn.disabled = false;
+  $("#updApplyLbl").textContent = t("upd.apply");
+}
 
 function applyLang() {
   const d = I18N[LANG];
@@ -225,16 +294,17 @@ async function loadAll() {
 }
 
 /* ---------- navigation ---------- */
-const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set", scanner: "page.scanner" };
-const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD", scanner: "page.scannerD" };
+const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set", scanner: "page.scanner", update: "page.update" };
+const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD", scanner: "page.scannerD", update: "page.updateD" };
 function setPage(p) {
   currentPage = p;
   $$("#nav .nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === p));
-  ["dashboard", "users", "subscription", "settings", "scanner"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
+  ["dashboard", "users", "subscription", "settings", "scanner", "update"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
   $("#pageTitle").textContent = t(PAGES[p]);
   $("#pageDesc").textContent = t(DESCS[p]);
   if (p === "settings") fillSettingsForm();
   if (p === "scanner" && typeof SCANNER !== "undefined") SCANNER.onOpen();
+  if (p === "update") checkUpdate();
 }
 $$("#nav .nav-item").forEach((b) => (b.onclick = () => setPage(b.dataset.page)));
 
@@ -454,6 +524,9 @@ $("#saveBtn").onclick = async () => {
   if (res.ok) { toast(t("toast.saved")); await loadAll(); }
   else toast(t("common.error"));
 };
+
+$("#updCheck").onclick = checkUpdate;
+$("#updApply").onclick = applyUpdate;
 
 /* ---------- boot ---------- */
 init();

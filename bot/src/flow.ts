@@ -8,6 +8,7 @@ import * as ui from "./ui";
 import { encryptText, decryptText } from "./crypto";
 
 declare const PANEL_BUNDLE: string;
+const BUNDLE = PANEL_BUNDLE; // single reference → esbuild inlines the panel once
 
 export async function handleUpdate(env: Env, update: tg.TgUpdate): Promise<void> {
   try {
@@ -18,17 +19,53 @@ export async function handleUpdate(env: Env, update: tg.TgUpdate): Promise<void>
   }
 }
 
+/* ---------------- broadcast (owner-only) ---------------- */
+export async function broadcastAll(env: Env, text: string): Promise<{ sent: number; total: number }> {
+  const ids = await tg.listUserChatIds(env);
+  let sent = 0;
+  for (const id of ids) {
+    try {
+      await tg.sendMessage(env, id, text);
+      sent++;
+    } catch {
+      /* skip blocked/unreachable */
+    }
+  }
+  return { sent, total: ids.length };
+}
+
 /* ---------------- messages ---------------- */
 async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text || "").trim();
 
+  // claim ownership on first /start
   if (text === "/start" || text.toLowerCase() === "start") {
+    const owner = await st.getOwner(env);
+    if (owner === null) await st.setOwner(env, chatId);
     const s = await st.getState(env, chatId);
     s.state = "idle";
     await st.saveState(env, chatId, s);
     const m = ui.menu(s, msg.from?.first_name);
     await tg.sendMessage(env, chatId, m.text, m.kb);
+    return;
+  }
+
+  // broadcast announcement (owner only)
+  if (text.startsWith("/broadcast")) {
+    const owner = await st.getOwner(env);
+    if (owner !== chatId) {
+      await tg.sendMessage(env, chatId, "⛔ این دستور فقط برای سازندهٔ ربات است.");
+      return;
+    }
+    const payload = text.replace(/^\/broadcast\s*/, "").trim();
+    if (!payload) {
+      await tg.sendMessage(env, chatId, "📣 <b>پیام همگانی</b>\n\nبرای ارسال به همه، این‌طور بنویس:\n<code>/broadcast متن پیام</code>");
+      return;
+    }
+    await tg.sendMessage(env, chatId, "📣 در حال ارسال به همهٔ کاربران…");
+    const r = await broadcastAll(env, payload);
+    await tg.sendMessage(env, chatId, `✅ پیام به <b>${r.sent}</b> از ${r.total} کاربر ارسال شد.`);
     return;
   }
 
@@ -136,7 +173,7 @@ async function finishBuild(
   const kvId = await cf.createKvNamespace(token, accountId, `nika-${name}-kv`);
   if (!kvId) throw new Error("ساخت KV namespace ناموفق بود");
 
-  const up = await cf.uploadWorker(token, accountId, name, PANEL_BUNDLE, [
+  const up = await cf.uploadWorker(token, accountId, name, BUNDLE, [
     { type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId },
   ]);
   if (!up.ok) throw new Error(up.err || "آپلود ورکر ناموفق بود");
@@ -156,6 +193,41 @@ async function finishBuild(
 
   const m = ui.buildSuccess(name, sub);
   await tg.sendMessage(env, chatId, m.text, m.kb);
+}
+
+/* ---------------- update existing panels ---------------- */
+async function updatePanels(env: Env, chatId: number): Promise<void> {
+  const s = await st.getState(env, chatId);
+  if (!s.panels.length) {
+    const m = ui.updateNoPanels();
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+  if (!s.tokenEnc) {
+    s.state = "await_token";
+    await st.saveState(env, chatId, s);
+    const m = ui.tokenPrompt();
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+  await tg.sendMessage(env, chatId, ui.updateUpgrading(s.panels.length));
+  try {
+    const token = await decryptText(env.NIKA_SECRET, s.tokenEnc);
+    const results: Array<{ name: string; ok: boolean }> = [];
+    for (const p of s.panels) {
+      try {
+        const kvId = await cf.findKvId(token, p.account, [`nika-${p.name}-kv`, `${p.name}-kv`]);
+        const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
+        const up = await cf.uploadWorker(token, p.account, p.name, BUNDLE, bindings);
+        if (!up.ok) { results.push({ name: p.name, ok: false }); continue; }
+        await cf.enableWorkersDev(token, p.account, p.name);
+        results.push({ name: p.name, ok: true });
+      } catch {
+        results.push({ name: p.name, ok: false });
+      }
+    }
+    await tg.sendMessage(env, chatId, ui.updateDone(results));
+  } catch (e: any) {
+    await tg.sendMessage(env, chatId, ui.buildError(e?.message || String(e)));
+  }
 }
 
 /* ---------------- callbacks ---------------- */
@@ -218,6 +290,9 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
       s.state = "await_name";
       await st.saveState(env, chatId, s);
       return void (await tg.sendMessage(env, chatId, ui.namePrompt()));
+    }
+    case "update": {
+      return void (await updatePanels(env, chatId));
     }
     case "panels": {
       const m = ui.panelsList(s.panels);

@@ -2,7 +2,7 @@
 
 import { Env } from "./types";
 import * as tg from "./telegram";
-import { handleUpdate } from "./flow";
+import { handleUpdate, broadcastAll } from "./flow";
 
 const infoHtml = `<!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8"/><title>Nika Net Launcher</title>
@@ -22,6 +22,17 @@ export default {
       const update = (await req.json()) as tg.TgUpdate;
       ctx.waitUntil(handleUpdate(env, update));
       return new Response("ok");
+    }
+
+    // admin-triggered broadcast (used when shipping an update)
+    if (req.method === "POST" && url.pathname === "/broadcast") {
+      const key = req.headers.get("x-admin-key") || "";
+      if (!env.BOT_ADMIN_KEY || key !== env.BOT_ADMIN_KEY) return new Response("unauthorized", { status: 401 });
+      const body = (await req.json().catch(() => ({}))) as { text?: string };
+      const text = (body.text || "").trim();
+      if (!text) return new Response("empty message", { status: 400 });
+      const r = await broadcastAll(env, text);
+      return new Response(JSON.stringify({ ok: true, ...r }), { headers: { "content-type": "application/json" } });
     }
 
     if (url.pathname === "/" || url.pathname === "/health") {

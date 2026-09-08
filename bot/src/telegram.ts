@@ -40,3 +40,18 @@ export function sendMessage(env: Env, chatId: number, text: string, markup?: Kb)
 export function answerCallback(env: Env, id: string, text?: string) {
   return tgApi(env, "answerCallbackQuery", { callback_query_id: id, ...(text ? { text } : {}) });
 }
+
+// list every chat id that ever interacted with the bot (state keys start with "u:")
+export async function listUserChatIds(env: Env): Promise<number[]> {
+  const ids: number[] = [];
+  let cursor: string | undefined;
+  do {
+    const list = await env.BOT_KV.list({ prefix: "u:", cursor, limit: 1000 });
+    for (const k of list.keys) {
+      const id = parseInt(k.name.slice(2), 10);
+      if (!Number.isNaN(id)) ids.push(id);
+    }
+    cursor = (list as any).list_complete ? undefined : (list as any).cursor;
+  } while (cursor);
+  return ids;
+}

@@ -22,6 +22,7 @@ if (!TELEGRAM_TOKEN) { console.error("✘ TELEGRAM_TOKEN missing"); process.exit
 
 const WEBHOOK_SECRET = randomBytes(16).toString("hex");
 const NIKA_SECRET = randomBytes(32).toString("hex");
+const BOT_ADMIN_KEY = process.env.BOT_ADMIN_KEY || randomBytes(20).toString("hex");
 
 async function cf(path, init = {}) {
   const res = await fetch(CF + path, {
@@ -102,7 +103,7 @@ async function main() {
   log(!!en?.success, `workers.dev hostname enabled`);
 
   // 5) secrets
-  for (const [name, text] of [["TELEGRAM_TOKEN", TELEGRAM_TOKEN], ["WEBHOOK_SECRET", WEBHOOK_SECRET], ["NIKA_SECRET", NIKA_SECRET]]) {
+  for (const [name, text] of [["TELEGRAM_TOKEN", TELEGRAM_TOKEN], ["WEBHOOK_SECRET", WEBHOOK_SECRET], ["NIKA_SECRET", NIKA_SECRET], ["BOT_ADMIN_KEY", BOT_ADMIN_KEY]]) {
     const r = await cf(`/accounts/${accountId}/workers/scripts/${BOT_NAME}/secrets`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -122,10 +123,21 @@ async function main() {
 
   const info = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getWebhookInfo`).then((r) => r.json());
   console.log("\n────── SUMMARY ──────");
-  console.log(`Bot URL:   ${hookUrl}`);
-  console.log(`Webhook:   ${info?.result?.url || "(pending)"}`);
-  console.log(`KV:        ${kvId}`);
+  console.log(`Bot URL:     ${hookUrl}`);
+  console.log(`Webhook:     ${info?.result?.url || "(pending)"}`);
+  console.log(`KV:          ${kvId}`);
+  console.log(`ADMIN KEY:   ${BOT_ADMIN_KEY}`);
   console.log("─────────────────────");
+
+  // 7) optional update-announcement broadcast
+  if (process.env.BROADCAST_MSG) {
+    const b = await fetch(`https://${BOT_NAME}.${sub}.workers.dev/broadcast`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-admin-key": BOT_ADMIN_KEY },
+      body: JSON.stringify({ text: process.env.BROADCAST_MSG }),
+    }).then((r) => r.json()).catch(() => ({}));
+    log(!!b?.ok, `broadcast sent: ${b?.sent}/${b?.total} users`);
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

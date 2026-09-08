@@ -40,3 +40,13 @@ export async function getState(env: Env, chatId: number): Promise<UserState> {
 export async function saveState(env: Env, chatId: number, s: UserState): Promise<void> {
   await env.BOT_KV.put(PREFIX + chatId, JSON.stringify(s));
 }
+
+/* ---------- owner (first user to /start) ---------- */
+export async function getOwner(env: Env): Promise<number | null> {
+  const raw = await env.BOT_KV.get("owner");
+  return raw ? parseInt(raw, 10) : null;
+}
+
+export async function setOwner(env: Env, chatId: number): Promise<void> {
+  await env.BOT_KV.put("owner", String(chatId));
+}

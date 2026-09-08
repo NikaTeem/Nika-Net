@@ -16,9 +16,13 @@ import * as metrics from "./metrics";
 import { handleVless } from "./protocols/vless";
 import { handleTrojan } from "./protocols/trojan";
 import { jsonResp } from "./protocols/common";
+import * as cf from "./cloudflare";
 
 declare const PANEL_HTML: string;
 const PANEL = PANEL_HTML; // single reference so esbuild inlines the HTML exactly once
+
+declare const NIKA_VERSION: string;
+const CUR_VERSION = NIKA_VERSION || "0.4.0";
 
 const html = (body: string, status = 200) =>
   new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
@@ -94,6 +98,18 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
       name: settings.title,
       setup: !settings.adminPassHash,
       protocols: settings.protocols,
+      version: CUR_VERSION,
+    });
+  }
+
+  // public: update check
+  if (op === "update/check") {
+    const latest = await fetchLatestVersion();
+    return jsonResp({
+      current: CUR_VERSION,
+      latest: latest.version,
+      notes: latest.notes || "",
+      upToDate: cmpVersion(CUR_VERSION, latest.version) >= 0,
     });
   }
 
@@ -225,6 +241,13 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         warp: settings.protocols.warp ? gen.buildWarpConfig(u) : null,
       });
     }
+
+    case "update/apply": {
+      if (method !== "POST") break;
+      const b = (await req.json().catch(() => ({}))) as { token?: string };
+      const res = await applySelfUpdate(env, settings, b.token || "");
+      return jsonResp(res, res.ok ? 200 : 400);
+    }
   }
 
   return jsonResp({ error: "not found" }, 404);
@@ -258,4 +281,66 @@ async function handleClientConfig(env: Env, settings: Settings, uuid: string): P
   if (!user) return jsonResp({ error: "unknown uuid" }, 404);
   const body = "vmess://" + gen.buildBase64Bundle(user, settings);
   return new Response(body, { headers: { "content-type": "text/plain" } });
+}
+
+/* ---------------------- updates ---------------------- */
+const GITHUB_RAW = "https://raw.githubusercontent.com/NikaTeem/Nika-Net/main";
+
+let latestCache: { version: string; notes?: string } | null = null;
+let latestAt = 0;
+
+async function fetchLatestVersion(): Promise<{ version: string; notes?: string }> {
+  if (latestCache && Date.now() - latestAt < 300_000) return latestCache;
+  try {
+    const r = await fetch(`${GITHUB_RAW}/version.json`, { cf: { cacheTtl: 300 } });
+    if (!r.ok) throw new Error("fetch failed");
+    const j = (await r.json()) as { version: string; notes?: string };
+    latestCache = j;
+    latestAt = Date.now();
+    return j;
+  } catch {
+    return { version: CUR_VERSION, notes: "" };
+  }
+}
+
+function cmpVersion(a: string, b: string): number {
+  const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+async function applySelfUpdate(
+  env: Env,
+  settings: Settings,
+  token: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!token || token.length < 20) return { ok: false, error: "token required" };
+
+  const v = await cf.cfJson(token, "/user/tokens/verify");
+  if (!v?.success) return { ok: false, error: v?.errors?.[0]?.message || "توکن نامعتبر است" };
+
+  const a = await cf.cfJson(token, "/accounts?per_page=50");
+  const accountId = a?.result?.[0]?.id;
+  if (!accountId) return { ok: false, error: "اکانتی با این توکن پیدا نشد" };
+
+  const name = (settings.host || "").split(".")[0];
+  if (!name) return { ok: false, error: "ابتدا Host ورکر را در تنظیمات وارد کن" };
+
+  const kvId = await cf.findKvId(token, accountId, [`nika-${name}-kv`, `${name}-kv`]);
+
+  const bundle = await fetch(`${GITHUB_RAW}/dist/worker.js`);
+  if (!bundle.ok) return { ok: false, error: "دریافت آخرین نسخه ممکن نشد" };
+  const code = await bundle.text();
+
+  const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
+  const up = await cf.uploadWorker(token, accountId, name, code, bindings);
+  if (!up.ok) return { ok: false, error: up.err };
+
+  await cf.enableWorkersDev(token, accountId, name);
+  await metrics.appendActivity(env, { icon: "🔄", text: "پنل به‌روزرسانی شد", time: Date.now() });
+  return { ok: true };
 }
