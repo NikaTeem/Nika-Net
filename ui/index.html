@@ -187,6 +187,39 @@
   .progress{height:8px;background:var(--card-2);border-radius:99px;overflow:hidden;margin-top:10px;border:1px dashed var(--border)}
   .progress>div{height:100%;background:var(--grad);border-radius:99px;transition:width .5s}
   .qty{width:74px;text-align:center}
+
+  /* ---------- اسکنر IP ---------- */
+  .seg button.on{background:var(--grad);color:#f4f4f4}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .pchip{padding:7px 13px;border-radius:9px;font-size:12px;font-weight:700;font-family:var(--mono);
+    background:var(--card-2);border:1.5px dashed var(--border);color:var(--muted);transition:all .15s}
+  .pchip.on{background:var(--grad);color:#f4f4f4;border-color:transparent}
+  .scan-counters{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+  .scan-counters#scanStatus{display:block;font-family:var(--mono);font-size:12.5px;color:var(--muted);min-height:18px}
+  #scanStatus.live{color:var(--ok)}
+  .scan-counters .sc{flex:1;min-width:84px;background:var(--card-2);border:1.5px dashed var(--border);border-radius:12px;padding:10px 12px;text-align:center}
+  .scan-counters .sc .v{font-family:var(--mono);font-size:21px;font-weight:700}
+  .scan-counters .sc .l{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+  .scan-counters .sc.ok .v{color:var(--ok)}
+  .scan-counters .sc.bad .v{color:var(--bad)}
+  .scan-top{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .top-chip{display:inline-flex;align-items:center;gap:8px;background:var(--card-2);border:1.5px dashed var(--border);
+    border-radius:11px;padding:6px 12px;cursor:pointer;transition:all .15s}
+  .top-chip:hover{border-color:var(--accent)}
+  .top-chip .top-rank{width:20px;height:20px;border-radius:50%;background:var(--grad);color:#f4f4f4;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .top-chip code{font-family:var(--mono);font-size:12px}
+  .top-chip b{font-family:var(--mono);font-size:11.5px;color:var(--ok)}
+  .scan-list{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+  .scan-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:var(--card-2);
+    border:1.5px dashed transparent;cursor:pointer;transition:all .12s}
+  .scan-row:hover{border-color:var(--accent)}
+  .scan-ip{font-family:var(--mono);font-size:12.5px;font-weight:700;min-width:130px}
+  .scan-port{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .scan-latbar{flex:1;height:7px;background:var(--border);border-radius:99px;overflow:hidden;min-width:40px}
+  .scan-latfill{height:100%;background:var(--grad);border-radius:99px}
+  .scan-ms{font-family:var(--mono);font-size:11.5px;min-width:56px;text-align:left}
+  .scan-ms.ok{color:var(--ok)} .scan-ms.warn{color:var(--warn)} .scan-ms.bad{color:var(--bad)}
+
   @media(max-width:760px){
     #appView{grid-template-columns:1fr}
     #sidebar{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;align-items:center;
@@ -244,6 +277,10 @@
       <button class="nav-item" data-page="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
         <span data-i18n="nav.settings">تنظیمات</span>
+      </button>
+      <button class="nav-item" data-page="scanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7a5 5 0 1 0 5 5"/><circle cx="12" cy="12" r="1"/><path d="M16 16l4 4"/></svg>
+        <span data-i18n="nav.scan">اسکنر IP</span>
       </button>
     </nav>
     <div class="sidebar-foot">Nika Net v0.2 · graphite<br/>Cloudflare Workers</div>
@@ -377,11 +414,78 @@
         <div class="copy-row"><button class="btn btn-primary" id="saveBtn" style="width:auto">💾 <span data-i18n="set.save">ذخیره تنظیمات</span></button></div>
       </div>
     </section>
+
+    <!-- اسکنر IP -->
+    <section id="page-scanner" class="hidden">
+      <div class="grid two-col">
+        <div class="card">
+          <div class="card-title"><span>✎ <span data-i18n="scanner.title">اسکنر IP تمیز</span></span><span class="mini" data-i18n="scan.source">منبع IP ها</span></div>
+          <div class="seg" style="margin-bottom:14px">
+            <button class="on" id="scanSourceB" data-i18n="scan.bundled">لیست داخلی</button>
+            <button id="scanSourceC" data-i18n="scan.custom">لیست شخصی</button>
+          </div>
+          <div id="scanCustomWrap" class="hidden" style="margin-bottom:14px">
+            <div class="field"><label data-i18n="scan.customD">هر خط یک IP یا رنج CIDR</label><textarea class="input" id="scanCustom" dir="ltr" style="min-height:96px"></textarea></div>
+          </div>
+          <div class="field-grid" id="scanTargetWrap">
+            <div class="field"><label data-i18n="scan.target">تعداد هدف</label>
+              <select class="input" id="scanTarget">
+                <option value="50">50</option><option value="100">100</option><option value="200" selected>200</option><option value="420">420 (کامل)</option>
+              </select>
+            </div>
+            <div class="field"><label data-i18n="scan.conc">همزمانی</label>
+              <select class="input" id="scanConc"><option>8</option><option>16</option><option selected>24</option><option>40</option></select>
+            </div>
+          </div>
+          <div class="field" style="margin-top:14px"><label data-i18n="scan.ports">پورت ها</label>
+            <div class="chips" id="scanPorts">
+              <button class="pchip on" data-port="443">443</button>
+              <button class="pchip" data-port="2053">2053</button>
+              <button class="pchip" data-port="2083">2083</button>
+              <button class="pchip" data-port="2087">2087</button>
+              <button class="pchip" data-port="2096">2096</button>
+              <button class="pchip" data-port="8443">8443</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top:14px"><label data-i18n="scan.timeout">تایم‌اوت (ms)</label>
+            <select class="input" id="scanTimeout"><option value="2500">2500</option><option value="3500" selected>3500</option><option value="5000">5000</option><option value="8000">8000</option></select>
+          </div>
+          <div class="copy-row" style="margin-top:18px">
+            <button class="btn btn-primary" id="scanStart" style="width:auto">▶ <span data-i18n="scan.start">شروع اسکن</span></button>
+            <button class="btn btn-danger hidden" id="scanStop" style="width:auto">■ <span data-i18n="scan.stop">توقف</span></button>
+          </div>
+          <div class="progress" style="margin-top:18px"><div id="scanBar" style="width:0%"></div></div>
+          <div class="scan-counters" id="scanStatus"><span data-i18n="scan.running">اسکن در حال انجام است…</span></div>
+          <div class="scan-counters">
+            <div class="sc"><div class="v" id="scTested">0</div><div class="l" data-i18n="scan.tested">تست شده</div></div>
+            <div class="sc ok"><div class="v" id="scAlive">0</div><div class="l" data-i18n="scan.alive">سالم</div></div>
+            <div class="sc bad"><div class="v" id="scDead">0</div><div class="l" data-i18n="scan.dead">مرده</div></div>
+          </div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="card-title"><span>✎ <span data-i18n="scan.top5">۵ برتر</span></span></div>
+          <canvas id="radarCanvas" style="width:100%;height:260px;display:block"></canvas>
+          <div class="scan-top" id="scanTop"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><span>✎ <span data-i18n="scan.results">نتایج زنده</span></span>
+          <span style="display:flex;gap:8px">
+            <button class="btn btn-ghost" id="scanCopy" style="padding:8px 14px;font-size:12px">📋 <span data-i18n="scan.copy">کپی</span></button>
+            <button class="btn btn-ghost" id="scanExport" style="padding:8px 14px;font-size:12px">⬇ <span data-i18n="scan.export">خروجی</span></button>
+            <button class="btn btn-primary" id="scanApply" style="padding:8px 14px;font-size:12px" title="" data-i18n="scan.apply">⚡ اعمال به پنل</button>
+          </span>
+        </div>
+        <div class="scan-list" id="scanList"><div class="empty" data-i18n="scan.empty">هنوز اسکنی شروع نشده</div></div>
+      </div>
+    </section>
   </div>
 </div>
 
 <div id="modalBack" class="modal-back hidden"></div>
 <div class="toast" id="toast"></div>
+
+
 
 <script>
 /* ================================================================
@@ -418,7 +522,7 @@ const I18N = {
     "login.hintPass": "رمز عبور ادمین را وارد کن",
     "login.hintPreview": "این پیش‌نمایش فایل است — برای دادهٔ واقعی، پنل را از آدرس زندهٔ ورکر باز کن",
     "login.wrong": "رمز اشتباه است", "login.short": "رمز باید حداقل ۴ کاراکتر باشد",
-    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات",
+    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات", "nav.scan": "اسکنر IP",
     "stat.users": "کاربران", "stat.active": "فعال", "stat.req": "درخواست امروز", "stat.gig": "گیگابایت مصرف", "stat.proto": "پروتکل فعال",
     "dash.traffic": "ترافیک (۷ روز اخیر)", "dash.gb": "بر حسب گیگابایت", "dash.usage": "مصرف", "dash.activity": "فعالیت‌های اخیر",
     "dash.today": "امروز", "dash.nochart": "هنوز دادهٔ ترافیکی ثبت نشده است", "act.empty": "هنوز فعالیتی ثبت نشده است",
@@ -450,7 +554,7 @@ const I18N = {
     "login.hintPass": "Enter the admin password",
     "login.hintPreview": "This is a static preview — open the live panel URL for real data",
     "login.wrong": "Wrong password", "login.short": "Password must be at least 4 characters",
-    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings",
+    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings", "nav.scan": "IP Scanner",
     "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
     "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
     "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
@@ -611,15 +715,16 @@ async function loadAll() {
 }
 
 /* ---------- navigation ---------- */
-const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set" };
-const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD" };
+const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set", scanner: "page.scanner" };
+const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD", scanner: "page.scannerD" };
 function setPage(p) {
   currentPage = p;
   $$("#nav .nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === p));
-  ["dashboard", "users", "subscription", "settings"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
+  ["dashboard", "users", "subscription", "settings", "scanner"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
   $("#pageTitle").textContent = t(PAGES[p]);
   $("#pageDesc").textContent = t(DESCS[p]);
   if (p === "settings") fillSettingsForm();
+  if (p === "scanner" && typeof SCANNER !== "undefined") SCANNER.onOpen();
 }
 $$("#nav .nav-item").forEach((b) => (b.onclick = () => setPage(b.dataset.page)));
 
@@ -823,8 +928,7 @@ function fillSettingsForm() {
   $("#setHost").value = (state.settings && state.settings.host) || "";
   $("#setSni").value = (state.settings && state.settings.sni) || "";
   $("#setWsPath").value = (state.settings && state.settings.wsPath) || "";
-  $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("
-");
+  $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("\n");
 }
 $("#saveBtn").onclick = async () => {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
@@ -833,8 +937,7 @@ $("#saveBtn").onclick = async () => {
     host: $("#setHost").value,
     sni: $("#setSni").value,
     wsPath: $("#setWsPath").value || "/nika-ws",
-    cleanIps: $("#setIps").value.split("
-").map((x) => x.trim()).filter(Boolean),
+    cleanIps: $("#setIps").value.split("\n").map((x) => x.trim()).filter(Boolean),
     protocols: proto,
   };
   const res = await api("/api/settings", { method: "POST", body });
@@ -844,6 +947,425 @@ $("#saveBtn").onclick = async () => {
 
 /* ---------- boot ---------- */
 init();
+
+</script>
+<script>
+/* ================================================================
+   Nika Net — IP Scanner (clean Cloudflare IP discovery)
+   Browser-side timing probe: a live Cloudflare edge completes its
+   TLS handshake fast (20–150 ms) while a dead/blocked IP times out.
+   The scanner probes candidate IPs in parallel, ranks them by
+   latency, and can push the best ones into the panel's clean-IP
+   list so every generated config uses them.
+   ================================================================ */
+
+/* i18n for the scanner */
+I18N.fa["scanner.title"] = "اسکنر IP تمیز";
+I18N.fa["scanner.sub"] = "تست و گلچین بهترین IP های کلودفلر از شبکهٔ تو";
+I18N.fa["scan.source"] = "منبع IP ها";
+I18N.fa["scan.bundled"] = "لیست داخلی";
+I18N.fa["scan.custom"] = "لیست شخصی";
+I18N.fa["scan.customD"] = "هر خط یک IP یا رنج CIDR";
+I18N.fa["scan.target"] = "تعداد هدف";
+I18N.fa["scan.ports"] = "پورت ها";
+I18N.fa["scan.conc"] = "همزمانی";
+I18N.fa["scan.timeout"] = "تایم‌اوت (ms)";
+I18N.fa["scan.start"] = "▶ شروع اسکن";
+I18N.fa["scan.stop"] = "■ توقف";
+I18N.fa["scan.phase1"] = "در حال پروب IP ها…";
+I18N.fa["scan.done"] = "اسکن تمام شد";
+I18N.fa["scan.tested"] = "تست شده";
+I18N.fa["scan.alive"] = "سالم";
+I18N.fa["scan.dead"] = "مرده";
+I18N.fa["scan.best"] = "بهترین";
+I18N.fa["scan.results"] = "نتایج زنده";
+I18N.fa["scan.resultsD"] = "مرتب بر اساس تأخیر — برای کپی روی هر IP بزن";
+I18N.fa["scan.lat"] = "تأخیر";
+I18N.fa["scan.port"] = "پورت";
+I18N.fa["scan.status"] = "وضعیت";
+I18N.fa["scan.apply"] = "⚡ اعمال به پنل";
+I18N.fa["scan.applyD"] = "بهترین IP ها جایگزین لیست IP تمیز پنل می‌شوند";
+I18N.fa["scan.copy"] = "📋 کپی";
+I18N.fa["scan.export"] = "⬇ خروجی";
+I18N.fa["scan.empty"] = "هنوز اسکنی شروع نشده — دکمهٔ شروع را بزن";
+I18N.fa["scan.none"] = "هیچ IP سالمی پیدا نشد — تایم‌اوت را بیشتر یا پورت را عوض کن";
+I18N.fa["scan.applied"] = "بهترین IP ها به پنل اعمال شد ✓";
+I18N.fa["scan.copied"] = "IP ها کپی شد ✓";
+I18N.fa["scan.hist"] = "توزیع تأخیر (ms)";
+I18N.fa["scan.running"] = "اسکن در حال انجام است…";
+I18N.fa["scan.ms"] = "ms";
+I18N.fa["scan.live"] = "سالم";
+I18N.fa["scan.deadL"] = "مرده";
+I18N.fa["scan.top5"] = "۵ برتر";
+
+I18N.en["scanner.title"] = "Clean IP Scanner";
+I18N.en["scanner.sub"] = "Probe & pick the best Cloudflare IPs from your network";
+I18N.en["scan.source"] = "IP source";
+I18N.en["scan.bundled"] = "Built-in list";
+I18N.en["scan.custom"] = "Custom list";
+I18N.en["scan.customD"] = "One IP or CIDR per line";
+I18N.en["scan.target"] = "Target count";
+I18N.en["scan.ports"] = "Ports";
+I18N.en["scan.conc"] = "Concurrency";
+I18N.en["scan.timeout"] = "Timeout (ms)";
+I18N.en["scan.start"] = "▶ Start scan";
+I18N.en["scan.stop"] = "■ Stop";
+I18N.en["scan.phase1"] = "Probing IPs…";
+I18N.en["scan.done"] = "Scan complete";
+I18N.en["scan.tested"] = "Tested";
+I18N.en["scan.alive"] = "Alive";
+I18N.en["scan.dead"] = "Dead";
+I18N.en["scan.best"] = "Best";
+I18N.en["scan.results"] = "Live results";
+I18N.en["scan.resultsD"] = "Sorted by latency — click an IP to copy";
+I18N.en["scan.lat"] = "Latency";
+I18N.en["scan.port"] = "Port";
+I18N.en["scan.status"] = "Status";
+I18N.en["scan.apply"] = "⚡ Apply to panel";
+I18N.en["scan.applyD"] = "Top IPs replace the panel's clean-IP list";
+I18N.en["scan.copy"] = "📋 Copy";
+I18N.en["scan.export"] = "⬇ Export";
+I18N.en["scan.empty"] = "No scan yet — press start";
+I18N.en["scan.none"] = "No alive IP found — raise the timeout or change the port";
+I18N.en["scan.applied"] = "Top IPs applied to the panel ✓";
+I18N.en["scan.copied"] = "IPs copied ✓";
+I18N.en["scan.hist"] = "Latency distribution (ms)";
+I18N.en["scan.running"] = "Scan running…";
+I18N.en["scan.ms"] = "ms";
+I18N.en["scan.live"] = "alive";
+I18N.en["scan.deadL"] = "dead";
+I18N.en["scan.top5"] = "Top 5";
+I18N.en["page.scanner"] = "IP Scanner";
+I18N.en["page.scannerD"] = "Discover the fastest clean Cloudflare IPs";
+I18N.fa["page.scanner"] = "اسکنر IP";
+I18N.fa["page.scannerD"] = "پیدا کردن سریع‌ترین IP های تمیز کلودفلر";
+
+const SCANNER = (() => {
+  /* bundled seed list (curated clean Cloudflare IPv4) */
+  const SEED = ["1.1.1.205", "103.116.7.159", "104.129.164.73", "104.16.0.158", "104.16.104.127", "104.16.105.208", "104.16.12.155", "104.16.122.31", "104.16.127.145", "104.16.134.94", "104.16.138.229", "104.16.15.61", "104.16.172.40", "104.16.200.105", "104.16.209.40", "104.16.228.155", "104.16.231.154", "104.16.234.166", "104.16.235.139", "104.16.241.3", "104.16.25.194", "104.16.33.169", "104.16.4.244", "104.16.42.140", "104.16.45.222", "104.16.66.24", "104.16.76.146", "104.16.78.31", "104.16.84.135", "104.16.84.24", "104.16.96.61", "104.17.101.85", "104.17.110.181", "104.17.112.46", "104.17.121.12", "104.17.122.238", "104.17.128.173", "104.17.146.211", "104.17.148.242", "104.17.150.98", "104.17.171.118", "104.17.18.167", "104.17.185.63", "104.17.187.8", "104.17.192.182", "104.17.195.233", "104.17.196.229", "104.17.197.221", "104.17.205.217", "104.17.207.42", "104.17.223.228", "104.17.228.165", "104.17.240.243", "104.17.246.44", "104.17.25.239", "104.17.251.86", "104.17.253.178", "104.17.255.201", "104.17.27.211", "104.17.29.174", "104.17.31.203", "104.17.34.42", "104.17.36.206", "104.17.38.50", "104.17.44.240", "104.17.48.188", "104.17.5.30", "104.17.61.65", "104.17.64.67", "104.17.82.189", "104.17.82.215", "104.17.9.155", "104.17.90.249", "104.18.1.81", "104.18.111.31", "104.18.114.234", "104.18.121.40", "104.18.146.241", "104.18.158.192", "104.18.160.180", "104.18.163.244", "104.18.164.174", "104.18.167.107", "104.18.170.147", "104.18.185.179", "104.18.188.115", "104.18.191.195", "104.18.193.85", "104.18.204.53", "104.18.209.237", "104.18.213.206", "104.18.216.44", "104.18.218.124", "104.18.220.15", "104.18.236.110", "104.18.237.80", "104.18.247.129", "104.18.248.155", "104.18.251.151", "104.18.253.86", "104.18.33.119", "104.18.34.232", "104.18.35.176", "104.18.5.36", "104.18.54.13", "104.18.54.231", "104.18.55.248", "104.18.79.228", "104.18.83.11", "104.19.103.173", "104.19.104.143", "104.19.107.209", "104.19.114.114", "104.19.114.252", "104.19.119.181", "104.19.134.215", "104.19.136.183", "104.19.144.198", "104.19.145.142", "104.19.158.214", "104.19.181.243", "104.19.186.216", "104.19.186.47", "104.19.189.251", "104.19.202.206", "104.19.229.52", "104.19.232.195", "104.19.237.179", "104.19.29.197", "104.19.38.85", "104.19.39.82", "104.19.41.171", "104.19.41.228", "104.19.50.59", "104.19.52.241", "104.19.56.137", "104.19.60.0", "104.19.62.255", "104.19.66.54", "104.19.74.36", "104.19.75.119", "104.19.80.247", "104.19.80.98", "104.19.85.153", "104.19.91.124", "104.19.94.184", "104.20.12.161", "104.20.32.42", "104.20.40.194", "104.20.59.177", "104.21.106.155", "104.21.112.26", "104.21.113.137", "104.21.118.199", "104.21.18.68", "104.21.20.139", "104.21.221.61", "104.21.223.242", "104.21.224.32", "104.21.225.43", "104.21.23.23", "104.21.23.44", "104.21.231.123", "104.21.236.58", "104.21.25.89", "104.21.31.159", "104.21.36.174", "104.21.36.188", "104.21.37.215", "104.21.38.34", "104.21.42.100", "104.21.48.98", "104.21.5.197", "104.21.60.85", "104.21.62.19", "104.21.62.231", "104.21.63.154", "104.21.64.55", "104.21.67.237", "104.21.69.179", "104.21.70.136", "104.21.71.248", "104.21.72.102", "104.21.73.17", "104.21.75.225", "104.21.81.12", "104.21.83.26", "104.21.86.13", "104.21.87.113", "104.21.88.178", "104.21.88.79", "104.21.92.203", "104.21.93.170", "104.21.94.118", "104.239.72.0", "104.239.72.195", "104.24.142.51", "104.24.143.32", "104.24.150.11", "104.24.151.152", "104.24.158.116", "104.24.172.151", "104.24.172.200", "104.24.180.71", "104.24.181.68", "104.24.188.188", "104.24.189.34", "104.24.197.160", "104.24.20.6", "104.24.203.122", "104.24.211.31", "104.24.225.235", "104.24.233.118", "104.24.235.222", "104.24.236.15", "104.24.236.44", "104.24.241.159", "104.24.246.92", "104.24.26.24", "104.24.27.31", "104.24.29.62", "104.24.33.28", "104.24.34.44", "104.24.41.212", "104.24.45.16", "104.24.63.194", "104.25.1.157", "104.25.101.151", "104.25.107.158", "104.25.110.90", "104.25.115.43", "104.25.120.120", "104.25.124.20", "104.25.126.55", "104.25.127.245", "104.25.13.108", "104.25.130.51", "104.25.133.76", "104.25.141.138", "104.25.142.39", "104.25.148.250", "104.25.160.5", "104.25.173.57", "104.25.188.19", "104.25.198.1", "104.25.203.160", "104.25.204.143", "104.25.206.186", "104.25.209.147", "104.25.209.209", "104.25.209.251", "104.25.210.72", "104.25.226.220", "104.25.236.188", "104.25.244.30", "104.25.245.249", "104.25.27.45", "104.25.4.110", "104.25.62.57", "104.25.64.10", "104.25.79.119", "104.25.83.106", "104.25.96.164", "104.26.1.153", "104.26.13.175", "104.26.15.230", "104.26.5.42", "104.27.101.189", "104.27.110.157", "104.27.118.231", "104.27.17.178", "104.27.193.209", "104.27.200.19", "104.27.206.168", "104.27.26.161", "104.27.36.27", "104.27.37.185", "104.27.38.72", "104.27.4.156", "104.27.44.72", "104.27.49.51", "104.27.52.44", "104.27.54.234", "104.27.88.172", "104.27.97.174", "104.27.97.42", "108.162.193.46", "139.64.235.227", "141.11.202.7", "147.185.161.10", "154.197.65.219", "154.83.2.193", "159.242.242.20", "162.159.1.250", "162.159.132.26", "162.159.141.125", "162.159.151.88", "162.159.156.223", "162.159.156.64", "162.159.229.25", "162.159.233.84", "162.159.245.27", "162.159.40.172", "162.159.43.230", "162.159.60.112", "162.159.93.59", "167.68.11.204", "170.114.52.147", "172.64.157.244", "172.64.189.14", "172.64.49.95", "172.64.53.114", "172.64.74.9", "172.64.82.227", "172.64.85.161", "172.64.87.231", "172.65.217.95", "172.65.223.179", "172.65.237.186", "172.65.54.9", "172.65.58.206", "172.66.147.124", "172.66.147.59", "172.66.148.106", "172.66.149.15", "172.66.152.213", "172.66.152.87", "172.66.159.171", "172.66.162.127", "172.66.169.65", "172.66.174.124", "172.66.174.6", "172.66.216.111", "172.67.126.76", "172.67.127.131", "172.67.133.245", "172.67.134.218", "172.67.135.190", "172.67.135.47", "172.67.136.112", "172.67.140.237", "172.67.140.83", "172.67.143.245", "172.67.144.126", "172.67.147.255", "172.67.153.29", "172.67.154.182", "172.67.156.98", "172.67.160.104", "172.67.169.139", "172.67.170.253", "172.67.172.242", "172.67.176.34", "172.67.187.246", "172.67.188.214", "172.67.190.234", "172.67.195.55", "172.67.196.217", "172.67.197.235", "172.67.199.186", "172.67.199.209", "172.67.200.209", "172.67.211.75", "172.67.214.149", "172.67.217.25", "172.67.218.10", "172.67.220.3", "172.67.221.7", "172.67.238.109", "172.67.240.46", "172.67.250.18", "172.67.253.123", "172.67.73.30", "172.67.74.86", "172.67.93.117", "172.67.93.126", "172.67.94.198", "173.245.49.57", "185.238.228.201", "188.114.96.39", "191.101.251.190", "198.202.211.158", "198.41.193.207", "198.41.205.190", "198.41.211.0", "199.181.197.109", "199.181.197.158", "199.181.197.246", "2.16.0.134", "2.16.0.235", "2.16.1.137", "2.16.1.149", "2.16.1.218", "2.16.105.142", "2.16.11.186", "2.16.125.17", "2.16.164.29", "2.16.168.12", "2.16.168.7", "2.16.190.87", "2.16.192.83", "2.16.2.152", "2.16.222.174", "2.16.31.75", "2.16.31.87", "2.16.33.249", "2.16.39.17", "2.16.42.250", "2.16.42.251", "2.16.93.211", "212.104.128.75", "45.80.110.140", "5.10.214.117", "74.49.215.119", "88.216.66.154", "88.216.66.81", "89.116.161.253", "89.117.112.240", "92.53.188.172", "92.53.188.71"];
+
+  const PORTS_ALL = [443, 2053, 2083, 2087, 2096, 8443];
+  const S = {
+    running: false,
+    controller: null,
+    concurrency: 24,
+    timeout: 3500,
+    tries: 2,
+    ports: [443],
+    target: 200,
+    source: "bundled",
+    results: [],      // {ip, port, min, avg, ok, dead}
+    byIp: new Map(),
+    tested: 0,
+    alive: 0,
+    dead: 0,
+  };
+  let raf = null;
+  let sweep = 0;
+  let lastBlip = 0;
+
+  /* ---------------- probing ---------------- */
+  function probe(ip, port, timeout) {
+    return new Promise((resolve) => {
+      const ctl = new AbortController();
+      const t0 = setTimeout(() => ctl.abort(), timeout);
+      const start = performance.now();
+      fetch(`https://${ip}:${port}/`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
+        .then(() => { clearTimeout(t0); resolve({ ok: true, ms: Math.max(1, performance.now() - start) }); })
+        .catch(() => {
+          clearTimeout(t0);
+          const ms = performance.now() - start;
+          const aborted = ctl.signal.aborted;
+          // non-aborted fast rejection = TLS handshake completed (live CF edge);
+          // aborted = timeout (dead). Sub-12ms rejections are treated as RST noise.
+          resolve({ ok: !aborted && ms >= 12, ms });
+        });
+    });
+  }
+
+  function parseList(text) {
+    const ips = new Set();
+    for (let line of (text || "").split("\n")) {
+      line = line.trim();
+      if (!line || line.startsWith("#")) continue;
+      // CIDR → expand? just take the base IP for a /32-ish probe
+      if (line.includes("/")) line = line.split("/")[0];
+      const m = line.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/);
+      if (m && /^\d{1,3}(\.\d{1,3}){3}$/.test(m[1])) ips.add(m[1]);
+    }
+    return [...ips];
+  }
+
+  function buildQueue() {
+    let list;
+    if (S.source === "custom") {
+      list = parseList($("#scanCustom").value);
+    } else {
+      list = SEED.slice(0, Math.min(S.target, SEED.length));
+    }
+    const queue = [];
+    for (const ip of list) for (const port of S.ports) queue.push({ ip, port });
+    return queue;
+  }
+
+  async function runScan() {
+    const queue = buildQueue();
+    if (!queue.length) { toast(t("scan.none")); return; }
+    S.running = true;
+    S.controller = new AbortController();
+    S.results = [];
+    S.byIp = new Map();
+    S.tested = S.alive = S.dead = 0;
+    lastBlip = 0;
+    $("#scanStart").classList.add("hidden");
+    $("#scanStop").classList.remove("hidden");
+    $("#scanStatus").textContent = t("scan.running");
+    $("#scanStatus").classList.add("live");
+    renderCounters();
+    renderResults(true);
+    drawRadar();
+
+    let cursor = 0;
+    const workers = [];
+    const n = Math.min(S.concurrency, queue.length);
+    const signal = S.controller.signal;
+
+    for (let w = 0; w < n; w++) {
+      workers.push((async () => {
+        while (cursor < queue.length && !signal.aborted) {
+          const idx = cursor++;
+          const { ip, port } = queue[idx];
+          let okTries = 0, sum = 0, min = Infinity;
+          for (let tr = 0; tr < S.tries; tr++) {
+            if (signal.aborted) break;
+            const r = await probe(ip, port, S.timeout);
+            if (r.ok) { okTries++; sum += r.ms; if (r.ms < min) min = r.ms; }
+          }
+          if (signal.aborted) break;
+          S.tested++;
+          const alive = okTries > 0;
+          if (alive) S.alive++; else S.dead++;
+          S.results.push({ ip, port, min: alive ? Math.round(min) : null, avg: alive ? Math.round(sum / okTries) : null, alive });
+          if (alive) { lastBlip = performance.now(); }
+          renderCounters();
+          if (S.results.length % 8 === 0 || !S.running) renderResults(false);
+        }
+      })());
+    }
+    await Promise.all(workers);
+    S.running = false;
+    $("#scanStart").classList.remove("hidden");
+    $("#scanStop").classList.add("hidden");
+    $("#scanStatus").textContent = t("scan.done");
+    $("#scanStatus").classList.remove("live");
+    renderResults(false);
+    renderCounters();
+    renderTop();
+  }
+
+  function stopScan() {
+    if (S.controller) S.controller.abort();
+    S.running = false;
+    $("#scanStart").classList.remove("hidden");
+    $("#scanStop").classList.add("hidden");
+    $("#scanStatus").textContent = t("scan.done");
+    $("#scanStatus").classList.remove("live");
+  }
+
+  function aliveResults() {
+    return S.results.filter((r) => r.alive).sort((a, b) => a.min - b.min);
+  }
+
+  /* ---------------- UI rendering ---------------- */
+  function renderCounters() {
+    $("#scTested").textContent = num(S.tested);
+    $("#scAlive").textContent = num(S.alive);
+    $("#scDead").textContent = num(S.dead);
+    const total = buildQueueLen();
+    const pct = total ? Math.min(100, Math.round((S.tested / total) * 100)) : 0;
+    $("#scanBar").style.width = pct + "%";
+    $("#scanBar").textContent = pct + "%";
+  }
+
+  function buildQueueLen() {
+    if (S.source === "custom") return parseList($("#scanCustom").value).length * S.ports.length;
+    return Math.min(S.target, SEED.length) * S.ports.length;
+  }
+
+  function renderResults(forceEmpty) {
+    const el = $("#scanList");
+    const list = aliveResults();
+    if (forceEmpty || (!list.length && !S.running)) {
+      el.innerHTML = `<div class="empty">${S.running ? t("scan.phase1") : t("scan.empty")}</div>`;
+      return;
+    }
+    if (!list.length) { el.innerHTML = `<div class="empty">${t("scan.phase1")}</div>`; return; }
+    const max = Math.max(...list.map((r) => r.min));
+    el.innerHTML = list.slice(0, 60).map((r) => {
+      const w = Math.max(4, Math.round((r.min / max) * 100));
+      const cls = r.min < 120 ? "ok" : r.min < 300 ? "warn" : "bad";
+      return `<div class="scan-row" onclick="SCANNER.copyIp('${r.ip}')" title="${t("scan.copy")}">
+        <code class="scan-ip">${r.ip}</code>
+        <span class="scan-port">:${r.port}</span>
+        <div class="scan-latbar"><div class="scan-latfill" style="width:${w}%"></div></div>
+        <code class="scan-ms ${cls}">${r.min}ms</code>
+      </div>`;
+    }).join("");
+  }
+
+  function renderTop() {
+    const el = $("#scanTop");
+    const list = aliveResults().slice(0, 5);
+    if (!list.length) { el.innerHTML = ""; return; }
+    el.innerHTML = list.map((r, i) =>
+      `<div class="top-chip" onclick="SCANNER.copyIp('${r.ip}')"><span class="top-rank">${i + 1}</span><code>${r.ip}</code><b>${r.min}ms</b></div>`
+    ).join("");
+  }
+
+  /* ---------------- radar canvas ---------------- */
+  function drawRadar() {
+    const cv = $("#radarCanvas");
+    if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth || 320, h = cv.clientHeight || 300;
+    if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 18;
+    const dark = document.documentElement.dataset.theme === "dark";
+
+    function frame() {
+      ctx.clearRect(0, 0, w, h);
+      const line = dark ? "rgba(127,178,135,0.28)" : "rgba(90,110,90,0.25)";
+      const fill = dark ? "rgba(127,178,135,0.05)" : "rgba(90,110,90,0.05)";
+      // rings
+      for (let i = 1; i <= 4; i++) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2);
+        ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.stroke();
+      }
+      // crosshair
+      ctx.beginPath();
+      ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy);
+      ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R);
+      ctx.strokeStyle = line; ctx.stroke();
+
+      // blips (alive IPs, angle by hash, radius by latency)
+      for (const r of aliveResults().slice(0, 120)) {
+        let hsh = 0; for (const c of r.ip) hsh = (hsh * 31 + c.charCodeAt(0)) >>> 0;
+        const ang = (hsh % 360) * (Math.PI / 180);
+        const rr = Math.min(1, r.min / 800) * R * 0.92;
+        const bx = cx + Math.cos(ang) * rr, by = cy + Math.sin(ang) * rr;
+        const fresh = performance.now() - lastBlip < 1500;
+        ctx.beginPath();
+        ctx.arc(bx, by, fresh ? 3.4 : 2.1, 0, Math.PI * 2);
+        ctx.fillStyle = r.min < 120 ? (dark ? "#7fb287" : "#4a7a52") : r.min < 300 ? "#c9b273" : "#c98a92";
+        ctx.globalAlpha = fresh ? 1 : 0.75;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // sweep
+      const a = sweep + (S.running ? performance.now() * 0.0009 : 0);
+      sweep = a;
+      const g = ctx.createConicGradient ? ctx.createConicGradient(a, cx, cy) : null;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, a, a + 0.9);
+      ctx.closePath();
+      if (g) {
+        g.addColorStop(0, "rgba(127,178,135,0)");
+        g.addColorStop(1, dark ? "rgba(127,178,135,0.5)" : "rgba(74,122,82,0.5)");
+        ctx.fillStyle = g;
+      } else {
+        ctx.fillStyle = dark ? "rgba(127,178,135,0.18)" : "rgba(74,122,82,0.18)";
+      }
+      ctx.fill();
+      // sweep line
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+      ctx.strokeStyle = dark ? "#7fb287" : "#4a7a52";
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      // center
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = dark ? "#7fb287" : "#4a7a52"; ctx.fill();
+
+      raf = requestAnimationFrame(frame);
+    }
+    if (raf) cancelAnimationFrame(raf);
+    frame();
+  }
+
+  /* ---------------- actions ---------------- */
+  function copyIp(ip) {
+    try { navigator.clipboard.writeText(ip).then(() => toast(ip)); } catch (e) {}
+  }
+  function copyAll() {
+    const txt = aliveResults().map((r) => r.ip).join("\n");
+    try { navigator.clipboard.writeText(txt).then(() => toast(t("scan.copied"))); } catch (e) {}
+  }
+  function exportTxt() {
+    const txt = "# Nika Net — clean IPs\n" + aliveResults().map((r) => r.ip + ":" + r.port).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain" }));
+    a.download = "nika-clean-ips.txt";
+    a.click();
+  }
+  async function applyToPanel() {
+    const top = aliveResults().slice(0, 20).map((r) => r.ip);
+    if (!top.length) { toast(t("scan.none")); return; }
+    if (MODE !== "live") { toast(t("toast.preview")); return; }
+    const res = await api("/api/settings", { method: "POST", body: { cleanIps: top } });
+    if (res.ok) { toast(t("scan.applied")); if (state.settings) state.settings.cleanIps = top; }
+    else toast(t("common.error"));
+  }
+
+  function onOpen() {
+    if (!raf) drawRadar();
+  }
+
+  /* ---------------- wiring ---------------- */
+  function initUI() {
+    $("#scanStart").onclick = () => { readConfig(); runScan(); };
+    $("#scanStop").onclick = stopScan;
+    $("#scanSourceB").onclick = () => setSource("bundled");
+    $("#scanSourceC").onclick = () => setSource("custom");
+    $("#scanApply").onclick = applyToPanel;
+    $("#scanCopy").onclick = copyAll;
+    $("#scanExport").onclick = exportTxt;
+    $("#scanTarget").onchange = () => { S.target = +$("#scanTarget").value; };
+    $("#scanConc").onchange = () => { S.concurrency = +$("#scanConc").value; };
+    $("#scanTimeout").onchange = () => { S.timeout = +$("#scanTimeout").value; };
+    $$("#scanPorts .pchip").forEach((el) => (el.onclick = () => {
+      el.classList.toggle("on");
+      S.ports = $$("#scanPorts .pchip.on").map((x) => +x.dataset.port);
+    }));
+  }
+
+  function readConfig() {
+    S.target = +($("#scanTarget").value || 200);
+    S.concurrency = +($("#scanConc").value || 24);
+    S.timeout = +($("#scanTimeout").value || 3500);
+    S.ports = $$("#scanPorts .pchip.on").map((x) => +x.dataset.port);
+    if (!S.ports.length) { S.ports = [443]; $$("#scanPorts .pchip[data-port='443']").classList.add("on"); }
+  }
+
+  function setSource(src) {
+    S.source = src;
+    $("#scanSourceB").classList.toggle("on", src === "bundled");
+    $("#scanSourceC").classList.toggle("on", src === "custom");
+    $("#scanCustomWrap").classList.toggle("hidden", src !== "custom");
+    $("#scanTargetWrap").classList.toggle("hidden", src !== "bundled");
+  }
+
+  return { onOpen, copyIp, initUI, _seed: SEED.length };
+})();
+
+/* expose for inline onclick */
+window.SCANNER = SCANNER;
+SCANNER.initUI();
 
 </script>
 </body>

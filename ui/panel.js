@@ -32,7 +32,7 @@ const I18N = {
     "login.hintPass": "رمز عبور ادمین را وارد کن",
     "login.hintPreview": "این پیش‌نمایش فایل است — برای دادهٔ واقعی، پنل را از آدرس زندهٔ ورکر باز کن",
     "login.wrong": "رمز اشتباه است", "login.short": "رمز باید حداقل ۴ کاراکتر باشد",
-    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات",
+    "nav.dash": "داشبورد", "nav.users": "کاربران", "nav.sub": "اشتراک", "nav.settings": "تنظیمات", "nav.scan": "اسکنر IP",
     "stat.users": "کاربران", "stat.active": "فعال", "stat.req": "درخواست امروز", "stat.gig": "گیگابایت مصرف", "stat.proto": "پروتکل فعال",
     "dash.traffic": "ترافیک (۷ روز اخیر)", "dash.gb": "بر حسب گیگابایت", "dash.usage": "مصرف", "dash.activity": "فعالیت‌های اخیر",
     "dash.today": "امروز", "dash.nochart": "هنوز دادهٔ ترافیکی ثبت نشده است", "act.empty": "هنوز فعالیتی ثبت نشده است",
@@ -64,7 +64,7 @@ const I18N = {
     "login.hintPass": "Enter the admin password",
     "login.hintPreview": "This is a static preview — open the live panel URL for real data",
     "login.wrong": "Wrong password", "login.short": "Password must be at least 4 characters",
-    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings",
+    "nav.dash": "Dashboard", "nav.users": "Users", "nav.sub": "Subscription", "nav.settings": "Settings", "nav.scan": "IP Scanner",
     "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
     "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
     "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
@@ -225,15 +225,16 @@ async function loadAll() {
 }
 
 /* ---------- navigation ---------- */
-const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set" };
-const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD" };
+const PAGES = { dashboard: "page.dash", users: "page.users", subscription: "page.sub", settings: "page.set", scanner: "page.scanner" };
+const DESCS = { dashboard: "page.dashD", users: "page.usersD", subscription: "page.subD", settings: "page.setD", scanner: "page.scannerD" };
 function setPage(p) {
   currentPage = p;
   $$("#nav .nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === p));
-  ["dashboard", "users", "subscription", "settings"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
+  ["dashboard", "users", "subscription", "settings", "scanner"].forEach((x) => $("#page-" + x).classList.toggle("hidden", x !== p));
   $("#pageTitle").textContent = t(PAGES[p]);
   $("#pageDesc").textContent = t(DESCS[p]);
   if (p === "settings") fillSettingsForm();
+  if (p === "scanner" && typeof SCANNER !== "undefined") SCANNER.onOpen();
 }
 $$("#nav .nav-item").forEach((b) => (b.onclick = () => setPage(b.dataset.page)));
 

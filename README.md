@@ -45,6 +45,7 @@ It ships with a bilingual panel (English + فارسی, RTL), a classic **graphit
 | ✏️ **Graphite / paper theme** | A nostalgic, hand-drawn aesthetic — dashed pencil borders, paper grain, serif & typewriter typography, dark + light mode |
 | 🌐 **Bilingual & RTL** | English and فارسی in the same panel, one click to switch |
 | 👥 **Multi-user** | Per-user quota (GB), expiry (days), active/inactive, one private link each |
+| 📡 **Clean-IP scanner** | In-panel radar that probes 420+ Cloudflare IPs from *your* network, ranks them by latency, and applies the best ones to every config |
 | 🔌 **Multi-format configs** | Base64 (v2rayNG), Clash/Mihomo, Sing-box and WireGuard (WARP) output |
 | 🛡️ **Security** | SHA-256 hashed admin password, HMAC-signed sessions, hidden admin path, camouflage for unknown routes |
 | ⚡ **Serverless** | Runs entirely on the edge — free tier, auto-scaling, zero maintenance |
@@ -130,7 +131,7 @@ A companion Telegram bot, also running on Cloudflare Workers (free), that builds
 
 ## 🗺️ Roadmap
 
-Fragment (anti-DPI), ISP presets (MCI/MTN/Rightel/TCI), in-panel clean-IP scanner, Telegram bot, JSON backup — see [ROADMAP.md](ROADMAP.md).
+Fragment (anti-DPI), ISP presets (MCI/MTN/Rightel/TCI), QR codes, Telegram bot — see [ROADMAP.md](ROADMAP.md).
 
 ## 📜 License
 
