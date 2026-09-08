@@ -98,6 +98,24 @@ export async function uploadWorker(
   return { ok: !!j?.success, err: j?.errors?.[0]?.message || `HTTP ${res.status}` };
 }
 
+export async function deleteWorker(
+  token: string,
+  accountId: string,
+  name: string
+): Promise<{ ok: boolean; err?: string }> {
+  const r = await cfReq(token, `/accounts/${accountId}/workers/scripts/${name}?force=true`, { method: "DELETE" });
+  return { ok: !!r?.success, err: r?.errors?.[0]?.message };
+}
+
+export async function deleteKvNamespace(
+  token: string,
+  accountId: string,
+  ns: string
+): Promise<{ ok: boolean; err?: string }> {
+  const r = await cfReq(token, `/accounts/${accountId}/storage/kv/namespaces/${ns}`, { method: "DELETE" });
+  return { ok: !!r?.success, err: r?.errors?.[0]?.message };
+}
+
 // workers.dev hostname is disabled by default for API-uploaded workers —
 // it must be enabled or the URL returns "error code: 1042".
 export async function enableWorkersDev(

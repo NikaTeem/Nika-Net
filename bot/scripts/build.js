@@ -19,6 +19,12 @@ try {
   process.exit(1);
 }
 
+let version = "0.4.0";
+try {
+  const v = JSON.parse(readFileSync(join(ROOT, "..", "version.json"), "utf8"));
+  if (v.version) version = v.version;
+} catch {}
+
 const result = await build({
   entryPoints: [join(ROOT, "src", "worker.ts")],
   bundle: true,
@@ -28,6 +34,7 @@ const result = await build({
   write: false,
   define: {
     PANEL_BUNDLE: JSON.stringify(panel),
+    NIKA_VERSION: JSON.stringify(version),
   },
   legalComments: "none",
 });

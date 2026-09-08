@@ -1,4 +1,4 @@
-// Nika Net Launcher — Telegram Bot API helpers
+// Nika Net Launcher — Telegram Bot API helpers (raw JSON, webhook-based).
 import { Env } from "./types";
 
 export interface TgUser { id: number; first_name?: string; last_name?: string; username?: string }
@@ -7,18 +7,76 @@ export interface TgMessage { message_id: number; chat: TgChat; from?: TgUser; te
 export interface TgCallbackQuery { id: string; from: TgUser; message?: TgMessage; data?: string }
 export interface TgUpdate { update_id: number; message?: TgMessage; callback_query?: TgCallbackQuery }
 
-export type KbButton = { text: string; cb?: string; url?: string };
-export type Kb = { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> };
+/* ---------- colored buttons (Bot API 9.0 `style`) ---------- */
+export type Color = "primary" | "success" | "danger";
 
-export const kb = (rows: KbButton[][]): Kb => ({
-  inline_keyboard: rows.map((r) =>
-    r.map((b) => ({ text: b.text, ...(b.url ? { url: b.url } : { callback_data: b.cb }) }))
-  ),
-});
+export interface Btn {
+  text: string;
+  cb?: string;
+  url?: string;
+  copy?: string;
+  color?: Color | string | null; // also accepts فارسی/english aliases & "gray"
+  emoji?: string | false; // default "auto" → circle emoji per color
+}
+
+interface InlineButton {
+  text: string;
+  callback_data?: string;
+  url?: string;
+  copy_text?: { text: string };
+  style?: string;
+}
+
+export interface Kb { inline_keyboard: InlineButton[][] }
+export interface ReplyKb { keyboard: Array<Array<{ text: string }>>; resize_keyboard: boolean; one_time_keyboard?: boolean }
+
+const CEMOJI: Record<string, string> = { primary: "🔵", success: "🟢", danger: "🔴", "": "⚪" };
+const ALIAS: Record<string, string | null> = {
+  primary: "primary", blue: "primary", "آبی": "primary",
+  success: "success", green: "success", "سبز": "success",
+  danger: "danger", red: "danger", "قرمز": "danger",
+  gray: null, grey: null, default: null, normal: null,
+  "خاکستری": null, "معمولی": null, "": null, none: null, null: null,
+};
+
+function ncolor(c: Color | string | null | undefined): string | null {
+  if (c === undefined || c === null || c === "") return null;
+  const k = String(c).trim().toLowerCase();
+  return k in ALIAS ? ALIAS[k] : null;
+}
+
+function emojiOf(text: string, style: string | null, emoji: string | false | undefined): string {
+  if (emoji === false || emoji === "") return text;
+  if (emoji === undefined || emoji === "auto") {
+    const e = CEMOJI[style || ""] || "";
+    return e ? `${e} ${text}` : text;
+  }
+  return `${emoji} ${text}`;
+}
+
+export function kb(rows: Btn[][]): Kb {
+  return {
+    inline_keyboard: rows.map((r) =>
+      r.map((b) => {
+        const style = ncolor(b.color);
+        const btn: InlineButton = { text: emojiOf(b.text, style, b.emoji) };
+        if (b.copy) btn.copy_text = { text: b.copy };
+        else if (b.url) btn.url = b.url;
+        else btn.callback_data = b.cb || "noop";
+        if (style) btn.style = style;
+        return btn;
+      })
+    ),
+  };
+}
+
+export function replyKb(rows: Array<Array<{ text: string }>>, oneTime = false): ReplyKb {
+  return { keyboard: rows, resize_keyboard: true, one_time_keyboard: oneTime };
+}
 
 const API = "https://api.telegram.org";
 
-export async function tgApi(env: Env, method: string, body: Record<string, unknown>): Promise<any> {
+async function tgApi(env: Env, method: string, body: Record<string, unknown>): Promise<any> {
   const res = await fetch(`${API}/bot${env.TELEGRAM_TOKEN}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -27,7 +85,7 @@ export async function tgApi(env: Env, method: string, body: Record<string, unkno
   return res.json();
 }
 
-export function sendMessage(env: Env, chatId: number, text: string, markup?: Kb) {
+export function sendMessage(env: Env, chatId: number, text: string, markup?: Kb | ReplyKb) {
   return tgApi(env, "sendMessage", {
     chat_id: chatId,
     text,
@@ -37,8 +95,37 @@ export function sendMessage(env: Env, chatId: number, text: string, markup?: Kb)
   });
 }
 
-export function answerCallback(env: Env, id: string, text?: string) {
-  return tgApi(env, "answerCallbackQuery", { callback_query_id: id, ...(text ? { text } : {}) });
+export function editMessage(env: Env, chatId: number, messageId: number, text: string, markup?: Kb) {
+  return tgApi(env, "editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...(markup ? { reply_markup: markup } : {}),
+  });
+}
+
+export function deleteMessage(env: Env, chatId: number, messageId: number) {
+  return tgApi(env, "deleteMessage", { chat_id: chatId, message_id: messageId });
+}
+
+export function sendChatAction(env: Env, chatId: number, action = "typing") {
+  return tgApi(env, "sendChatAction", { chat_id: chatId, action });
+}
+
+export function answerCallback(env: Env, id: string, text?: string, alert = false) {
+  return tgApi(env, "answerCallbackQuery", {
+    callback_query_id: id,
+    ...(text ? { text, show_alert: alert } : {}),
+  });
+}
+
+export function sendDocument(env: Env, chatId: number, filename: string, content: string) {
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("document", new File([content], filename, { type: "application/javascript" }));
+  return fetch(`${API}/bot${env.TELEGRAM_TOKEN}/sendDocument`, { method: "POST", body: form });
 }
 
 // list every chat id that ever interacted with the bot (state keys start with "u:")

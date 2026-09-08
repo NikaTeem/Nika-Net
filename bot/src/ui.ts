@@ -1,13 +1,156 @@
-// Nika Net Launcher — all the beautiful Persian messages & keyboards.
+// Nika Net Launcher — "Graphite + Neon" art engine, menus & renderers.
+import { Kb, ReplyKb, kb, replyKb, Btn } from "./telegram";
+import { UserState, PanelRecord, TokenRecord } from "./state";
+import { t, Lang } from "./i18n";
 
-import { Kb, kb } from "./telegram";
-import { UserState, PanelRecord } from "./state";
-import { CfAccount } from "./cloudflare";
+declare const NIKA_VERSION: string;
+export const VERSION = NIKA_VERSION || "0.4.0";
 
-const esc = (s: string) =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const esc = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
-/* ---------- لینک مستقیم توکن با دسترسی‌های آماده ---------- */
+/* ============================ art engine ✏️ ============================ */
+
+const SPIN = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+export { SPIN };
+
+const THEMES: Record<string, { icon: string; line: string }> = {
+  main: { icon: "⚡", line: "━" },
+  tokens: { icon: "🔑", line: "━" },
+  panels: { icon: "🗂", line: "━" },
+  users: { icon: "👥", line: "━" },
+  settings: { icon: "🛠", line: "┄" },
+  help: { icon: "ℹ️", line: "┄" },
+  build: { icon: "🚀", line: "━" },
+  danger: { icon: "⛔", line: "━" },
+  ok: { icon: "✅", line: "━" },
+  art: { icon: "✏️", line: "┄" },
+};
+
+function head(theme: string, title: string): string {
+  const th = THEMES[theme] || THEMES.main;
+  return `<b>${th.icon} ${th.line.repeat(3)} ${title} ${th.line.repeat(3)}</b>`;
+}
+
+function div(theme = "main", n = 14): string {
+  return (THEMES[theme] || THEMES.main).line.repeat(n);
+}
+
+function card(title: string, lines: string[]): string {
+  const out = [`┌─ ${title}`, ...lines.map((ln) => `│ ${ln}`), "└" + "─".repeat(18)];
+  return out.join("\n");
+}
+
+export const party = (lines: string[]): string =>
+  ["🎉".repeat(8), ...lines, "🎉".repeat(8)].join("\n");
+
+export function meter(pct: number, width = 10, invert = false): string {
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  const f = Math.round((p / 100) * width);
+  const dot = !invert ? (p < 70 ? "🟢" : p < 90 ? "🟡" : "🔴") : (p < 70 ? "🔴" : p < 90 ? "🟡" : "🟢");
+  return `${dot} ${"█".repeat(f)}${"░".repeat(width - f)} ${p}%`;
+}
+
+export function makeText(
+  title: string,
+  body?: string | string[] | null,
+  hint?: string | null,
+  crumb?: string | null,
+  theme = "main"
+): string {
+  const parts = [head(theme, title)];
+  if (crumb) parts.push(`🗺 <code>${esc(crumb)}</code>`);
+  parts.push(div(theme));
+  if (body) {
+    parts.push(Array.isArray(body) ? body.join("\n") : body);
+    parts.push(div(theme));
+  }
+  if (hint) parts.push(hint);
+  return parts.join("\n");
+}
+
+/* ============================ date & tips 🌍 ============================ */
+
+const FA_D = "۰۱۲۳۴۵۶۷۸۹";
+const FA_M = ["", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+const FA_W = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+
+export const fa_num = (n: number | string): string =>
+  String(n).replace(/\d/g, (d) => FA_D[+d]);
+
+function g2j(gy: number, gm: number, gd: number): [number, number, number] {
+  const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy: number;
+  if (gy > 1600) { jy = 979; gy -= 1600; } else { jy = 0; gy -= 621; }
+  const gy2 = gm > 2 ? gy + 1 : gy;
+  let days = 365 * gy + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) - 80 + gd + gdm[gm - 1];
+  jy += 33 * Math.floor(days / 12053);
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+  if (days < 186) return [jy, 1 + Math.floor(days / 31), 1 + (days % 31)];
+  return [jy, 7 + Math.floor((days - 186) / 30), 1 + ((days - 186) % 30)];
+}
+
+export function todayStr(lang: Lang): string {
+  const now = new Date(Date.now() + 3.5 * 3600_000); // Tehran
+  if (lang === "fa") {
+    const [jy, jm, jd] = g2j(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate());
+    const wd = FA_W[(now.getUTCDay() + 1) % 7];
+    const hm = `${fa_num(String(now.getUTCHours()).padStart(2, "0"))}:${fa_num(String(now.getUTCMinutes()).padStart(2, "0"))}`;
+    return `${wd} ${fa_num(jd)} ${FA_M[jm]} ${fa_num(jy)} ⏰ ${hm}`;
+  }
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${p(now.getUTCMonth() + 1)}-${p(now.getUTCDate())} ⏰ ${p(now.getUTCHours())}:${p(now.getUTCMinutes())} (Tehran)`;
+}
+
+export function fmtDate(ts: number, lang: Lang): string {
+  try {
+    if (lang === "fa") {
+      const d = new Date(ts + 3.5 * 3600_000);
+      const [jy, jm, jd] = g2j(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+      return `${fa_num(jd)} ${FA_M[jm]} ${fa_num(jy)}`;
+    }
+    return new Date(ts).toISOString().slice(0, 10);
+  } catch {
+    return "?";
+  }
+}
+
+const TIPS_FA = [
+  "توکن رو از لینک مستقیم با دسترسی آماده بساز — ۳۰ ثانیه‌ست! 🔑",
+  "بعد از هر آپدیت گیت‌هاب، پنل رو از «🔄 بروزرسانی» تازه کن. 📦",
+  "اسم پنل کوتاه بذار؛ توی آدرس میاد و تایپش راحته. ✍️",
+  "با «💚 بررسی سلامت» همه پنل‌ها رو یه‌جا پینگ کن.",
+  "رمز ادمین پنل رو ذخیره کن تا هر بار نخواد. 🔐",
+  "توکن قدیمی‌تر از ۳۰ روز؟ نوسازیش کن، امنیت اوله! 🛡",
+  "لینک ساب رو با دکمه 📋 کپی کن، نه تایپ!",
+  "قبل از دادن لینک به بقیه، یه پنل تست جدا بساز. 🧪",
+];
+const TIPS_EN = [
+  "Create the token via direct link — 30 seconds! 🔑",
+  "Refresh panels via “🔄 Update” after every GitHub update. 📦",
+  "Keep panel names short — they're in the URL. ✍️",
+  "Ping all panels at once with “💚 Health check”.",
+  "Save the panel admin password to skip typing. 🔐",
+  "Token older than 30 days? Renew it! 🛡",
+  "Copy sub links with 📋, don't type them!",
+  "Build a separate test panel first. 🧪",
+];
+
+export function tip(lang: Lang): string {
+  const arr = lang === "fa" ? TIPS_FA : TIPS_EN;
+  const now = new Date(Date.now() + 3.5 * 3600_000);
+  const doy = Math.floor((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400_000);
+  return arr[doy % arr.length];
+}
+
+/* ============================ token link 🔑 ============================ */
+
 export function tokenUrl(): string {
   const perms = JSON.stringify([
     { key: "workers_scripts", type: "edit" },
@@ -26,180 +169,432 @@ export function tokenUrl(): string {
   );
 }
 
-export const DIV = "──────────────────────";
+/* ============================ helpers 🃏 ============================ */
 
-/* ---------- منوی اصلی ---------- */
-export function menu(s: UserState, firstName?: string): { text: string; kb: Kb } {
+const L = (s: UserState | null): Lang => (s?.lang === "en" ? "en" : "fa");
+
+function activeTok(s: UserState): TokenRecord | undefined {
+  return s.activeToken ? s.tokens[s.activeToken] : undefined;
+}
+
+export const healthDot = (p: PanelRecord): string =>
+  !p.health ? "⚪" : p.health.ok ? "🟢" : "🔴";
+
+function healthLine(p: PanelRecord): string {
+  const h = p.health;
+  if (!h || h.ms < 0) return "⚪ ?";
+  if (!h.ok) return "🔴 down";
+  return `${meter(Math.min(100, (h.ms * 100) / 1500), 8)} · ${h.ms}ms`;
+}
+
+export function subLinks(base: string, u: { uuid?: string }): { base64: string; clash: string; singbox: string } {
+  const tok = (u.uuid || "").replace(/-/g, "").slice(0, 12);
+  return { base64: `${base}/sub/${tok}`, clash: `${base}/sub/${tok}.yaml`, singbox: `${base}/sub/${tok}.json` };
+}
+
+function usagePct(u: { quota?: number; used?: number }): number {
+  const q = Number(u.quota) || 0;
+  const used = Number(u.used) || 0;
+  return q > 0 ? Math.min(100, Math.round((used * 100) / q)) : 0;
+}
+
+export function stepsBar(lang: Lang, cur: number, total = 4): string {
+  const labels = t(lang, "w_steps").split(",");
+  const dots = "━━".repeat(0) + Array.from({ length: total }, (_, i) => (i < cur ? "●" : "○")).join("━━");
+  return `${dots}\n📌 ${labels[cur - 1] || ""} (${lang === "fa" ? fa_num(cur) : cur}/${lang === "fa" ? fa_num(total) : total})`;
+}
+
+function n(s: UserState | null, v: number | string): string {
+  return L(s) === "fa" ? fa_num(v) : String(v);
+}
+
+function pageRow(lang: Lang, page: number, total: number, prefix: string): Btn[] {
+  const nav: Btn[] = [];
+  if (page < total - 1) nav.push({ text: t(lang, "next"), cb: `${prefix}:${page + 1}`, color: "primary", emoji: false });
+  nav.push({ text: `• ${lang === "fa" ? fa_num(page + 1) : page + 1}/${lang === "fa" ? fa_num(total) : total} •`, cb: "noop", color: "gray", emoji: false });
+  if (page > 0) nav.push({ text: t(lang, "prev"), cb: `${prefix}:${page - 1}`, color: "primary", emoji: false });
+  return nav;
+}
+
+/* ============================ reply keyboard ⌨️ ============================ */
+
+export function replyMenu(s: UserState): ReplyKb {
+  const lang = L(s);
+  if (lang === "fa") {
+    return replyKb([[{ text: "🚀 ساخت پنل" }], [{ text: "🗂 پنل‌ها" }, { text: "🏠 منو" }]]);
+  }
+  return replyKb([[{ text: "🚀 New panel" }], [{ text: "🗂 Panels" }, { text: "🏠 Menu" }]]);
+}
+
+export const REPLY_LABELS: Record<string, "menu" | "panels" | "new"> = {
+  "🏠 منو": "menu", "🏠 Menu": "menu",
+  "🗂 پنل‌ها": "panels", "🗂 Panels": "panels",
+  "🚀 ساخت پنل": "new", "🚀 New panel": "new",
+};
+
+/* ============================ main menu ⚡ ============================ */
+
+export function mainMenu(s: UserState, firstName?: string): { text: string; kb: Kb } {
+  const lang = L(s);
   const name = firstName ? esc(firstName) : "دوست";
-  const saved = s.saved ? "✅ ذخیره شده" : "⚠️ ذخیره نشده";
-  const savedLine = s.saved && s.tokenTail ? `${saved} (…${esc(s.tokenTail)})` : saved;
-  const text =
-    `⚡ <b>NIKA NET</b> · لانچر پنل\n${DIV}\n` +
-    `سلام ${name} عزیز! 👋\n\n` +
-    `من لانچر <b>Nika Net</b> هستم.\n` +
-    `با من می‌تونی روی اکانت Cloudflare خودت پنل پروکسی بسازی — <b>کاملاً رایگان</b> و بدون سرور. ✏️\n\n` +
-    `🔑 <b>وضعیت توکن:</b> ${savedLine}\n` +
-    `🛠 <b>پنل‌های ساخته‌شده:</b> ${s.panels.length}\n`;
-  const kbRows: Kb = kb([
-    [{ text: "🔑 لینک مستقیم توکن", url: tokenUrl() }],
-    [{ text: "🚀 ساخت پنل جدید", cb: "build" }, { text: "🔄 بروزرسانی پنل‌ها", cb: "update" }],
-    [{ text: "🗂 پنل‌های من", cb: "panels" }, { text: "🛠 تنظیمات", cb: "settings" }],
-    [{ text: "ℹ️ راهنما", cb: "help" }],
+  const at = activeTok(s);
+  const atv = at ? `${esc(at.name)} (…${esc(at.tail)})` : t(lang, "tok_none");
+  const dash = card(`📊 ${t(lang, "main_hello", { name: `<b>${name}</b>` })}`, [
+    `${t(lang, "main_tok")}: <b>${atv}</b>`,
+    `${t(lang, "main_panels")}: <b>${n(s, s.panels.length)}</b>`,
+    `${t(lang, "main_ver")}: <b><code>${VERSION}</code></b>`,
+    `${t(lang, "main_today")}: ${todayStr(lang)}`,
   ]);
-  return { text, kb: kbRows };
+  const body = [t(lang, "main_desc"), "", dash, "", card(`${t(lang, "main_tip")} 💡`, [tip(lang)])].join("\n");
+  const rows: Btn[][] = [
+    [{ text: t(lang, "b_new"), cb: "do:build", color: "success", emoji: false }],
+    [
+      { text: t(lang, "b_panels"), cb: "panels:0", color: "primary", emoji: false },
+      { text: t(lang, "b_tokens"), cb: "menu:tokens", color: "primary", emoji: false },
+    ],
+    [
+      { text: t(lang, "b_users"), cb: "do:users", color: "success", emoji: false },
+      { text: t(lang, "b_settings"), cb: "menu:settings", color: "gray", emoji: false },
+    ],
+    [{ text: t(lang, "upd_all"), cb: "upd:all", color: "primary", emoji: false }],
+    [{ text: t(lang, "b_help"), cb: "menu:help", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "main_title"), body, t(lang, "choose"), t(lang, "main_crumb"), "main"), kb: kb(rows) };
 }
 
-/* ---------- ثبت توکن ---------- */
-export function tokenPrompt(): { text: string; kb: Kb } {
-  const text =
-    `🔑 <b>ثبت توکن Cloudflare</b>\n${DIV}\n` +
-    `برای ساختن پنل، به یک <b>API Token</b> از اکانت Cloudflare خودت نیاز دارم.\n\n` +
-    `👇 برای راحتی، روی دکمهٔ زیر بزن تا با <b>همهٔ دسترسی‌های لازم از قبل انتخاب‌شده</b> وارد صفحهٔ ساخت توکن بشی. فقط کافیه:\n\n` +
-    `1️⃣ <b>Continue to summary</b> رو بزنی\n` +
-    `2️⃣ بعد <b>Create Token</b> رو بزنی\n` +
-    `3️⃣ توکن رو کپی کنی و همین‌جا برام بفرستی\n`;
-  return { text, kb: kb([[{ text: "🔑 لینک مستقیم توکن (دسترسی‌ها آماده)", url: tokenUrl() }], [{ text: "🔙 بازگشت", cb: "menu" }]]) };
-}
+/* ============================ tokens 🔑 ============================ */
 
-export const checking = (): string => `⏳ در حال بررسی توکن...`;
-export const badToken = (): string => `⚠️ این که فرستادی شبیه توکن Cloudflare نیست!\nتوکن معمولاً با حروف و عدد طولانی شروع می‌شه. دوباره امتحان کن.`;
-
-export function tokenInvalid(err?: string): string {
-  return `❌ <b>توکن معتبر نیست</b>\n${DIV}\n${esc(err || "مشکل نامشخص")}\n\nمطمئن شو توکن رو کامل کپی کردی. 🔁`;
-}
-
-export function saveQuestion(accounts: CfAccount[]): { text: string; kb: Kb } {
-  const acc = accounts[0];
-  const more = accounts.length > 1 ? `\n➕ (${accounts.length} اکانت پیدا شد — موقع ساخت پنل می‌پرسی کدوم رو می‌خوای)` : "";
-  const text =
-    `✅ <b>توکن تأیید شد!</b>\n${DIV}\n` +
-    `👤 <b>اکانت:</b> ${esc(acc.name)}\n` +
-    `🆔 <b>شناسه:</b> <code>${esc(acc.id)}</code>${more}\n\n` +
-    `💾 <b>می‌خوای توکنت رو ذخیره کنم؟</b>\n` +
-    `اگه ذخیره بشه، برای ساخت پنل‌های بعدی دیگه ازت توکن نمی‌خوام. 🔐\n` +
-    `(با رمزنگاری ذخیره می‌شه)`;
-  return {
-    text,
-    kb: kb([[{ text: "✅ بله، ذخیره کن", cb: "save_y" }, { text: "❌ نه، فقط همین دفعه", cb: "save_n" }]]),
-  };
-}
-
-export const savedYes = (): { text: string; kb: Kb } => ({
-  text: `✅ توکن با <b>رمزنگاری</b> ذخیره شد! 🔐\n${DIV}\nحالا هر وقت خواستی می‌تونی پنل بسازی.`,
-  kb: kb([[{ text: "🚀 ساخت پنل جدید", cb: "build" }], [{ text: "🔙 منوی اصلی", cb: "menu" }]]),
-});
-
-export const savedNo = (): { text: string; kb: Kb } => ({
-  text: `👌 باشه، توکن رو ذخیره نمی‌کنم.\nفقط برای همین بار استفاده می‌کنم و بعد از ساخت پنل پاکش می‌کنم.`,
-  kb: kb([[{ text: "🚀 ساخت پنل جدید", cb: "build" }], [{ text: "🔙 منوی اصلی", cb: "menu" }]]),
-});
-
-/* ---------- ساخت پنل ---------- */
-export const namePrompt = (): string =>
-  `🚀 <b>ساخت پنل جدید</b>\n${DIV}\n` +
-  `یه اسم برای پنلت بفرست ✍️\n\n` +
-  `این اسم توی آدرس پنل میاد:\n` +
-  `<code>https://{name}.{subdomain}.workers.dev/admin</code>\n\n` +
-  `قواعد: حروف کوچک انگلیسی، عدد و خط تیره (-)، بین ۳ تا ۳۲ کاراکتر.\n` +
-  `مثلاً: <code>nika-one</code>`;
-
-export const invalidName = (): string =>
-  `⚠️ این اسم قابل قبول نیست!\nفقط حروف کوچک انگلیسی (a-z)، عدد و خط تیره (-)، بین ۳ تا ۳۲ کاراکتر.\n\nدوباره بفرست:`;
-
-export const chooseAccount = (accounts: CfAccount[]): { text: string; kb: Kb } => ({
-  text: `🗂 <b>چند تا اکانت پیدا کردم!</b>\n${DIV}\nکدوم اکانت رو برای ساخت پنل می‌خوای؟`,
-  kb: kb(accounts.map((a, i) => [{ text: `👤 ${a.name}`, cb: `acc:${i}` }]).concat([[{ text: "🔙 بازگشت", cb: "menu" }]])),
-});
-
-export const building = (): string => `⏳ در حال ساخت پنل... چند ثانیه طول می‌کشه ✏️`;
-
-export const needSubdomain = (): string =>
-  `ℹ️ <b>یه قدم کوچیک مونده</b>\n${DIV}\n` +
-  `اکانت Cloudflare تو هنوز <b>زیردامنهٔ workers.dev</b> نداره.\n\n` +
-  `یه اسم یکتا بفرست تا برات ثبتش کنم (فقط حروف کوچک و عدد، مثل <code>nika2026</code>).\n` +
-  `این زیردامنه یک‌بار ساخته می‌شه و بعداً برای همهٔ پنل‌هات استفاده می‌شه.`;
-
-export const invalidSub = (): string =>
-  `⚠️ این اسم قابل قبول نیست!\nفقط حروف کوچک انگلیسی و عدد (بدون خط تیره)، بین ۳ تا ۳۲ کاراکتر. دوباره بفرست:`;
-
-export function buildSuccess(name: string, sub: string): { text: string; kb: Kb } {
-  const url = `https://${name}.${sub}.workers.dev/admin`;
-  return {
-    text:
-      `✅ <b>پنل ساخته شد!</b> 🎉\n${DIV}\n` +
-      `🌐 <b>آدرس پنل:</b>\n<code>${esc(url)}</code>\n\n` +
-      `🔐 بار اول که وارد بشی، خودت رمز ادمین رو تعیین می‌کنی.\n` +
-      `📡 پروتکل‌ها: <b>VLESS · Trojan · WARP</b>\n\n` +
-      `بزن بریم! ✏️`,
-    kb: kb([[{ text: "🔗 باز کردن پنل", url }], [{ text: "🗂 پنل‌های من", cb: "panels" }, { text: "🔙 منوی اصلی", cb: "menu" }]]),
-  };
-}
-
-export const buildError = (err?: string): string =>
-  `❌ <b>ساخت پنل ناموفق بود</b>\n${DIV}\n${esc(err || "خطای نامشخص")}\n\nدوباره امتحان کن.`;
-
-/* ---------- پنل‌های من ---------- */
-export function panelsList(panels: PanelRecord[]): { text: string; kb: Kb } {
-  if (!panels.length) {
+export function tokensMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  if (Object.keys(s.tokens).length === 0) {
     return {
-      text: `🗂 <b>پنل‌های من</b>\n${DIV}\nهنوز پنلی نساختی! 🫥\nبا «🚀 ساخت پنل جدید» شروع کن.`,
-      kb: kb([[{ text: "🚀 ساخت پنل جدید", cb: "build" }], [{ text: "🔙 منوی اصلی", cb: "menu" }]]),
+      text: makeText(t(lang, "tok_title"), t(lang, "tok_empty"), t(lang, "choose"), t(lang, "tok_crumb"), "tokens"),
+      kb: kb([
+        [{ text: t(lang, "tok_add"), cb: "tok:add", color: "success", emoji: false }],
+        [{ text: t(lang, "tok_link"), url: tokenUrl(), color: "primary", emoji: false }],
+        [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
+      ]),
     };
   }
-  const lines = panels.map((p, i) => `${i + 1}. <a href="${esc(p.url)}">${esc(p.name)}</a>`).join("\n");
+  const cards: string[] = [];
+  for (const [tid, tk] of Object.entries(s.tokens)) {
+    const on = tid === s.activeToken;
+    const age = Math.floor((Date.now() - tk.created) / 86400_000);
+    const lines = [`${t(lang, "tok_age")}: ${n(s, age)}d`, meter(Math.min(100, (age * 100) / 90), 8)];
+    if (on) lines.push(t(lang, "tok_active"));
+    if (age >= 30) lines.push(t(lang, "tok_old"));
+    cards.push(card(`${on ? "✅" : "🔑"} ${esc(tk.name)} (…${esc(tk.tail)})`, lines));
+  }
+  cards.push(t(lang, "tok_hint"));
+  const rows: Btn[][] = [];
+  for (const [tid, tk] of Object.entries(s.tokens)) {
+    const on = tid === s.activeToken;
+    rows.push([
+      { text: `${on ? "✅ " : ""}${esc(tk.name)}`, cb: `tok:use:${tid}`, color: on ? "success" : "gray", emoji: false },
+      { text: "❌", cb: `tok:del:${tid}`, color: "danger", emoji: false },
+    ]);
+  }
+  rows.push([{ text: t(lang, "tok_add"), cb: "tok:add", color: "success", emoji: false }]);
+  rows.push([{ text: t(lang, "tok_link"), url: tokenUrl(), color: "primary", emoji: false }]);
+  rows.push([{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }]);
+  return { text: makeText(t(lang, "tok_title"), cards.join("\n\n"), t(lang, "choose"), t(lang, "tok_crumb"), "tokens"), kb: kb(rows) };
+}
+
+/* ============================ settings ⚙️ ============================ */
+
+export function settingsMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = [
+    card(`📦 ${t(lang, "set_bundle")}`, [`<code>${VERSION}</code>`]),
+    "",
+    card("📊 Stats", [t(lang, "set_stats", { tok: n(s, Object.keys(s.tokens).length), pan: n(s, s.panels.length), b: n(s, s.builds) })]),
+  ].join("\n");
+  const rows: Btn[][] = [
+    [{ text: t(lang, "set_lang"), cb: "do:lang", color: "primary", emoji: false }],
+    [{ text: t(lang, "set_bundle_get"), cb: "do:getbundle", color: "gray", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "set_title"), body, t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
+}
+
+/* ============================ help ℹ️ ============================ */
+
+export function helpMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
   return {
-    text: `🗂 <b>پنل‌های من</b>\n${DIV}\n${lines}\n\nروی هر کدوم بزن تا باز بشه.`,
+    text: makeText(t(lang, "h_title"), t(lang, "h_body"), t(lang, "choose"), t(lang, "h_crumb"), "help"),
+    kb: kb([[{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }]]),
+  };
+}
+
+/* ============================ panels 🗂 ============================ */
+
+export function panelsList(s: UserState, page = 0): { text: string; kb: Kb } {
+  const lang = L(s);
+  if (!s.panels.length) {
+    return {
+      text: makeText(t(lang, "pan_title"), t(lang, "pan_empty"), t(lang, "choose"), t(lang, "pan_crumb"), "panels"),
+      kb: kb([
+        [{ text: t(lang, "pan_new"), cb: "do:build", color: "success", emoji: false }],
+        [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
+      ]),
+    };
+  }
+  const PER = 5;
+  const total = Math.max(1, Math.ceil(s.panels.length / PER));
+  page = Math.max(0, Math.min(page, total - 1));
+  const chunk = s.panels.slice(page * PER, (page + 1) * PER);
+  const cards = chunk.map((p) =>
+    card(`${healthDot(p)} ${esc(p.name)}`, [`🌐 <code>${esc(p.url)}</code>`, `💚 ${healthLine(p)}`])
+  );
+  const rows: Btn[][] = chunk.map((p) => [{ text: `${healthDot(p)} ${esc(p.name)}`, cb: `panel:${p.name}`, color: "primary", emoji: false }]);
+  if (total > 1) rows.push(pageRow(lang, page, total, "panels"));
+  rows.push([{ text: t(lang, "pan_health"), cb: "do:health", color: "success", emoji: false }]);
+  rows.push([
+    { text: t(lang, "pan_new"), cb: "do:build", color: "success", emoji: false },
+    { text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false },
+  ]);
+  return {
+    text: makeText(`${t(lang, "pan_title")} (${n(s, s.panels.length)})`, cards.join("\n\n"), t(lang, "choose"), t(lang, "pan_crumb"), "panels"),
+    kb: kb(rows),
+  };
+}
+
+export function panelDetail(s: UserState, name: string): { text: string; kb: Kb } {
+  const lang = L(s);
+  const p = s.panels.find((x) => x.name === name);
+  if (!p) {
+    return {
+      text: makeText("?", "?", null, null, "danger"),
+      kb: kb([[{ text: t(lang, "back"), cb: "panels:0", color: "gray", emoji: false }]]),
+    };
+  }
+  const body = card(`${healthDot(p)} ${esc(name)}`, [
+    `🌐 <code>${esc(p.url)}</code>`,
+    `👤 ${esc(p.accountName || "?")}`,
+    `📦 ${t(lang, "pd_ver")}: <code>${esc(p.bundleVer || "?")}</code>`,
+    `📅 ${t(lang, "pd_created")}: ${fmtDate(p.createdAt, lang)}`,
+    `💚 ${t(lang, "pd_health")}: ${healthLine(p)}`,
+  ]);
+  const rows: Btn[][] = [
+    [{ text: t(lang, "pd_open"), url: p.url, color: "primary", emoji: false }],
+    [{ text: t(lang, "pd_users"), cb: `pusers:${name}`, color: "success", emoji: false }],
+    [{ text: t(lang, "pd_update"), cb: `pupd:${name}`, color: "primary", emoji: false }],
+    [{ text: t(lang, "pd_delete"), cb: `pdel:${name}`, color: "danger", emoji: false }],
+    [{ text: t(lang, "back"), cb: "panels:0", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(esc(name), body, t(lang, "choose"), `${t(lang, "pan_crumb")} ‹ ${esc(name)}`, "panels"), kb: kb(rows) };
+}
+
+/* ============================ users 👥 ============================ */
+
+export function usersList(
+  s: UserState,
+  pname: string,
+  users: Array<{ id: string; name: string; quota?: number; used?: number; days?: number; active?: boolean }>,
+  page = 0
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const PER = 5;
+  const total = Math.max(1, Math.ceil(users.length / PER));
+  page = Math.max(0, Math.min(page, total - 1));
+  const chunk = users.slice(page * PER, (page + 1) * PER);
+  const body = users.length
+    ? chunk
+        .map((x) =>
+          card(`${x.active ? "🟢" : "🔴"} ${esc(x.name)}`, [
+            `📦 ${meter(usagePct(x), 8)}`,
+            `${t(lang, "u_days")}: <b>${n(s, x.days ?? "?")}</b>`,
+          ])
+        )
+        .join("\n\n")
+    : t(lang, "u_empty");
+  const rows: Btn[][] = chunk.map((x) => [{ text: `${x.active ? "🟢" : "🔴"} ${esc(x.name)}`, cb: `user:${x.id}`, color: "primary", emoji: false }]);
+  if (total > 1) rows.push(pageRow(lang, page, total, `users:${pname}`));
+  rows.push([{ text: t(lang, "u_new"), cb: `unew:${pname}`, color: "success", emoji: false }]);
+  rows.push([{ text: t(lang, "back"), cb: `panel:${pname}`, color: "gray", emoji: false }]);
+  return {
+    text: makeText(t(lang, "u_title", { n: esc(pname) }), body, t(lang, "choose"), `${t(lang, "pan_crumb")} ‹ ${esc(pname)}`, "users"),
+    kb: kb(rows),
+  };
+}
+
+export function userDetail(
+  s: UserState,
+  pname: string,
+  x: { id: string; name: string; quota?: number; used?: number; days?: number; active?: boolean },
+  page: number
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const base = s.panels.find((p) => p.name === pname)?.base || "";
+  const links = subLinks(base, x as any);
+  const body = card(`🙂 ${esc(x.name)}`, [
+    `📦 ${t(lang, "u_quota")}: <b>${n(s, x.quota ?? "?")}GB</b>`,
+    `${t(lang, "u_used")}: ${meter(usagePct(x), 8)}`,
+    `📅 ${t(lang, "u_days")}: <b>${n(s, x.days ?? "?")}</b>`,
+    `${t(lang, "u_state")}: <b>${x.active ? t(lang, "u_on") : t(lang, "u_off")}</b>`,
+    `📡 <code>${esc(links.base64)}</code>`,
+  ]);
+  const rows: Btn[][] = [
+    [
+      { text: "📡 base64", url: links.base64, color: "primary", emoji: false },
+      { text: "⛵ Clash", url: links.clash, color: "primary", emoji: false },
+      { text: "📦 S-box", url: links.singbox, color: "primary", emoji: false },
+    ],
+    [{ text: t(lang, "u_copy"), copy: links.base64, color: "gray", emoji: false }],
+    [{ text: t(lang, "u_del"), cb: `udel:${x.id}`, color: "danger", emoji: false }],
+    [{ text: t(lang, "back"), cb: `users:${pname}:${page}`, color: "gray", emoji: false }],
+  ];
+  return { text: makeText(esc(x.name), body, t(lang, "choose"), `${t(lang, "pan_crumb")} ‹ ${esc(pname)}`, "users"), kb: kb(rows) };
+}
+
+/* ============================ prompts 🧩 ============================ */
+
+export function tokenPrompt(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  return {
+    text: makeText("🔑", t(lang, "tok_ask"), null, null, "tokens"),
     kb: kb([
-      ...panels.map((p) => [{ text: `🔗 ${p.name}`, url: p.url }]),
-      [{ text: "🚀 ساخت پنل جدید", cb: "build" }, { text: "🔙 منوی اصلی", cb: "menu" }],
+      [{ text: t(lang, "tok_link"), url: tokenUrl(), color: "primary", emoji: false }],
+      [{ text: t(lang, "back"), cb: "menu:tokens", color: "gray", emoji: false }],
     ]),
   };
 }
 
-/* ---------- تنظیمات ---------- */
-export function settings(s: UserState): { text: string; kb: Kb } {
-  const tokenLine = s.saved && s.tokenTail
-    ? `🔑 <b>توکن ذخیره‌شده:</b> …${esc(s.tokenTail)}`
-    : `🔑 <b>توکن ذخیره‌شده:</b> ندارد`;
-  const text = `🛠 <b>تنظیمات</b>\n${DIV}\n${tokenLine}\n\n🛡 توکن با رمزنگاری AES-GCM ذخیره می‌شه.`;
-  const rows: Kb = kb([
-    ...(s.saved ? [[{ text: "❌ حذف توکن ذخیره‌شده", cb: "del_token" }] as Array<{text:string; cb?:string; url?:string}>] : []),
-    [{ text: "🔑 ثبت توکن جدید", cb: "token" }],
-    [{ text: "🔙 منوی اصلی", cb: "menu" }],
+export function saveQuestion(s: UserState, accountName: string, accountCount: number): { text: string; kb: Kb } {
+  const lang = L(s);
+  const more = accountCount > 1 ? `\n➕ (${n(s, accountCount)} ${lang === "fa" ? "اکانت پیدا شد" : "accounts found"} — ${lang === "fa" ? "موقع ساخت پنل می‌پرسم کدوم رو می‌خوای" : "I'll ask which one when building"})` : "";
+  const text = makeText(
+    "🔐",
+    `👤 <b>${esc(accountName)}</b>${more}\n\n💾 <b>${lang === "fa" ? "می‌خوای توکنت رو ذخیره کنم؟" : "Save your token?"}</b>\n${lang === "fa" ? "اگه ذخیره بشه، برای پنل‌های بعدی دیگه ازت توکن نمی‌خوام. 🔐 (با رمزنگاری ذخیره می‌شه)" : "If saved, I won't ask again for future panels. 🔐 (stored encrypted)"}`,
+    null,
+    null,
+    "ok"
+  );
+  return {
+    text,
+    kb: kb([
+      [{ text: t(lang, "a_yes"), cb: "save_y", color: "success", emoji: false }],
+      [{ text: t(lang, "a_no"), cb: "save_n", color: "gray", emoji: false }],
+    ]),
+  };
+}
+
+export function chooseAccount(s: UserState, accounts: Array<{ id: string; name: string }>): { text: string; kb: Kb } {
+  const lang = L(s);
+  const rows: Btn[][] = accounts.map((a, i) => [{ text: `👤 ${esc(a.name)}`, cb: `acc:${i}`, color: "primary", emoji: false }]);
+  rows.push([{ text: t(lang, "cancel"), cb: "menu:main", color: "gray", emoji: false }]);
+  return { text: makeText("🗂", t(lang, "b_choose_acc"), t(lang, "choose"), null, "build"), kb: kb(rows) };
+}
+
+export function namePrompt(s: UserState, suggest?: string): { text: string; kb: Kb } {
+  const lang = L(s);
+  let text = makeText(t(lang, "b_new"), t(lang, "b_name"), null, `${t(lang, "main_crumb")} ‹ 🚀`, "build");
+  if (suggest) text += `\n\n${card(`🎲 ${t(lang, "b_suggest")}`, [`<code>${esc(suggest)}</code>`])}`;
+  const rows: Btn[][] = [[{ text: t(lang, "b_rand"), cb: "do:randname", color: "primary", emoji: false }]];
+  if (suggest) {
+    rows.push([
+      { text: t(lang, "b_use"), cb: "do:usesuggest", color: "success", emoji: false },
+      { text: t(lang, "b_another"), cb: "do:randname", color: "gray", emoji: false },
+    ]);
+  }
+  rows.push([{ text: t(lang, "cancel"), cb: "menu:main", color: "gray", emoji: false }]);
+  return { text, kb: kb(rows) };
+}
+
+export function buildConfirm(
+  s: UserState,
+  data: { name: string; accountName: string; url: string; ver: string }
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = card(`📛 <code>${esc(data.name)}</code>`, [
+    `👤 ${esc(data.accountName)}`,
+    `🌐 <code>${esc(data.url)}</code>`,
+    `📦 <code>${esc(data.ver)}</code> · ${stepsBar(lang, 4)}`,
   ]);
-  return { text, kb: rows };
+  return {
+    text: makeText(t(lang, "b_confirm"), body, null, null, "build"),
+    kb: kb([
+      [{ text: t(lang, "b_build"), cb: "do:buildyes", color: "success", emoji: false }],
+      [{ text: t(lang, "cancel"), cb: "menu:main", color: "gray", emoji: false }],
+    ]),
+  };
 }
 
-export const tokenDeleted = (): string => `🗑 توکن ذخیره‌شده حذف شد.\nبرای ساخت پنل بعدی دوباره توکن می‌خوام.`;
-
-/* ---------- بروزرسانی پنل‌ها ---------- */
-export const updateUpgrading = (n: number): string =>
-  `🔄 <b>در حال بروزرسانی ${n} پنل…</b>\n${DIV}\nچند ثانیه طول می‌کشه ✏️`;
-
-export function updateDone(results: Array<{ name: string; ok: boolean }>): string {
-  const lines = results
-    .map((r) => `${r.ok ? "✅" : "❌"} <code>${esc(r.name)}</code>`)
-    .join("\n");
-  const okCount = results.filter((r) => r.ok).length;
-  return `🔄 <b>نتیجهٔ بروزرسانی</b>\n${DIV}\n${lines}\n\n${okCount} از ${results.length} پنل با موفقیت به‌روزرسانی شد.`;
+export function buildSuccess(s: UserState, name: string, sub: string): { text: string; kb: Kb } {
+  const lang = L(s);
+  const base = `https://${name}.${sub}.workers.dev`;
+  const url = `${base}/admin`;
+  return {
+    text: party([
+      `<b>${t(lang, "b_done", { n: esc(name) })}</b>`,
+      `🌐 <code>${esc(url)}</code>`,
+      "",
+      t(lang, "b_done_sub"),
+    ]),
+    kb: kb([
+      [{ text: t(lang, "pd_open"), url, color: "primary", emoji: false }],
+      [{ text: `📋 ${t(lang, "u_copy")}`, copy: url, color: "gray", emoji: false }],
+      [
+        { text: t(lang, "b_panels"), cb: "panels:0", color: "success", emoji: false },
+        { text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false },
+      ],
+    ]),
+  };
 }
 
-export const updateNoPanels = (): { text: string; kb: Kb } => ({
-  text: `🗂 هنوز پنلی نساختی که بخواد بروزرسانی بشه!\nاول «🚀 ساخت پنل جدید» بزن.`,
-  kb: kb([[{ text: "🚀 ساخت پنل جدید", cb: "build" }], [{ text: "🔙 منوی اصلی", cb: "menu" }]]),
-});
+/* ---------- small one-liners ---------- */
 
-/* ---------- راهنما ---------- */
-export const help = (): { text: string; kb: Kb } => ({
-  text:
-    `ℹ️ <b>راهنمای Nika Net Launcher</b>\n${DIV}\n` +
-    `<b>۱) گرفتن توکن Cloudflare</b>\n` +
-    `روی «🔑 لینک مستقیم توکن» بزن — همهٔ دسترسی‌ها از قبل انتخاب شده. فقط:\n` +
-    `<code>Continue to summary</code> → <code>Create Token</code> → کپی توکن → برام بفرست.\n\n` +
-    `<b>۲) ساخت پنل</b>\n` +
-    `«🚀 ساخت پنل جدید» بزن، اسم پنل رو بفرست — من پنل رو با KV و همه‌چیز می‌سازم و آدرسش رو می‌دم.\n\n` +
-    `<b>۳) ورود به پنل</b>\n` +
-    `اولین بار رمز ادمین رو خودت تعیین می‌کنی، بعد کاربر بساز و لینک اشتراک بگیر.\n\n` +
-    `🔒 توکن‌ها با رمزنگاری ذخیره می‌شن و فقط مال خودت‌ان.`,
-  kb: kb([[{ text: "🔙 منوی اصلی", cb: "menu" }]]),
-});
+export const checking = (s: UserState): string => `⏳ ${t(L(s), "tok_checking")}`;
+export const badToken = (s: UserState): string => t(L(s), "tok_bad");
+export const tokenInvalid = (s: UserState, err?: string): string =>
+  makeText("⛔", t(L(s), "tok_invalid", { e: esc(err || "?") }), null, null, "danger");
+export const invalidName = (s: UserState): string => t(L(s), "b_name_bad");
+export const invalidSub = (s: UserState): string => t(L(s), "b_sub_bad");
+export const building = (s: UserState): string => `⏳ ${t(L(s), "tok_checking")}`;
+export const needSubdomain = (s: UserState): string =>
+  makeText("ℹ️", t(L(s), "b_need_sub"), null, null, "build");
+export const buildError = (s: UserState, err?: string): string =>
+  makeText(t(L(s), "b_fail"), `<code>${esc(err || "?")}</code>`, null, null, "danger");
+export const cooldown = (s: UserState, m: number): string =>
+  t(L(s), "b_cool", { m: L(s) === "fa" ? fa_num(m) : m });
+
+export function confirmMenu(
+  lang: Lang,
+  actionCb: string,
+  cancelCb: string,
+  question: string,
+  danger = true
+): { text: string; kb: Kb } {
+  return {
+    text: makeText("⚠️", question, null, null, danger ? "danger" : "ok"),
+    kb: kb([
+      [{ text: t(lang, "yes_do"), cb: actionCb, color: danger ? "danger" : "success", emoji: false }],
+      [{ text: t(lang, "back"), cb: cancelCb, color: "gray", emoji: false }],
+    ]),
+  };
+}
+
+export const askPanelPass = (s: UserState, pname: string): { text: string; kb: Kb } => {
+  const lang = L(s);
+  return {
+    text: makeText("🔐", t(lang, "a_ask_pass", { n: esc(pname) }), null, null, "users"),
+    kb: kb([[{ text: t(lang, "cancel"), cb: `panel:${pname}`, color: "gray", emoji: false }]]),
+  };
+};
+
+export const askUname = (s: UserState, pname: string): { text: string; kb: Kb } => {
+  const lang = L(s);
+  return {
+    text: makeText("➕", t(lang, "u_ask_name"), null, null, "users"),
+    kb: kb([[{ text: t(lang, "cancel"), cb: `users:${pname}:0`, color: "gray", emoji: false }]]),
+  };
+};
+
+export const badNum = (s: UserState): string => t(L(s), "u_bad_num");
+
+export const pingResult = (s: UserState, ms: number): string =>
+  `🏓 ${t(L(s), "ping_res", { ms: L(s) === "fa" ? fa_num(ms) : ms })}\n${meter(Math.min(100, (ms * 100) / 2000), 10)}`;
+
+export const tokenSavedBanner = (s: UserState, acc: string): string =>
+  makeText("🔐", t(L(s), "tok_saved", { acc: esc(acc) }), null, null, "ok");
