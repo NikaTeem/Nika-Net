@@ -1,0 +1,23 @@
+{
+  "name": "nika-net",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Nika Net — a beautiful, self-hosted VLESS/Trojan/WARP panel on a single Cloudflare Worker.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "deploy": "npm run build && wrangler deploy",
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260603.1",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NikaTeem/Nika-Net.git"
+  }
+}
