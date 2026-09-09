@@ -1893,19 +1893,23 @@ window.POOL = (() => {
   const S = { selected: null, running: false, ctl: null, tested: 0, alive: 0, dead: 0, results: [], lockArmed: false };
   const countries = Object.keys(P).sort((a, b) => P[b].length - P[a].length);
 
-  function probe(ip, port) {
-    return new Promise((resolve) => {
-      const ctl = new AbortController();
-      const t0 = setTimeout(() => ctl.abort(), 3500);
-      const start = performance.now();
-      fetch(`https://${ip}:${port}/`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
-        .then(() => { clearTimeout(t0); resolve({ ok: true, ms: Math.max(1, performance.now() - start) }); })
-        .catch(() => {
-          clearTimeout(t0);
-          const ms = performance.now() - start;
-          resolve({ ok: !ctl.signal.aborted && ms >= 12, ms });
-        });
-    });
+  // Liveness is checked SERVER-SIDE: the worker opens a raw TCP connection to
+  // each ip:port (datacenter IPs rarely speak valid HTTPS, so a browser fetch
+  // always failed). Returns the same shape as before: { ip, port, min, alive }.
+  async function probeBatch(items) {
+    const addrs = items.map((it) => (it.port !== 443 ? `${it.ip}:${it.port}` : it.ip));
+    try {
+      const res = await api("/api/pooltest", { method: "POST", body: { list: addrs } });
+      if (!res.ok) throw new Error("http " + res.status);
+      const j = await res.json();
+      const byAddr = new Map((j.results || []).map((r) => [r.addr, r]));
+      return items.map((it, i) => {
+        const r = byAddr.get(addrs[i]);
+        return { ip: it.ip, port: it.port, min: r && r.ok ? Math.max(1, Math.round(r.ms)) : null, alive: !!(r && r.ok) };
+      });
+    } catch (e) {
+      return items.map((it) => ({ ip: it.ip, port: it.port, min: null, alive: false }));
+    }
   }
 
   function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -1954,25 +1958,19 @@ window.POOL = (() => {
     $("#poolStatus").textContent = t("pool.running");
     renderCounters(); renderList(true);
 
-    let cursor = 0;
-    const workers = [];
-    const n = Math.min(30, queue.length);
-    const signal = S.ctl.signal;
-    for (let w = 0; w < n; w++) {
-      workers.push((async () => {
-        while (cursor < queue.length && !signal.aborted) {
-          const it = queue[cursor++];
-          const r = await probe(it.ip, it.port);
-          if (signal.aborted) break;
-          S.tested++;
-          if (r.ok) S.alive++; else S.dead++;
-          S.results.push({ ip: it.ip, port: it.port, min: r.ok ? Math.round(r.ms) : null, alive: r.ok });
-          renderCounters();
-          if (S.results.length % 10 === 0 || !S.running) renderList(false);
-        }
-      })());
+    // test in chunks through the worker's TCP probe
+    const CHUNK = 40;
+    for (let off = 0; off < queue.length && !S.ctl.signal.aborted; off += CHUNK) {
+      const batch = await probeBatch(queue.slice(off, off + CHUNK));
+      if (S.ctl.signal.aborted) break;
+      for (const r of batch) {
+        S.tested++;
+        if (r.alive) S.alive++; else S.dead++;
+        S.results.push(r);
+      }
+      renderCounters();
+      renderList(false);
     }
-    await Promise.all(workers);
     S.running = false;
     $("#poolStart").classList.remove("hidden");
     $("#poolStop").classList.add("hidden");

@@ -13,6 +13,7 @@ import * as store from "./settings";
 import * as auth from "./auth";
 import * as gen from "./generators";
 import * as metrics from "./metrics";
+import * as poolprobe from "./poolprobe";
 import { handleVless } from "./protocols/vless";
 import { handleTrojan } from "./protocols/trojan";
 import { jsonResp } from "./protocols/common";
@@ -293,6 +294,16 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         return jsonResp({ ok: true });
       }
       break;
+    }
+
+    case "pooltest": {
+      if (method !== "POST") break;
+      const b = (await req.json().catch(() => ({}))) as { list?: string[] };
+      const list = Array.isArray(b.list) ? b.list.filter((x) => typeof x === "string") : [];
+      if (!list.length) return jsonResp({ results: [], elapsed: 0 });
+      const t0 = Date.now();
+      const results = await poolprobe.probePool(list);
+      return jsonResp({ results, elapsed: Date.now() - t0 });
     }
 
     case "gen": {
