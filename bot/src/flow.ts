@@ -223,7 +223,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   const text = (msg.text || "").trim();
 
   // track last-seen + name for the panel (throttled writes)
-  await st.touchMeta(env, chatId, { firstName: msg.from?.first_name, username: msg.from?.username });
+  await st.touchMeta(env, chatId, { firstName: msg.from?.first_name, lastName: msg.from?.last_name, username: msg.from?.username });
 
   // عضویت اجباری — gate every message (owner + exempt always pass, and the
   // "await_fj_chat" setup state is allowed so the owner can configure it).

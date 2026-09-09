@@ -129,6 +129,14 @@ export function getChat(env: Env, chatId: string | number) {
   return tgApi(env, "getChat", { chat_id: String(chatId) });
 }
 
+export function getUserProfilePhotos(env: Env, userId: number, limit = 1) {
+  return tgApi(env, "getUserProfilePhotos", { user_id: userId, limit });
+}
+
+export function getFile(env: Env, fileId: string) {
+  return tgApi(env, "getFile", { file_id: fileId });
+}
+
 export function getMe(env: Env) {
   return tgApi(env, "getMe", {});
 }

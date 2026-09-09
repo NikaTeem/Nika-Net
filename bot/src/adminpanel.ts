@@ -92,7 +92,8 @@ const PANEL_HTML = `<!doctype html>
   .utable td{padding:9px 10px;border-bottom:1px solid rgba(35,47,77,.5);vertical-align:middle}
   .utable tr:hover td{background:rgba(28,37,62,.4)}
   .usr{display:flex;align-items:center;gap:10px}
-  .avatar{width:34px;height:34px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-size:15px;font-weight:700;color:#fff;flex:none}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-size:15px;font-weight:700;color:#fff;flex:none;overflow:hidden;position:relative}
+  .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0}
   .uname{font-weight:700}
   .umeta{color:var(--muted);font-size:11.5px;font-family:ui-monospace,monospace}
   .search{position:relative}
@@ -320,6 +321,11 @@ const PANEL_HTML = `<!doctype html>
 
   async function load() {
     var r = await api("/panel/api/state");
+    // KV sessions can lag a heartbeat — retry once before showing the login
+    if (!r.ok && r.status === 401) {
+      await new Promise(function (res) { setTimeout(res, 700); });
+      r = await api("/panel/api/state");
+    }
     if (!r.ok) { $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
     state = r.j;
     $("#loginView").classList.add("hidden");
@@ -427,12 +433,21 @@ const PANEL_HTML = `<!doctype html>
     return '<span class="badge off">⛔ مسدود</span>';
   }
 
+  function copyId(id) {
+    var ta = document.createElement("textarea");
+    ta.value = String(id);
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("آیدی کپی شد ✓"); } catch (e) { toast("کپی نشد"); }
+    ta.remove();
+  }
+
   function renderUsers() {
     var q = ($("#usrSearch").value || "").trim().toLowerCase();
     var list = users.filter(function (u) {
       if (!q) return true;
       return (String(u.id).indexOf(q) >= 0) ||
              ((u.name || "").toLowerCase().indexOf(q) >= 0) ||
+             ((u.lastName || "").toLowerCase().indexOf(q) >= 0) ||
              ((u.username || "").toLowerCase().indexOf(q) >= 0);
     });
     var body = $("#usrBody");
@@ -440,22 +455,74 @@ const PANEL_HTML = `<!doctype html>
     $("#usrEmpty").classList.toggle("hidden", list.length > 0);
     list.forEach(function (u) {
       var tr = document.createElement("tr");
-      var initial = (u.name || "؟").charAt(0);
-      var name = u.name ? '<div class="uname">' + u.name + '</div><div class="umeta">@' + (u.username || "بدون یوزرنیم") + '</div>' : '<div class="uname">—</div>';
-      tr.innerHTML =
-        '<td><div class="usr"><div class="avatar">' + initial + '</div><div>' + name + '</div></div></td>' +
-        '<td><div class="umeta" dir="ltr">' + u.id + "</div></td>" +
-        '<td>' + statusBadge(u) + "</td>" +
-        '<td><div class="umeta">' + fmtTime(u.lastSeen) + "</div></td>";
-      var act = document.createElement("td");
+      var full = ((u.name || "") + " " + (u.lastName || "")).trim();
+      var initial = (full || "؟").charAt(0);
+
+      // cell 1: avatar (photo or initial) + full name + @username
+      var td1 = document.createElement("td");
+      var usr = document.createElement("div"); usr.className = "usr";
+      var av = document.createElement("div"); av.className = "avatar"; av.textContent = initial;
+      if (u.photo) {
+        var img = document.createElement("img");
+        img.src = "/panel/api/photo/" + u.id;
+        img.alt = "";
+        img.onload = function () { av.textContent = ""; av.appendChild(img); };
+        img.onerror = function () {
+          if (!img.getAttribute("data-r")) {
+            img.setAttribute("data-r", "1");
+            setTimeout(function () { img.src = "/panel/api/photo/" + u.id + "?r=" + Date.now(); }, 800);
+          } else img.remove();
+        };
+      }
+      usr.appendChild(av);
+      var nm = document.createElement("div");
+      var nmn = document.createElement("div"); nmn.className = "uname"; nmn.textContent = full || "بدون نام";
+      nm.appendChild(nmn);
+      var um = document.createElement("div"); um.className = "umeta";
+      if (u.username) {
+        um.textContent = "@" + u.username;
+        um.style.cursor = "pointer"; um.title = "باز کردن پروفایل تلگرام";
+        um.onclick = function () { window.open("https://t.me/" + u.username, "_blank"); };
+      } else um.textContent = "بدون یوزرنیم";
+      nm.appendChild(um);
+      usr.appendChild(nm);
+      td1.appendChild(usr);
+
+      // cell 2: numeric id + copy button
+      var td2 = document.createElement("td");
+      var idv = document.createElement("div"); idv.className = "umeta"; idv.dir = "ltr"; idv.textContent = u.id;
+      var cp = document.createElement("button"); cp.className = "btn btn-ghost btn-sm"; cp.style.marginTop = "4px"; cp.textContent = "📋 کپی";
+      cp.onclick = function () { copyId(u.id); };
+      td2.appendChild(idv); td2.appendChild(cp);
+
+      // cell 3: status badge
+      var td3 = document.createElement("td");
+      td3.innerHTML = statusBadge(u);
+
+      // cell 4: last seen
+      var td4 = document.createElement("td");
+      var ls = document.createElement("div"); ls.className = "umeta"; ls.textContent = fmtTime(u.lastSeen);
+      td4.appendChild(ls);
+
+      // cell 5: actions (open profile + exempt)
+      var td5 = document.createElement("td");
+      var acts = document.createElement("div"); acts.style.display = "flex"; acts.style.gap = "6px"; acts.style.flexWrap = "wrap";
+      if (u.username) {
+        var link = document.createElement("button"); link.className = "btn btn-ghost btn-sm"; link.textContent = "🔗";
+        link.title = "پروفایل تلگرام";
+        link.onclick = function () { window.open("https://t.me/" + u.username, "_blank"); };
+        acts.appendChild(link);
+      }
       if (!u.owner) {
         var b = document.createElement("button");
         b.className = "btn btn-ghost btn-sm";
         b.textContent = u.exempt ? "لغو معافیت" : "معاف کن";
         b.onclick = function () { toggleExempt(u); };
-        act.appendChild(b);
+        acts.appendChild(b);
       }
-      tr.appendChild(act);
+      td5.appendChild(acts);
+
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
       body.appendChild(tr);
     });
   }
@@ -580,6 +647,81 @@ async function panelOwner(env: Env, req: Request): Promise<number | null> {
   return Number.isNaN(id) ? null : id;
 }
 
+/* ---------------- profile enrichment ---------------- */
+
+// Build one user row for the panel: full profile (name, username, photo)
+// cached in KV and refreshed from Telegram at most once a day.
+async function userRow(env: Env, id: number, owner: number, cfg: fj.FjConfig): Promise<Record<string, any>> {
+  let meta = await st.getMeta(env, id);
+  const now = Date.now();
+  const staleName = !meta.nameAt || now - meta.nameAt > 24 * 3600_000 || !meta.firstName;
+  if (staleName) {
+    try {
+      const r: any = await tg.getChat(env, id);
+      const res = r?.result;
+      if (res && res.type === "private") {
+        meta.firstName = res.first_name || meta.firstName || "";
+        meta.lastName = res.last_name || meta.lastName || "";
+        meta.username = res.username || meta.username || "";
+        if (res.photo?.small_file_id) meta.photoFileId = res.photo.small_file_id;
+        else if (res.photo?.big_file_id && !meta.photoFileId) meta.photoFileId = res.photo.big_file_id;
+        meta.nameAt = now;
+        await st.saveMeta(env, id, meta);
+      }
+    } catch { /* keep cached meta */ }
+  }
+  const joined = await fj.isCachedJoined(env, id, cfg);
+  return {
+    id,
+    name: meta.firstName || "",
+    lastName: meta.lastName || "",
+    username: meta.username || "",
+    photo: !!meta.photoFileId,
+    lastSeen: meta.at || 0,
+    owner: id === owner,
+    exempt: cfg.exempt.includes(id),
+    fjEnabled: cfg.enabled && cfg.chats.length > 0,
+    joined,
+  };
+}
+
+// Stream a user's Telegram profile photo to the browser WITHOUT leaking the
+// bot token (the worker resolves file_id → file_path and fetches server-side).
+async function photoResponse(env: Env, uid: number): Promise<Response> {
+  const meta = await st.getMeta(env, uid);
+  let fileId = meta.photoFileId || "";
+  if (!fileId) {
+    try {
+      const r: any = await tg.getUserProfilePhotos(env, uid, 1);
+      const photos: any[][] = r?.result?.photos;
+      if (photos && photos.length && photos[0].length) {
+        fileId = photos[0][0]?.file_id || photos[0][photos[0].length - 1]?.file_id || "";
+      }
+    } catch { /* ignore */ }
+    if (fileId) {
+      meta.photoFileId = fileId;
+      await st.saveMeta(env, uid, meta);
+    }
+  }
+  if (!fileId) return new Response("", { status: 404 });
+  try {
+    const g: any = await tg.getFile(env, fileId);
+    const fp: string | undefined = g?.result?.file_path;
+    if (!fp) return new Response("", { status: 404 });
+    const img = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_TOKEN}/${fp}`);
+    if (!img.ok || !img.body) return new Response("", { status: 404 });
+    const ct = img.headers.get("content-type") || "image/jpeg";
+    return new Response(img.body, {
+      headers: {
+        "content-type": ct,
+        "cache-control": "public, max-age=86400",
+      },
+    });
+  } catch {
+    return new Response("", { status: 404 });
+  }
+}
+
 /* ---------------- main handler ---------------- */
 export async function handlePanel(env: Env, req: Request, url: URL): Promise<Response> {
   const path = url.pathname;
@@ -667,28 +809,25 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
 
   if (path === "/panel/api/users" && req.method === "GET") {
     const cfg = await fj.getConfig(env);
-    const ids = (await tg.listUserChatIds(env)).slice(0, 500);
-    const users = await Promise.all(
-      ids.map(async (id) => {
-        const meta = await st.getMeta(env, id);
-        const joined = await fj.isCachedJoined(env, id, cfg);
-        return {
-          id,
-          name: meta.firstName || "",
-          username: meta.username || "",
-          lastSeen: meta.at || 0,
-          owner: id === owner,
-          exempt: cfg.exempt.includes(id),
-          fjEnabled: cfg.enabled && cfg.chats.length > 0,
-          joined,
-        };
-      })
-    );
+    const ids = (await tg.listUserChatIds(env)).slice(0, 300);
+    const users: Record<string, any>[] = [];
+    // chunked concurrency to avoid Telegram burst rate limits
+    for (let i = 0; i < ids.length; i += 10) {
+      const chunk = ids.slice(i, i + 10);
+      const part = await Promise.all(chunk.map((id) => userRow(env, id, owner, cfg)));
+      users.push(...part);
+    }
     users.sort((a, b) => {
       if (a.owner !== b.owner) return a.owner ? -1 : 1;
       return b.lastSeen - a.lastSeen;
     });
     return json({ ok: true, users });
+  }
+
+  if (path.startsWith("/panel/api/photo/") && req.method === "GET") {
+    const uid = parseInt(path.replace("/panel/api/photo/", ""), 10);
+    if (!Number.isInteger(uid) || uid <= 0) return json({ error: "bad id" }, 400);
+    return await photoResponse(env, uid);
   }
 
   if (path === "/panel/api/exempt" && req.method === "POST") {

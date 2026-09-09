@@ -115,9 +115,20 @@ export async function saveState(env: Env, chatId: number, s: UserState): Promise
   await env.BOT_KV.put(PREFIX + chatId, JSON.stringify(s));
 }
 
-/* ---------- light per-user meta (name + last seen) for the admin panel ---------- */
+/* ---------- light per-user meta (profile + last seen) for the admin panel ---------- */
+export interface UserMeta {
+  at?: number;        // last seen (any bot interaction)
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  photoFileId?: string; // Telegram small file_id of the profile photo
+  nameAt?: number;    // when name/username were last refreshed via getChat
+}
+
+const META_TTL = 90 * 86400;
+
 // Throttled to ≤1 write / 10 min per user so the KV write budget is safe.
-export async function touchMeta(env: Env, chatId: number, info?: { firstName?: string; username?: string }): Promise<void> {
+export async function touchMeta(env: Env, chatId: number, info?: { firstName?: string; lastName?: string; username?: string }): Promise<void> {
   const key = "u:meta:" + chatId;
   try {
     const raw = await env.BOT_KV.get(key);
@@ -129,23 +140,29 @@ export async function touchMeta(env: Env, chatId: number, info?: { firstName?: s
   try {
     const prev = await env.BOT_KV.get(key);
     let firstName = (info?.firstName || "").slice(0, 64);
+    let lastName = (info?.lastName || "").slice(0, 64);
     let username = (info?.username || "").slice(0, 64);
     if (prev) {
       const j = JSON.parse(prev);
       if (!firstName) firstName = j.firstName || "";
+      if (!lastName) lastName = j.lastName || "";
       if (!username) username = j.username || "";
     }
-    await env.BOT_KV.put(key, JSON.stringify({ at: Date.now(), firstName, username }), { expirationTtl: 90 * 86400 });
+    await env.BOT_KV.put(key, JSON.stringify({ at: Date.now(), firstName, lastName, username }), { expirationTtl: META_TTL });
   } catch { /* ignore */ }
 }
 
-export async function getMeta(env: Env, chatId: number): Promise<{ firstName?: string; username?: string; at?: number }> {
+export async function getMeta(env: Env, chatId: number): Promise<UserMeta> {
   try {
     const raw = await env.BOT_KV.get("u:meta:" + chatId);
-    return raw ? JSON.parse(raw) : {};
+    return raw ? (JSON.parse(raw) as UserMeta) : {};
   } catch {
     return {};
   }
+}
+
+export async function saveMeta(env: Env, chatId: number, meta: UserMeta): Promise<void> {
+  await env.BOT_KV.put("u:meta:" + chatId, JSON.stringify(meta), { expirationTtl: META_TTL }).catch(() => {});
 }
 
 /* ---------- owner (first user to /start) ---------- */
