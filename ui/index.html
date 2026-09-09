@@ -1009,7 +1009,7 @@ I18N.fa["scan.ranges"] = "رنج کلودفلر";
 I18N.fa["scan.fetching"] = "دریافت مخزن آنلاین IP ها…";
 I18N.fa["relay.title"] = "تست رله";
 I18N.fa["relay.desc"] = "پیدا کردن بهترین دامنهٔ رله تا کانفیگ ها وصل شوند";
-I18N.fa["relay.help"] = "دامنهٔ رله، دامنه ای است که جلوی ورکر تو می ایستد و کانفیگ ها را وصل می کند. هر دامنه ای که به ورکرت متصل است (workers.dev یا دامنهٔ اختصاصی با Route) را اینجا بنویس — تست می کنیم کدام سریع تر و سالم تر است.";
+I18N.fa["relay.help"] = "همهٔ دامنه‌ها خودکار جمع و تست می‌شوند: دامنهٔ ورکر، دامنهٔ رلهٔ فعلی، زیردامنه‌های احتمالی، فهرست عمومی و هر دامنه‌ای که اینجا بنویسی. بهترین (سالم + سریع + متصل به ورکر) خودکار انتخاب و اعمال می‌شود.";
 I18N.fa["relay.candidates"] = "دامنه های رله (هر خط یکی)";
 I18N.fa["relay.start"] = "تست رله";
 I18N.fa["relay.apply"] = "اعمال بهترین دامنه";
@@ -1022,6 +1022,9 @@ I18N.fa["relay.current"] = "دامنهٔ رلهٔ فعلی";
 I18N.fa["relay.none"] = "هیچ دامنهٔ سالمی پیدا نشد";
 I18N.fa["relay.applied"] = "دامنهٔ رله اعمال شد ✓ — کانفیگ ها از الان از این دامنه استفاده می کنند";
 I18N.fa["relay.empty"] = "هنوز تستی انجام نشده";
+I18N.fa["relay.phaseA"] = "بررسی سلامت همهٔ دامنه‌ها…";
+I18N.fa["relay.autopicked"] = "بهترین دامنهٔ رله انتخاب و اعمال شد ✓";
+I18N.fa["relay.public"] = "فهرست عمومی";
 
 I18N.en["scanner.title"] = "Clean IP Scanner";
 I18N.en["scanner.sub"] = "Probe & pick the best Cloudflare IPs from your network";
@@ -1065,7 +1068,7 @@ I18N.en["scan.ranges"] = "CF ranges";
 I18N.en["scan.fetching"] = "Fetching online IP pool…";
 I18N.en["relay.title"] = "Relay Test";
 I18N.en["relay.desc"] = "Find the best relay domain so configs connect";
-I18N.en["relay.help"] = "A relay domain fronts your worker and makes configs connect. List every domain that routes to your worker (workers.dev or a custom domain with a Worker route) — we test which is fastest & healthiest.";
+I18N.en["relay.help"] = "All domains are collected & tested automatically: your worker domain, current relay domain, likely subdomains, a public pool, plus anything you type here. The best (healthy + fast + reaching your worker) is picked & applied automatically.";
 I18N.en["relay.candidates"] = "Relay domains (one per line)";
 I18N.en["relay.start"] = "Run relay test";
 I18N.en["relay.apply"] = "Apply best domain";
@@ -1078,6 +1081,9 @@ I18N.en["relay.current"] = "Current relay domain";
 I18N.en["relay.none"] = "No healthy relay domain found";
 I18N.en["relay.applied"] = "Relay domain applied ✓ — configs now use this domain";
 I18N.en["relay.empty"] = "No test yet";
+I18N.en["relay.phaseA"] = "Checking health of all domains…";
+I18N.en["relay.autopicked"] = "Best relay domain picked & applied ✓";
+I18N.en["relay.public"] = "Public pool";
 I18N.en["page.scanner"] = "IP Scanner";
 I18N.en["page.scannerD"] = "Discover the fastest clean Cloudflare IPs";
 I18N.fa["page.scanner"] = "اسکنر IP";
@@ -1409,7 +1415,7 @@ const SCANNER = (() => {
     $("#scanSourceR").onclick = () => setSource("ranges");
     $("#scanSourceC").onclick = () => setSource("custom");
     $("#relayStart").onclick = () => runRelay();
-    $("#relayApply").onclick = applyRelay;
+    $("#relayApply").onclick = () => applyRelay(false);
     $("#scanApply").onclick = applyToPanel;
     $("#scanCopy").onclick = copyAll;
     $("#scanExport").onclick = exportTxt;
@@ -1455,7 +1461,16 @@ const SCANNER = (() => {
     if (!S.online.length) S.online = [...SEED];
   }
 
-  /* ---------------- relay test (تست رله) ---------------- */
+  /* ---------------- relay test (تست رله) — every candidate ---------------- */
+  // Built-in pool of popular / Cloudflare-fronted domains (health + fronting test)
+  const RELAY_POOL = [
+    "www.cloudflare.com", "one.one.one.one", "speed.cloudflare.com", "www.speedtest.net",
+    "cdn.jsdelivr.net", "unpkg.com", "www.npmjs.com", "dl.google.com", "www.gstatic.com",
+    "www.microsoft.com", "www.openai.com", "chat.openai.com", "gateway.icloud.com",
+    "www.bing.com", "zoom.us", "www.whatsapp.com", "www.okx.com", "www.uptodown.com",
+    "www.github.com", "raw.githubusercontent.com", "www.alibaba.com", "www.cloudflare-cn.com",
+  ];
+
   function parseDomains(text) {
     const out = new Set();
     for (let line of (text || "").split("\n")) {
@@ -1465,6 +1480,59 @@ const SCANNER = (() => {
       if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(line)) out.add(line);
     }
     return [...out];
+  }
+
+  function baseDomain(d) {
+    const p = d.split(".");
+    if (p.length <= 2) return d;
+    if (p.slice(-2).join(".") === "workers.dev") return d;
+    const multi = ["com.ir","co.ir","ac.ir","org.ir","net.ir","gov.ir","co.uk","com.au","com.tr","org.uk"];
+    const last2 = p.slice(-2).join(".");
+    const last3 = p.slice(-3).join(".");
+    return multi.includes(last3) ? last3 : last2;
+  }
+
+  // For custom domains, generate likely subdomains (they work when a wildcard
+  // Worker route like *.example.com fronts this worker).
+  function variantDomains(hosts) {
+    const subs = ["www","cdn","relay","vpn","proxy","net","edge","node","speed","api","panel","sub"];
+    const out = new Set();
+    for (const h of hosts) {
+      if (!h || /^\d{1,3}(\.\d{1,3}){3}$/.test(h)) continue;
+      const base = baseDomain(h);
+      out.add(h);
+      if (base !== h) out.add(base);
+      if (base.split(".").length > 2) for (const s of subs) out.add(s + "." + base);
+    }
+    return [...out];
+  }
+
+  // Gather EVERY candidate: live host, saved host, current relay, textarea,
+  // generated subdomains and the public pool.
+  function collectCandidates() {
+    const hosts = [];
+    if (location.hostname) hosts.push(location.hostname);
+    const sh = (state.settings && state.settings.host) || "";
+    if (sh) hosts.push(sh);
+    const rd = (state.settings && state.settings.relayDomain) || "";
+    if (rd) hosts.push(rd);
+    const set = new Set([...hosts, ...parseDomains($("#relayCandidates").value), ...variantDomains(hosts), ...RELAY_POOL]);
+    return [...set];
+  }
+
+  function httpProbe(domain) {
+    return new Promise((resolve) => {
+      const ctl = new AbortController();
+      const t0 = setTimeout(() => ctl.abort(), 6000);
+      const start = performance.now();
+      fetch("https://" + domain + "/", { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
+        .then(() => { clearTimeout(t0); resolve({ ok: true, ms: Math.max(1, Math.round(performance.now() - start)) }); })
+        .catch(() => {
+          clearTimeout(t0);
+          const ms = performance.now() - start;
+          resolve({ ok: !ctl.signal.aborted && ms >= 12, ms: Math.round(ms) });
+        });
+    });
   }
 
   function wsProbe(domain) {
@@ -1495,56 +1563,94 @@ const SCANNER = (() => {
     });
   }
 
+  async function pool(items, n, fn) {
+    let cursor = 0;
+    const workers = [];
+    for (let w = 0; w < Math.min(n, items.length); w++) {
+      workers.push((async () => { while (cursor < items.length) { const it = items[cursor++]; await fn(it); } })());
+    }
+    await Promise.all(workers);
+  }
+
   async function runRelay() {
-    const domains = parseDomains($("#relayCandidates").value);
-    if (!domains.length) { toast(t("relay.none")); return; }
+    const candidates = collectCandidates();
+    if (!candidates.length) { toast(t("relay.none")); return; }
     R.running = true; R.results = []; R.best = null;
     $("#relayStart").classList.add("hidden");
     $("#relayApply").classList.add("hidden");
-    $("#relayStatus").textContent = t("relay.running");
-    $("#relayList").innerHTML = `<div class="empty">${t("relay.running")}</div>`;
-    let cursor = 0;
-    const workers = [];
-    const n = Math.min(6, domains.length);
-    for (let w = 0; w < n; w++) {
-      workers.push((async () => {
-        while (cursor < domains.length) {
-          const d = domains[cursor++];
-          const r = await wsProbe(d);
-          R.results.push(r);
-          renderRelay();
-        }
-      })());
-    }
-    await Promise.all(workers);
-    R.running = false;
-    const ok = R.results.filter((r) => r.ok).sort((a, b) => a.ms - b.ms);
-    R.best = ok[0] || null;
     renderRelay();
+
+    // Phase A — health check on EVERY candidate (parallel)
+    $("#relayStatus").textContent = t("relay.phaseA");
+    const liveness = new Map();
+    let done = 0;
+    await pool(candidates, 10, async (d) => {
+      const r = await httpProbe(d);
+      liveness.set(d, r);
+      done++;
+      $("#relayStatus").textContent = t("relay.phaseA") + " " + done + "/" + candidates.length;
+    });
+
+    // Phase B — fronting probe on healthy candidates (2 tries each)
+    const alive = candidates.filter((d) => liveness.get(d) && liveness.get(d).ok);
+    done = 0;
+    await pool(alive, 8, async (d) => {
+      let best = null;
+      for (let tr = 0; tr < 2; tr++) {
+        const r = await wsProbe(d);
+        if (r.ok) { best = r; break; }
+      }
+      const live = liveness.get(d);
+      R.results.push({
+        domain: d,
+        alive: !!(live && live.ok),
+        httpMs: live && live.ok ? live.ms : null,
+        front: !!(best && best.ok),
+        ms: best ? best.ms : null,
+      });
+      done++;
+      $("#relayStatus").textContent = t("relay.running") + " " + done + "/" + alive.length;
+      renderRelay();
+    });
+
+    R.results.sort((a, b) => {
+      if (a.front !== b.front) return a.front ? -1 : 1;
+      if (a.front && b.front) return (a.ms || 0) - (b.ms || 0);
+      if (a.alive !== b.alive) return a.alive ? -1 : 1;
+      return (a.httpMs || 9999) - (b.httpMs || 9999);
+    });
+    R.best = R.results.find((r) => r.front) || null;
+    R.running = false;
+    renderRelay();
+    if (R.best) await applyRelay(true);
+    else toast(t("relay.none"));
   }
 
   function renderRelay() {
     const el = $("#relayList");
-    const list = [...R.results].sort((a, b) => (a.ok === b.ok ? (a.ms || 9999) - (b.ms || 9999) : a.ok ? -1 : 1));
     if (!R.results.length) {
       el.innerHTML = `<div class="empty">${R.running ? t("relay.running") : t("relay.empty")}</div>`;
       $("#relayStart").classList.toggle("hidden", R.running);
-      $("#relayStatus").textContent = "";
+      $("#relayApply").classList.add("hidden");
+      if (!R.running) $("#relayStatus").textContent = "";
       return;
     }
-    el.innerHTML = list.map((r) => {
+    el.innerHTML = R.results.map((r) => {
       const best = R.best && r.domain === R.best.domain;
-      const label = r.ok ? t("relay.front") + " · " + r.ms + "ms" : t("relay.notfront");
-      return `<div class="scan-row" onclick="SCANNER.copyIp('${r.domain}')">
+      let status;
+      if (r.front) status = `<code class="scan-ms ok">${t("relay.front")} · ${r.ms}ms</code>`;
+      else if (r.alive) status = `<code class="scan-ms warn">${t("relay.notfront")} · ${r.httpMs}ms</code>`;
+      else status = `<code class="scan-ms bad">${t("scan.dead")}</code>`;
+      return `<div class="scan-row" onclick="SCANNER.copyIp('${r.domain}')" title="${t("scan.copy")}">
         <code class="scan-ip">${r.domain}</code>
         ${best ? '<span class="badge ok" style="font-size:10px">★ ' + t("relay.best") + '</span>' : ""}
         <div style="flex:1"></div>
-        <code class="scan-ms ${r.ok ? "ok" : "bad"}">${label}</code>
+        ${status}
       </div>`;
     }).join("");
     $("#relayStart").classList.toggle("hidden", R.running);
     $("#relayApply").classList.toggle("hidden", !R.best);
-    $("#relayStatus").textContent = R.running ? t("relay.running") : t("relay.done");
+    if (!R.running) $("#relayStatus").textContent = t("relay.done");
     renderRelayCurrent();
   }
 
@@ -1558,19 +1664,21 @@ const SCANNER = (() => {
   function prefillRelay() {
     const ta = $("#relayCandidates");
     if (!ta || ta.value.trim()) return;
-    const host = (state.settings && state.settings.host) || location.hostname;
+    const hosts = [];
+    if (location.hostname) hosts.push(location.hostname);
+    const sh = (state.settings && state.settings.host) || "";
+    if (sh && !hosts.includes(sh)) hosts.push(sh);
     const rd = (state.settings && state.settings.relayDomain) || "";
-    const lines = ["# " + t("relay.candidates") + ":", host];
-    if (rd && rd !== host) lines.push(rd);
-    ta.value = lines.join("\n");
+    if (rd && !hosts.includes(rd)) hosts.push(rd);
+    ta.value = "# " + t("relay.candidates") + "\n" + hosts.join("\n");
   }
 
-  async function applyRelay() {
+  async function applyRelay(auto) {
     if (!R.best) { toast(t("relay.none")); return; }
-    if (MODE !== "live") { toast(t("toast.preview")); return; }
+    if (MODE !== "live") { if (!auto) toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { relayDomain: R.best.domain } });
     if (res.ok) {
-      toast(t("relay.applied"));
+      toast(auto ? t("relay.autopicked") : t("relay.applied"));
       if (state.settings) state.settings.relayDomain = R.best.domain;
       renderRelayCurrent();
     } else toast(t("common.error"));
