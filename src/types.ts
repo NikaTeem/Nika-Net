@@ -23,6 +23,7 @@ export interface Settings {
   sni: string;         // fake SNI / Host header
   wsPath: string;      // websocket path
   cleanIps: string[];
+  relayDomain: string; // chosen fronting domain ("دامنهٔ رله") — set by Relay Test
   protocols: Protocols;
   adminPassHash: string | null;
   secretPath: string;  // hidden admin path
@@ -42,6 +43,7 @@ export const DEFAULTS: Settings = {
   sni: "www.speedtest.net",
   wsPath: "/nika-ws",
   cleanIps: ["1.0.0.1", "104.16.132.229", "188.114.96.9"],
+  relayDomain: "",
   protocols: { vless: true, trojan: true, warp: true },
   adminPassHash: null,
   secretPath: "nika-admin",

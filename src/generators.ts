@@ -1,33 +1,43 @@
 // Nika Net — subscription config generators (server-side source of truth).
-// Mirrored in ui/index.html for the in-panel preview.
 
 import { Settings, User } from "./types";
+
+// Brand remark used on every generated config.
+const REMARK = "Nika Paneel | یک سرویس رایگان هست";
+const remark = encodeURIComponent(REMARK);
 
 function pickIp(s: Settings): string {
   const list = (s.cleanIps || []).filter(Boolean);
   return list.length ? list[Math.floor(Math.random() * list.length)] : s.host;
 }
 
-// The TLS SNI *and* the WebSocket Host header must be the worker's own
-// domain (settings.host), otherwise Cloudflare routes the connection to the
-// fake host's origin and the worker never sees it. A clean IP is used only
-// as the connect address (anycast → routed by SNI/Host to the worker).
+// The domain that fronts this worker: the Relay-Test-selected domain wins,
+// otherwise the panel host. TLS SNI + WS Host MUST be this domain so
+// Cloudflare routes the connection to our worker. A clean IP is used only as
+// the connect address (anycast → routed by SNI/Host).
+function front(s: Settings): string {
+  const r = (s.relayDomain || "").trim();
+  return r || (s.host || "").trim();
+}
+
 export function vlessLink(u: User, s: Settings): string {
   const host = pickIp(s);
+  const f = front(s);
   const q = new URLSearchParams({
-    encryption: "none", security: "tls", sni: s.host, fp: "chrome",
-    type: "ws", host: s.host, path: s.wsPath + "?ed=2048&proto=vless",
+    encryption: "none", security: "tls", sni: f, fp: "chrome",
+    type: "ws", host: f, path: s.wsPath + "?ed=2048&proto=vless",
   });
-  return `vless://${u.uuid}@${host}:443?${q.toString()}#NikaNet-${encodeURIComponent(u.name)}`;
+  return `vless://${u.uuid}@${host}:443?${q.toString()}#${remark}`;
 }
 
 export function trojanLink(u: User, s: Settings): string {
   const host = pickIp(s);
+  const f = front(s);
   const q = new URLSearchParams({
-    security: "tls", sni: s.host, fp: "chrome", type: "ws", host: s.host,
+    security: "tls", sni: f, fp: "chrome", type: "ws", host: f,
     path: s.wsPath + "?ed=2048&proto=trojan",
   });
-  return `trojan://${u.password}@${host}:443?${q.toString()}#NikaNet-${encodeURIComponent(u.name)}`;
+  return `trojan://${u.password}@${host}:443?${q.toString()}#${remark}`;
 }
 
 export function buildBase64Bundle(u: User, s: Settings): string {
@@ -39,44 +49,46 @@ export function buildBase64Bundle(u: User, s: Settings): string {
 
 export function buildClashYaml(u: User, s: Settings): string {
   const host = pickIp(s);
+  const f = front(s);
   const names: string[] = [];
-  let out = `# Nika Net — ${u.name}\nmixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: info\n` +
+  let out = `# Nika Net — ${REMARK}\nmixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: info\n` +
     `dns:\n  enable: true\n  enhanced-mode: fake-ip\n  nameserver: [1.1.1.1, 8.8.8.8]\nproxies:\n`;
   if (s.protocols.vless) {
-    names.push(`NikaNet-VLESS`);
-    out += `  - name: "NikaNet-VLESS"\n    type: vless\n    server: ${host}\n    port: 443\n    uuid: ${u.uuid}\n` +
-      `    network: ws\n    tls: true\n    udp: false\n    servername: ${s.host}\n    client-fingerprint: chrome\n` +
-      `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=vless"\n      headers: { Host: "${s.host}" }\n`;
+    names.push(`Nika Paneel - VLESS`);
+    out += `  - name: "Nika Paneel - VLESS"\n    type: vless\n    server: ${host}\n    port: 443\n    uuid: ${u.uuid}\n` +
+      `    network: ws\n    tls: true\n    udp: false\n    servername: ${f}\n    client-fingerprint: chrome\n` +
+      `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=vless"\n      headers: { Host: "${f}" }\n`;
   }
   if (s.protocols.trojan) {
-    names.push(`NikaNet-Trojan`);
-    out += `  - name: "NikaNet-Trojan"\n    type: trojan\n    server: ${host}\n    port: 443\n    password: ${u.password}\n` +
-      `    network: ws\n    tls: true\n    udp: false\n    sni: ${s.host}\n    client-fingerprint: chrome\n` +
-      `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=trojan"\n      headers: { Host: "${s.host}" }\n`;
+    names.push(`Nika Paneel - Trojan`);
+    out += `  - name: "Nika Paneel - Trojan"\n    type: trojan\n    server: ${host}\n    port: 443\n    password: ${u.password}\n` +
+      `    network: ws\n    tls: true\n    udp: false\n    sni: ${f}\n    client-fingerprint: chrome\n` +
+      `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=trojan"\n      headers: { Host: "${f}" }\n`;
   }
-  out += `proxy-groups:\n  - name: "NikaNet"\n    type: select\n    proxies: [${names.map((n) => `"${n}"`).join(", ")}]\n`;
-  out += `rules:\n  - GEOIP,IR,DIRECT\n  - MATCH,NikaNet\n`;
+  out += `proxy-groups:\n  - name: "Nika Paneel"\n    type: select\n    proxies: [${names.map((n) => `"${n}"`).join(", ")}]\n`;
+  out += `rules:\n  - GEOIP,IR,DIRECT\n  - MATCH,Nika Paneel\n`;
   return out;
 }
 
 export function buildSingboxJson(u: User, s: Settings): string {
   const host = pickIp(s);
+  const f = front(s);
   const outbounds: Record<string, unknown>[] = [];
   const tags: string[] = [];
   if (s.protocols.vless) {
-    tags.push("NikaNet-VLESS");
+    tags.push("Nika Paneel - VLESS");
     outbounds.push({
-      tag: "NikaNet-VLESS", type: "vless", server: host, server_port: 443, uuid: u.uuid,
-      network: "ws", tls: { enabled: true, server_name: s.host, utls: { enabled: true, fingerprint: "chrome" } },
-      transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=vless", headers: { Host: s.host } },
+      tag: "Nika Paneel - VLESS", type: "vless", server: host, server_port: 443, uuid: u.uuid,
+      network: "ws", tls: { enabled: true, server_name: f, utls: { enabled: true, fingerprint: "chrome" } },
+      transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=vless", headers: { Host: f } },
     });
   }
   if (s.protocols.trojan) {
-    tags.push("NikaNet-Trojan");
+    tags.push("Nika Paneel - Trojan");
     outbounds.push({
-      tag: "NikaNet-Trojan", type: "trojan", server: host, server_port: 443, password: u.password,
-      network: "ws", tls: { enabled: true, server_name: s.host, utls: { enabled: true, fingerprint: "chrome" } },
-      transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=trojan", headers: { Host: s.host } },
+      tag: "Nika Paneel - Trojan", type: "trojan", server: host, server_port: 443, password: u.password,
+      network: "ws", tls: { enabled: true, server_name: f, utls: { enabled: true, fingerprint: "chrome" } },
+      transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=trojan", headers: { Host: f } },
     });
   }
   const cfg = {
@@ -92,8 +104,7 @@ export function buildSingboxJson(u: User, s: Settings): string {
 }
 
 // WireGuard keys are 32 bytes (base64 = 44 chars). Derive a deterministic,
-// syntactically valid key from the user's uuid+password instead of a
-// truncated hex string (which apps reject as an invalid key).
+// syntactically valid key from the user's uuid+password.
 function warpKey(u: User): string {
   const hex = (u.uuid.replace(/-/g, "") + (u.password || "")).slice(0, 64).padEnd(64, "0");
   const bytes = new Uint8Array(32);

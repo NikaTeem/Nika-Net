@@ -407,6 +407,8 @@
           <div class="card-title"><span>✎ <span data-i18n="scanner.title">اسکنر IP تمیز</span></span><span class="mini" data-i18n="scan.source">منبع IP ها</span></div>
           <div class="seg" style="margin-bottom:14px">
             <button class="on" id="scanSourceB" data-i18n="scan.bundled">لیست داخلی</button>
+            <button id="scanSourceO" data-i18n="scan.online">مخزن آنلاین</button>
+            <button id="scanSourceR" data-i18n="scan.ranges">رنج کلودفلر</button>
             <button id="scanSourceC" data-i18n="scan.custom">لیست شخصی</button>
           </div>
           <div id="scanCustomWrap" class="hidden" style="margin-bottom:14px">
@@ -452,6 +454,19 @@
           <canvas id="radarCanvas" style="width:100%;height:260px;display:block"></canvas>
           <div class="scan-top" id="scanTop"></div>
         </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><span>🛰 <span data-i18n="relay.title">تست رله</span></span><span class="mini" data-i18n="relay.desc">پیدا کردن بهترین دامنهٔ رله</span></div>
+        <div class="d" style="margin-top:6px" data-i18n="relay.help">دامنهٔ رله، دامنه ای است که جلوی ورکر تو می ایستد و کانفیگ ها را وصل می کند.</div>
+        <div class="field" style="margin-top:14px"><label data-i18n="relay.candidates">دامنه های رله (هر خط یکی)</label>
+          <textarea class="input" id="relayCandidates" dir="ltr" style="min-height:84px"></textarea></div>
+        <div class="copy-row" style="margin-top:14px">
+          <button class="btn btn-primary" id="relayStart" style="width:auto">🚀 <span data-i18n="relay.start">تست رله</span></button>
+          <button class="btn btn-primary hidden" id="relayApply" style="width:auto">⚡ <span data-i18n="relay.apply">اعمال بهترین دامنه</span></button>
+        </div>
+        <div class="scan-counters" id="relayStatus" style="margin-top:12px"><span data-i18n="relay.empty">هنوز تستی انجام نشده</span></div>
+        <div class="scan-list" id="relayList" style="margin-top:10px"></div>
+        <div class="d" id="relayCurrent" style="margin-top:10px"></div>
       </div>
       <div class="card" style="margin-top:16px">
         <div class="card-title"><span>✎ <span data-i18n="scan.results">نتایج زنده</span></span>
@@ -989,6 +1004,24 @@ I18N.fa["scan.ms"] = "ms";
 I18N.fa["scan.live"] = "سالم";
 I18N.fa["scan.deadL"] = "مرده";
 I18N.fa["scan.top5"] = "۵ برتر";
+I18N.fa["scan.online"] = "مخزن آنلاین";
+I18N.fa["scan.ranges"] = "رنج کلودفلر";
+I18N.fa["scan.fetching"] = "دریافت مخزن آنلاین IP ها…";
+I18N.fa["relay.title"] = "تست رله";
+I18N.fa["relay.desc"] = "پیدا کردن بهترین دامنهٔ رله تا کانفیگ ها وصل شوند";
+I18N.fa["relay.help"] = "دامنهٔ رله، دامنه ای است که جلوی ورکر تو می ایستد و کانفیگ ها را وصل می کند. هر دامنه ای که به ورکرت متصل است (workers.dev یا دامنهٔ اختصاصی با Route) را اینجا بنویس — تست می کنیم کدام سریع تر و سالم تر است.";
+I18N.fa["relay.candidates"] = "دامنه های رله (هر خط یکی)";
+I18N.fa["relay.start"] = "تست رله";
+I18N.fa["relay.apply"] = "اعمال بهترین دامنه";
+I18N.fa["relay.running"] = "در حال تست دامنه های رله…";
+I18N.fa["relay.done"] = "تست تمام شد";
+I18N.fa["relay.front"] = "به ورکر وصل شد";
+I18N.fa["relay.notfront"] = "به این ورکر روت نمی شود";
+I18N.fa["relay.best"] = "بهترین";
+I18N.fa["relay.current"] = "دامنهٔ رلهٔ فعلی";
+I18N.fa["relay.none"] = "هیچ دامنهٔ سالمی پیدا نشد";
+I18N.fa["relay.applied"] = "دامنهٔ رله اعمال شد ✓ — کانفیگ ها از الان از این دامنه استفاده می کنند";
+I18N.fa["relay.empty"] = "هنوز تستی انجام نشده";
 
 I18N.en["scanner.title"] = "Clean IP Scanner";
 I18N.en["scanner.sub"] = "Probe & pick the best Cloudflare IPs from your network";
@@ -1027,6 +1060,24 @@ I18N.en["scan.ms"] = "ms";
 I18N.en["scan.live"] = "alive";
 I18N.en["scan.deadL"] = "dead";
 I18N.en["scan.top5"] = "Top 5";
+I18N.en["scan.online"] = "Online pool";
+I18N.en["scan.ranges"] = "CF ranges";
+I18N.en["scan.fetching"] = "Fetching online IP pool…";
+I18N.en["relay.title"] = "Relay Test";
+I18N.en["relay.desc"] = "Find the best relay domain so configs connect";
+I18N.en["relay.help"] = "A relay domain fronts your worker and makes configs connect. List every domain that routes to your worker (workers.dev or a custom domain with a Worker route) — we test which is fastest & healthiest.";
+I18N.en["relay.candidates"] = "Relay domains (one per line)";
+I18N.en["relay.start"] = "Run relay test";
+I18N.en["relay.apply"] = "Apply best domain";
+I18N.en["relay.running"] = "Testing relay domains…";
+I18N.en["relay.done"] = "Test finished";
+I18N.en["relay.front"] = "reaches this worker";
+I18N.en["relay.notfront"] = "not routed to this worker";
+I18N.en["relay.best"] = "Best";
+I18N.en["relay.current"] = "Current relay domain";
+I18N.en["relay.none"] = "No healthy relay domain found";
+I18N.en["relay.applied"] = "Relay domain applied ✓ — configs now use this domain";
+I18N.en["relay.empty"] = "No test yet";
 I18N.en["page.scanner"] = "IP Scanner";
 I18N.en["page.scannerD"] = "Discover the fastest clean Cloudflare IPs";
 I18N.fa["page.scanner"] = "اسکنر IP";
@@ -1037,6 +1088,31 @@ const SCANNER = (() => {
   const SEED = ["1.1.1.205", "103.116.7.159", "104.129.164.73", "104.16.0.158", "104.16.104.127", "104.16.105.208", "104.16.12.155", "104.16.122.31", "104.16.127.145", "104.16.134.94", "104.16.138.229", "104.16.15.61", "104.16.172.40", "104.16.200.105", "104.16.209.40", "104.16.228.155", "104.16.231.154", "104.16.234.166", "104.16.235.139", "104.16.241.3", "104.16.25.194", "104.16.33.169", "104.16.4.244", "104.16.42.140", "104.16.45.222", "104.16.66.24", "104.16.76.146", "104.16.78.31", "104.16.84.135", "104.16.84.24", "104.16.96.61", "104.17.101.85", "104.17.110.181", "104.17.112.46", "104.17.121.12", "104.17.122.238", "104.17.128.173", "104.17.146.211", "104.17.148.242", "104.17.150.98", "104.17.171.118", "104.17.18.167", "104.17.185.63", "104.17.187.8", "104.17.192.182", "104.17.195.233", "104.17.196.229", "104.17.197.221", "104.17.205.217", "104.17.207.42", "104.17.223.228", "104.17.228.165", "104.17.240.243", "104.17.246.44", "104.17.25.239", "104.17.251.86", "104.17.253.178", "104.17.255.201", "104.17.27.211", "104.17.29.174", "104.17.31.203", "104.17.34.42", "104.17.36.206", "104.17.38.50", "104.17.44.240", "104.17.48.188", "104.17.5.30", "104.17.61.65", "104.17.64.67", "104.17.82.189", "104.17.82.215", "104.17.9.155", "104.17.90.249", "104.18.1.81", "104.18.111.31", "104.18.114.234", "104.18.121.40", "104.18.146.241", "104.18.158.192", "104.18.160.180", "104.18.163.244", "104.18.164.174", "104.18.167.107", "104.18.170.147", "104.18.185.179", "104.18.188.115", "104.18.191.195", "104.18.193.85", "104.18.204.53", "104.18.209.237", "104.18.213.206", "104.18.216.44", "104.18.218.124", "104.18.220.15", "104.18.236.110", "104.18.237.80", "104.18.247.129", "104.18.248.155", "104.18.251.151", "104.18.253.86", "104.18.33.119", "104.18.34.232", "104.18.35.176", "104.18.5.36", "104.18.54.13", "104.18.54.231", "104.18.55.248", "104.18.79.228", "104.18.83.11", "104.19.103.173", "104.19.104.143", "104.19.107.209", "104.19.114.114", "104.19.114.252", "104.19.119.181", "104.19.134.215", "104.19.136.183", "104.19.144.198", "104.19.145.142", "104.19.158.214", "104.19.181.243", "104.19.186.216", "104.19.186.47", "104.19.189.251", "104.19.202.206", "104.19.229.52", "104.19.232.195", "104.19.237.179", "104.19.29.197", "104.19.38.85", "104.19.39.82", "104.19.41.171", "104.19.41.228", "104.19.50.59", "104.19.52.241", "104.19.56.137", "104.19.60.0", "104.19.62.255", "104.19.66.54", "104.19.74.36", "104.19.75.119", "104.19.80.247", "104.19.80.98", "104.19.85.153", "104.19.91.124", "104.19.94.184", "104.20.12.161", "104.20.32.42", "104.20.40.194", "104.20.59.177", "104.21.106.155", "104.21.112.26", "104.21.113.137", "104.21.118.199", "104.21.18.68", "104.21.20.139", "104.21.221.61", "104.21.223.242", "104.21.224.32", "104.21.225.43", "104.21.23.23", "104.21.23.44", "104.21.231.123", "104.21.236.58", "104.21.25.89", "104.21.31.159", "104.21.36.174", "104.21.36.188", "104.21.37.215", "104.21.38.34", "104.21.42.100", "104.21.48.98", "104.21.5.197", "104.21.60.85", "104.21.62.19", "104.21.62.231", "104.21.63.154", "104.21.64.55", "104.21.67.237", "104.21.69.179", "104.21.70.136", "104.21.71.248", "104.21.72.102", "104.21.73.17", "104.21.75.225", "104.21.81.12", "104.21.83.26", "104.21.86.13", "104.21.87.113", "104.21.88.178", "104.21.88.79", "104.21.92.203", "104.21.93.170", "104.21.94.118", "104.239.72.0", "104.239.72.195", "104.24.142.51", "104.24.143.32", "104.24.150.11", "104.24.151.152", "104.24.158.116", "104.24.172.151", "104.24.172.200", "104.24.180.71", "104.24.181.68", "104.24.188.188", "104.24.189.34", "104.24.197.160", "104.24.20.6", "104.24.203.122", "104.24.211.31", "104.24.225.235", "104.24.233.118", "104.24.235.222", "104.24.236.15", "104.24.236.44", "104.24.241.159", "104.24.246.92", "104.24.26.24", "104.24.27.31", "104.24.29.62", "104.24.33.28", "104.24.34.44", "104.24.41.212", "104.24.45.16", "104.24.63.194", "104.25.1.157", "104.25.101.151", "104.25.107.158", "104.25.110.90", "104.25.115.43", "104.25.120.120", "104.25.124.20", "104.25.126.55", "104.25.127.245", "104.25.13.108", "104.25.130.51", "104.25.133.76", "104.25.141.138", "104.25.142.39", "104.25.148.250", "104.25.160.5", "104.25.173.57", "104.25.188.19", "104.25.198.1", "104.25.203.160", "104.25.204.143", "104.25.206.186", "104.25.209.147", "104.25.209.209", "104.25.209.251", "104.25.210.72", "104.25.226.220", "104.25.236.188", "104.25.244.30", "104.25.245.249", "104.25.27.45", "104.25.4.110", "104.25.62.57", "104.25.64.10", "104.25.79.119", "104.25.83.106", "104.25.96.164", "104.26.1.153", "104.26.13.175", "104.26.15.230", "104.26.5.42", "104.27.101.189", "104.27.110.157", "104.27.118.231", "104.27.17.178", "104.27.193.209", "104.27.200.19", "104.27.206.168", "104.27.26.161", "104.27.36.27", "104.27.37.185", "104.27.38.72", "104.27.4.156", "104.27.44.72", "104.27.49.51", "104.27.52.44", "104.27.54.234", "104.27.88.172", "104.27.97.174", "104.27.97.42", "108.162.193.46", "139.64.235.227", "141.11.202.7", "147.185.161.10", "154.197.65.219", "154.83.2.193", "159.242.242.20", "162.159.1.250", "162.159.132.26", "162.159.141.125", "162.159.151.88", "162.159.156.223", "162.159.156.64", "162.159.229.25", "162.159.233.84", "162.159.245.27", "162.159.40.172", "162.159.43.230", "162.159.60.112", "162.159.93.59", "167.68.11.204", "170.114.52.147", "172.64.157.244", "172.64.189.14", "172.64.49.95", "172.64.53.114", "172.64.74.9", "172.64.82.227", "172.64.85.161", "172.64.87.231", "172.65.217.95", "172.65.223.179", "172.65.237.186", "172.65.54.9", "172.65.58.206", "172.66.147.124", "172.66.147.59", "172.66.148.106", "172.66.149.15", "172.66.152.213", "172.66.152.87", "172.66.159.171", "172.66.162.127", "172.66.169.65", "172.66.174.124", "172.66.174.6", "172.66.216.111", "172.67.126.76", "172.67.127.131", "172.67.133.245", "172.67.134.218", "172.67.135.190", "172.67.135.47", "172.67.136.112", "172.67.140.237", "172.67.140.83", "172.67.143.245", "172.67.144.126", "172.67.147.255", "172.67.153.29", "172.67.154.182", "172.67.156.98", "172.67.160.104", "172.67.169.139", "172.67.170.253", "172.67.172.242", "172.67.176.34", "172.67.187.246", "172.67.188.214", "172.67.190.234", "172.67.195.55", "172.67.196.217", "172.67.197.235", "172.67.199.186", "172.67.199.209", "172.67.200.209", "172.67.211.75", "172.67.214.149", "172.67.217.25", "172.67.218.10", "172.67.220.3", "172.67.221.7", "172.67.238.109", "172.67.240.46", "172.67.250.18", "172.67.253.123", "172.67.73.30", "172.67.74.86", "172.67.93.117", "172.67.93.126", "172.67.94.198", "173.245.49.57", "185.238.228.201", "188.114.96.39", "191.101.251.190", "198.202.211.158", "198.41.193.207", "198.41.205.190", "198.41.211.0", "199.181.197.109", "199.181.197.158", "199.181.197.246", "2.16.0.134", "2.16.0.235", "2.16.1.137", "2.16.1.149", "2.16.1.218", "2.16.105.142", "2.16.11.186", "2.16.125.17", "2.16.164.29", "2.16.168.12", "2.16.168.7", "2.16.190.87", "2.16.192.83", "2.16.2.152", "2.16.222.174", "2.16.31.75", "2.16.31.87", "2.16.33.249", "2.16.39.17", "2.16.42.250", "2.16.42.251", "2.16.93.211", "212.104.128.75", "45.80.110.140", "5.10.214.117", "74.49.215.119", "88.216.66.154", "88.216.66.81", "89.116.161.253", "89.117.112.240", "92.53.188.172", "92.53.188.71"];
 
   const PORTS_ALL = [443, 2053, 2083, 2087, 2096, 8443];
+
+  /* Cloudflare published IPv4 ranges (weighted random sampling like SenPaiScanner) */
+  const CF_RANGES = [
+    "173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18",
+    "108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17",
+    "162.158.0.0/15","104.16.0.0/12","172.64.0.0/17","172.64.128.0/18","172.64.192.0/19",
+    "172.64.224.0/22","172.64.229.0/24","172.64.230.0/23","172.64.232.0/22","172.64.236.0/23",
+    "172.64.238.0/23","172.64.240.0/22","172.64.244.0/22","172.64.248.0/22","131.0.72.0/22",
+  ];
+
+  function randIp(cidr) {
+    const [ip, bits] = cidr.split("/");
+    const b = ip.split(".").map(Number);
+    const base = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
+    const hostBits = 32 - (+bits);
+    const rnd = Math.floor(Math.random() * Math.pow(2, hostBits));
+    const out = (base + rnd) >>> 0;
+    return [(out >>> 24) & 255, (out >>> 16) & 255, (out >>> 8) & 255, out & 255].join(".");
+  }
+
+  function randomRangeIps(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(randIp(CF_RANGES[Math.floor(Math.random() * CF_RANGES.length)]));
+    return out;
+  }
   const S = {
     running: false,
     controller: null,
@@ -1051,7 +1127,9 @@ const SCANNER = (() => {
     tested: 0,
     alive: 0,
     dead: 0,
+    online: [],       // online clean-IP pool (fetched via /api/ips)
   };
+  const R = { running: false, results: [], best: null }; // relay-test state
   let raf = null;
   let sweep = 0;
   let lastBlip = 0;
@@ -1090,17 +1168,17 @@ const SCANNER = (() => {
 
   function buildQueue() {
     let list;
-    if (S.source === "custom") {
-      list = parseList($("#scanCustom").value);
-    } else {
-      list = SEED.slice(0, Math.min(S.target, SEED.length));
-    }
+    if (S.source === "custom") list = parseList($("#scanCustom").value);
+    else if (S.source === "ranges") list = randomRangeIps(S.target);
+    else if (S.source === "online") list = (S.online.length ? S.online : SEED).slice(0, Math.min(S.target, S.online.length || SEED.length));
+    else list = SEED.slice(0, Math.min(S.target, SEED.length));
     const queue = [];
     for (const ip of list) for (const port of S.ports) queue.push({ ip, port });
     return queue;
   }
 
   async function runScan() {
+    await ensureOnline();
     const queue = buildQueue();
     if (!queue.length) { toast(t("scan.none")); return; }
     S.running = true;
@@ -1181,6 +1259,8 @@ const SCANNER = (() => {
 
   function buildQueueLen() {
     if (S.source === "custom") return parseList($("#scanCustom").value).length * S.ports.length;
+    if (S.source === "ranges") return S.target * S.ports.length;
+    if (S.source === "online") return Math.min(S.target, S.online.length || SEED.length) * S.ports.length;
     return Math.min(S.target, SEED.length) * S.ports.length;
   }
 
@@ -1316,6 +1396,8 @@ const SCANNER = (() => {
 
   function onOpen() {
     if (!raf) drawRadar();
+    prefillRelay();
+    renderRelayCurrent();
   }
 
   /* ---------------- wiring ---------------- */
@@ -1323,7 +1405,11 @@ const SCANNER = (() => {
     $("#scanStart").onclick = () => { readConfig(); runScan(); };
     $("#scanStop").onclick = stopScan;
     $("#scanSourceB").onclick = () => setSource("bundled");
+    $("#scanSourceO").onclick = () => setSource("online");
+    $("#scanSourceR").onclick = () => setSource("ranges");
     $("#scanSourceC").onclick = () => setSource("custom");
+    $("#relayStart").onclick = () => runRelay();
+    $("#relayApply").onclick = applyRelay;
     $("#scanApply").onclick = applyToPanel;
     $("#scanCopy").onclick = copyAll;
     $("#scanExport").onclick = exportTxt;
@@ -1347,9 +1433,147 @@ const SCANNER = (() => {
   function setSource(src) {
     S.source = src;
     $("#scanSourceB").classList.toggle("on", src === "bundled");
+    $("#scanSourceO").classList.toggle("on", src === "online");
+    $("#scanSourceR").classList.toggle("on", src === "ranges");
     $("#scanSourceC").classList.toggle("on", src === "custom");
     $("#scanCustomWrap").classList.toggle("hidden", src !== "custom");
-    $("#scanTargetWrap").classList.toggle("hidden", src !== "bundled");
+    $("#scanTargetWrap").classList.toggle("hidden", src === "custom");
+  }
+
+  /* ---------------- online clean-IP pool ---------------- */
+  async function ensureOnline() {
+    if (S.source !== "online") return;
+    if (S.online.length) return;
+    $("#scanStatus").textContent = t("scan.fetching");
+    try {
+      const res = await api("/api/ips");
+      if (res.ok) {
+        const j = await res.json();
+        S.online = Array.isArray(j.ips) && j.ips.length ? j.ips : [...SEED];
+      } else S.online = [...SEED];
+    } catch (e) { S.online = [...SEED]; }
+    if (!S.online.length) S.online = [...SEED];
+  }
+
+  /* ---------------- relay test (تست رله) ---------------- */
+  function parseDomains(text) {
+    const out = new Set();
+    for (let line of (text || "").split("\n")) {
+      line = line.trim().toLowerCase();
+      if (!line || line.startsWith("#")) continue;
+      line = line.replace(/^[a-z]+:\/\//, "").split("/")[0].split(":")[0];
+      if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(line)) out.add(line);
+    }
+    return [...out];
+  }
+
+  function wsProbe(domain) {
+    return new Promise((resolve) => {
+      const wsPath = (state.settings && state.settings.wsPath) || "/nika-ws";
+      const url = "wss://" + domain + wsPath + "?probe=nika&proto=probe";
+      const t0 = performance.now();
+      let settled = false;
+      const finish = (ok, ms, info) => {
+        if (settled) return;
+        settled = true;
+        resolve({ domain, ok, ms: ok ? Math.max(1, Math.round(ms)) : null, info });
+      };
+      let ws;
+      try { ws = new WebSocket(url); }
+      catch (e) { finish(false, 0, "err"); return; }
+      const to = setTimeout(() => { try { ws.close(); } catch {} finish(false, 0, "timeout"); }, 8000);
+      ws.onmessage = (ev) => {
+        let ok = false;
+        try { const j = JSON.parse(ev.data); ok = !!(j && j.ok === true); } catch {}
+        clearTimeout(to);
+        const ms = performance.now() - t0;
+        try { ws.close(); } catch {}
+        finish(ok, ms, ok ? "front" : "mismatch");
+      };
+      ws.onerror = () => { clearTimeout(to); finish(false, 0, "err"); };
+      ws.onclose = () => { clearTimeout(to); finish(false, 0, "closed"); };
+    });
+  }
+
+  async function runRelay() {
+    const domains = parseDomains($("#relayCandidates").value);
+    if (!domains.length) { toast(t("relay.none")); return; }
+    R.running = true; R.results = []; R.best = null;
+    $("#relayStart").classList.add("hidden");
+    $("#relayApply").classList.add("hidden");
+    $("#relayStatus").textContent = t("relay.running");
+    $("#relayList").innerHTML = `<div class="empty">${t("relay.running")}</div>`;
+    let cursor = 0;
+    const workers = [];
+    const n = Math.min(6, domains.length);
+    for (let w = 0; w < n; w++) {
+      workers.push((async () => {
+        while (cursor < domains.length) {
+          const d = domains[cursor++];
+          const r = await wsProbe(d);
+          R.results.push(r);
+          renderRelay();
+        }
+      })());
+    }
+    await Promise.all(workers);
+    R.running = false;
+    const ok = R.results.filter((r) => r.ok).sort((a, b) => a.ms - b.ms);
+    R.best = ok[0] || null;
+    renderRelay();
+  }
+
+  function renderRelay() {
+    const el = $("#relayList");
+    const list = [...R.results].sort((a, b) => (a.ok === b.ok ? (a.ms || 9999) - (b.ms || 9999) : a.ok ? -1 : 1));
+    if (!R.results.length) {
+      el.innerHTML = `<div class="empty">${R.running ? t("relay.running") : t("relay.empty")}</div>`;
+      $("#relayStart").classList.toggle("hidden", R.running);
+      $("#relayStatus").textContent = "";
+      return;
+    }
+    el.innerHTML = list.map((r) => {
+      const best = R.best && r.domain === R.best.domain;
+      const label = r.ok ? t("relay.front") + " · " + r.ms + "ms" : t("relay.notfront");
+      return `<div class="scan-row" onclick="SCANNER.copyIp('${r.domain}')">
+        <code class="scan-ip">${r.domain}</code>
+        ${best ? '<span class="badge ok" style="font-size:10px">★ ' + t("relay.best") + '</span>' : ""}
+        <div style="flex:1"></div>
+        <code class="scan-ms ${r.ok ? "ok" : "bad"}">${label}</code>
+      </div>`;
+    }).join("");
+    $("#relayStart").classList.toggle("hidden", R.running);
+    $("#relayApply").classList.toggle("hidden", !R.best);
+    $("#relayStatus").textContent = R.running ? t("relay.running") : t("relay.done");
+    renderRelayCurrent();
+  }
+
+  function renderRelayCurrent() {
+    const el = $("#relayCurrent");
+    if (!el) return;
+    const cur = (state.settings && state.settings.relayDomain) || "";
+    el.innerHTML = cur ? `🔗 ${t("relay.current")}: <b>${cur}</b>` : "";
+  }
+
+  function prefillRelay() {
+    const ta = $("#relayCandidates");
+    if (!ta || ta.value.trim()) return;
+    const host = (state.settings && state.settings.host) || location.hostname;
+    const rd = (state.settings && state.settings.relayDomain) || "";
+    const lines = ["# " + t("relay.candidates") + ":", host];
+    if (rd && rd !== host) lines.push(rd);
+    ta.value = lines.join("\n");
+  }
+
+  async function applyRelay() {
+    if (!R.best) { toast(t("relay.none")); return; }
+    if (MODE !== "live") { toast(t("toast.preview")); return; }
+    const res = await api("/api/settings", { method: "POST", body: { relayDomain: R.best.domain } });
+    if (res.ok) {
+      toast(t("relay.applied"));
+      if (state.settings) state.settings.relayDomain = R.best.domain;
+      renderRelayCurrent();
+    } else toast(t("common.error"));
   }
 
   return { onOpen, copyIp, initUI, _seed: SEED.length };
@@ -1358,6 +1582,7 @@ const SCANNER = (() => {
 /* expose for inline onclick */
 window.SCANNER = SCANNER;
 SCANNER.initUI();
+if (typeof applyLang === "function") applyLang(); // translate scanner labels (keys added above)
 
 </script>
 </body>

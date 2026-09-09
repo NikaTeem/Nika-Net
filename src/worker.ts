@@ -25,6 +25,41 @@ const PANEL = PANEL_HTML; // single reference so esbuild inlines the HTML exactl
 declare const NIKA_VERSION: string;
 const CUR_VERSION = NIKA_VERSION || "0.4.0";
 
+/* ---------- online clean-IP pool ---------- */
+// Community-maintained sources of Cloudflare ranges + curated clean IPs.
+const IP_SOURCES = [
+  "https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt",
+  "https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt",
+];
+const IP_RE = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g;
+let ipPoolCache: { ips: string[]; at: number } | null = null;
+
+async function fetchIpPool(): Promise<string[]> {
+  if (ipPoolCache && Date.now() - ipPoolCache.at < 10 * 60_000) return ipPoolCache.ips;
+  const set = new Set<string>();
+  const withTimeout = (url: string) =>
+    Promise.race([
+      fetch(url),
+      new Promise<Response>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000)),
+    ]);
+  for (const src of IP_SOURCES) {
+    try {
+      const res = await withTimeout(src);
+      const text = await res.text();
+      let m: RegExpExecArray | null;
+      let n = 0;
+      while ((m = IP_RE.exec(text)) && n < 4000) {
+        const ip = m[1];
+        const o = ip.split(".").map(Number);
+        if (o.every((x) => x >= 0 && x <= 255) && !ip.startsWith("0.")) { set.add(ip); n++; }
+      }
+    } catch { /* source down → skip */ }
+  }
+  const ips = [...set];
+  ipPoolCache = { ips, at: Date.now() };
+  return ips;
+}
+
 const html = (body: string, status = 200) =>
   new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
 
@@ -74,8 +109,22 @@ export default {
 };
 
 /* ---------------------- websocket ---------------------- */
+// Relay-Test probe: `wss://<host>/<wsPath>?probe=nika` answers with a tiny
+// signature frame so the panel can verify (end-to-end, from the user's
+// browser) that a candidate domain really fronts THIS worker — and how fast.
+function handleProbe(req: Request): Response {
+  const pair = new WebSocketPair();
+  const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
+  server.accept();
+  const sig = JSON.stringify({ ok: true, panel: "nika", v: CUR_VERSION });
+  try { server.send(sig); } catch { /* noop */ }
+  setTimeout(() => { try { server.close(); } catch { /* noop */ } }, 2000);
+  return new Response(null, { status: 101, webSocket: client });
+}
+
 async function handleWebsocket(req: Request, env: Env, settings: Settings): Promise<Response> {
   const url = new URL(req.url);
+  if (url.searchParams.get("probe") === "nika") return handleProbe(req);
   const proto = url.searchParams.get("proto") || req.headers.get("x-nika-proto") || "";
   const users = await store.getUsers(env);
   const uuid = url.searchParams.get("uuid") || "";
@@ -112,6 +161,12 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
       notes: latest.notes || "",
       upToDate: cmpVersion(CUR_VERSION, latest.version) >= 0,
     });
+  }
+
+  // public: online clean-IP pool (fresh Cloudflare ranges + curated clean IPs)
+  if (op === "ips") {
+    const ips = await fetchIpPool();
+    return jsonResp({ ips, count: ips.length });
   }
 
   // login
@@ -221,6 +276,7 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (typeof b.sni === "string") next.sni = b.sni;
         if (typeof b.wsPath === "string") next.wsPath = b.wsPath;
         if (Array.isArray(b.cleanIps)) next.cleanIps = b.cleanIps;
+        if (typeof b.relayDomain === "string") next.relayDomain = b.relayDomain.trim();
         if (b.protocols) next.protocols = { ...settings.protocols, ...b.protocols };
         await store.saveSettings(env, next);
         await metrics.appendActivity(env, { icon: "⚙️", text: "تنظیمات پنل به‌روزرسانی شد", time: Date.now() });
