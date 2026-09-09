@@ -115,6 +115,39 @@ export async function saveState(env: Env, chatId: number, s: UserState): Promise
   await env.BOT_KV.put(PREFIX + chatId, JSON.stringify(s));
 }
 
+/* ---------- light per-user meta (name + last seen) for the admin panel ---------- */
+// Throttled to ≤1 write / 10 min per user so the KV write budget is safe.
+export async function touchMeta(env: Env, chatId: number, info?: { firstName?: string; username?: string }): Promise<void> {
+  const key = "u:meta:" + chatId;
+  try {
+    const raw = await env.BOT_KV.get(key);
+    if (raw) {
+      const j = JSON.parse(raw);
+      if (Date.now() - (j.at || 0) < 10 * 60_000) return; // fresh enough
+    }
+  } catch { /* ignore */ }
+  try {
+    const prev = await env.BOT_KV.get(key);
+    let firstName = (info?.firstName || "").slice(0, 64);
+    let username = (info?.username || "").slice(0, 64);
+    if (prev) {
+      const j = JSON.parse(prev);
+      if (!firstName) firstName = j.firstName || "";
+      if (!username) username = j.username || "";
+    }
+    await env.BOT_KV.put(key, JSON.stringify({ at: Date.now(), firstName, username }), { expirationTtl: 90 * 86400 });
+  } catch { /* ignore */ }
+}
+
+export async function getMeta(env: Env, chatId: number): Promise<{ firstName?: string; username?: string; at?: number }> {
+  try {
+    const raw = await env.BOT_KV.get("u:meta:" + chatId);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 /* ---------- owner (first user to /start) ---------- */
 export async function getOwner(env: Env): Promise<number | null> {
   const raw = await env.BOT_KV.get("owner");

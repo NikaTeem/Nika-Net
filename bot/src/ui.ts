@@ -387,7 +387,11 @@ export function helpMenu(s: UserState): { text: string; kb: Kb } {
 /* ============================ owner 🛡 (مالک فقط) ============================ */
 
 export interface BotMeta { username: string; origin: string }
-export interface FjView { enabled: boolean; chats: string[]; mode: string; recheckHours: number; exempt: number[] }
+export interface FjView {
+  enabled: boolean; chats: string[]; mode: string; recheckHours: number; exempt: number[];
+  chatMeta?: Record<string, { title?: string }>;
+  applyTo?: "all" | "new"; legacy?: number[];
+}
 
 export function ownerMenu(s: UserState, meta: BotMeta): { text: string; kb: Kb } {
   const lang = L(s);
@@ -419,9 +423,12 @@ export const fjSetOk = (s: UserState, chat: string): string => t(L(s), "fj_set_o
 
 export function fjStatusMenu(s: UserState, cfg: FjView): { text: string; kb: Kb } {
   const lang = L(s);
+  const chatsLine = cfg.chats.length
+    ? cfg.chats.map((c) => "• " + (cfg.chatMeta?.[c]?.title ? esc(cfg.chatMeta[c].title!) : "<code>" + esc(c) + "</code>")).join("\n")
+    : "—";
   const lines = [
     `${t(lang, "fj_st_en")}: ${cfg.enabled ? "✅ " + t(lang, "fj_on") : "⛔ " + t(lang, "fj_off")}`,
-    `${t(lang, "fj_st_chats")}: ${cfg.chats.length ? cfg.chats.map((c) => "<code>" + esc(c) + "</code>").join("، ") : "—"}`,
+    `${t(lang, "fj_st_chats")}:\n${chatsLine}`,
     `${t(lang, "fj_st_mode")}: ${cfg.mode === "all" ? t(lang, "fj_all") : t(lang, "fj_any")}`,
     `${t(lang, "fj_st_re")}: ${cfg.recheckHours === 0 ? t(lang, "fj_always") : String(cfg.recheckHours) + "h"}`,
   ];

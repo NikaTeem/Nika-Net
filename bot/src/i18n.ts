@@ -172,6 +172,12 @@ export const S: Record<Lang, Dict> = {
     fj_all: "همه (ALL)",
     fj_any: "حداقل یکی (ANY)",
     fj_always: "هر بار",
+    fj_gate_title: "عضویت اجباری",
+    fj_gate_list: "کانال‌های موردنیاز",
+    fj_gate_after: "بعد از عضویت، دکمهٔ زیر را بزن تا بازرسی انجام شود 👇",
+    fj_verify_ok: "✅ عضویت تأیید شد — خوش آمدی!",
+    fj_verify_fail: "⛔ هنوز عضو نشدی! اول عضو شو بعد دوباره بزن.",
+    fj_welcome: "✅ عضویتت تأیید شد — خوش آمدی! حالا می‌توانی از ربات استفاده کنی. 🎉",
   },
 
   en: {
@@ -340,6 +346,12 @@ export const S: Record<Lang, Dict> = {
     fj_all: "ALL",
     fj_any: "ANY",
     fj_always: "always",
+    fj_gate_title: "Forced join",
+    fj_gate_list: "Required channels",
+    fj_gate_after: "After joining, tap the button below to verify 👇",
+    fj_verify_ok: "✅ Verified — welcome!",
+    fj_verify_fail: "⛔ Not joined yet! Join first, then tap again.",
+    fj_welcome: "✅ Membership verified — welcome! You can now use the bot. 🎉",
   },
 };
 

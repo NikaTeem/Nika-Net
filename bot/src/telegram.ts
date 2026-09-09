@@ -5,7 +5,14 @@ export interface TgUser { id: number; first_name?: string; last_name?: string; u
 export interface TgChat { id: number; type?: string }
 export interface TgMessage { message_id: number; chat: TgChat; from?: TgUser; text?: string }
 export interface TgCallbackQuery { id: string; from: TgUser; message?: TgMessage; data?: string }
-export interface TgUpdate { update_id: number; message?: TgMessage; callback_query?: TgCallbackQuery }
+export interface TgChatMemberUpdate {
+  chat: TgChat & { title?: string; username?: string };
+  from?: TgUser;
+  date?: number;
+  old_chat_member?: { status: string };
+  new_chat_member?: { status: string };
+}
+export interface TgUpdate { update_id: number; message?: TgMessage; callback_query?: TgCallbackQuery; my_chat_member?: TgChatMemberUpdate; chat_member?: TgChatMemberUpdate }
 
 /* ---------- colored buttons (Bot API 9.0 `style`) ---------- */
 export type Color = "primary" | "success" | "danger";
@@ -116,6 +123,10 @@ export function sendChatAction(env: Env, chatId: number, action = "typing") {
 
 export function getChatMember(env: Env, chatId: string | number, userId: number) {
   return tgApi(env, "getChatMember", { chat_id: String(chatId), user_id: userId });
+}
+
+export function getChat(env: Env, chatId: string | number) {
+  return tgApi(env, "getChat", { chat_id: String(chatId) });
 }
 
 export function getMe(env: Env) {

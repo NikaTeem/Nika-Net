@@ -111,6 +111,8 @@ export async function handleScheduled(env: Env): Promise<void> {
 export async function handleUpdate(env: Env, update: tg.TgUpdate): Promise<void> {
   try {
     if (update.callback_query) return await handleCallback(env, update.callback_query);
+    if (update.my_chat_member) return await fj.onBotChatMember(env, update.my_chat_member);
+    if (update.chat_member) return await fj.onBotChatMember(env, update.chat_member);
     if (update.message) return await handleMessage(env, update.message);
   } catch (e) {
     console.error("update error", e);
@@ -220,11 +222,14 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text || "").trim();
 
+  // track last-seen + name for the panel (throttled writes)
+  await st.touchMeta(env, chatId, { firstName: msg.from?.first_name, username: msg.from?.username });
+
   // عضویت اجباری — gate every message (owner + exempt always pass, and the
   // "await_fj_chat" setup state is allowed so the owner can configure it).
   const pre = await st.getState(env, chatId);
   if (pre.state !== "await_fj_chat") {
-    if (!(await fj.gateUser(env, chatId))) return;
+    if (!(await fj.gateUser(env, chatId, L(pre)))) return;
   }
 
   if (text === "/start" || text.toLowerCase() === "start") {
@@ -939,6 +944,8 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     }
     const joined = await fj.verifyAndAnswer(env, chatId, cfg, cq.id, L(s));
     if (joined) {
+      const wmsg = cfg.verifyMessage?.trim() || t(L(s), "fj_welcome");
+      await tg.sendMessage(env, chatId, wmsg).catch(() => {});
       const m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
       await tg.sendMessage(env, chatId, m.text, m.kb);
     }
@@ -946,7 +953,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   }
 
   // gate every other callback for non-members
-  if (!(await fj.gateUser(env, chatId))) return;
+  if (!(await fj.gateUser(env, chatId, L(s)))) return;
 
   if (data === "noop") return void (await tg.answerCallback(env, cq.id).catch(() => {}));
   if (data === "menu:close") {
@@ -972,6 +979,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     const m = ui.fjStatusMenu(s, {
       enabled: cfg.enabled, chats: cfg.chats, mode: cfg.mode,
       recheckHours: cfg.recheckHours, exempt: cfg.exempt,
+      chatMeta: cfg.chatMeta, applyTo: cfg.applyTo, legacy: cfg.legacy,
     });
     await tg.answerCallback(env, cq.id).catch(() => {});
     return void (await reply(env, chatId, msgId, m.text, m.kb));
