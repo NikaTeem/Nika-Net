@@ -37,9 +37,12 @@ export type StateName =
   | "await_uquota"
   | "await_uexp";
 
+export type SkinId = "graphite" | "neon" | "paper";
+
 export interface UserState {
   state: StateName;
   lang: "fa" | "en";
+  skin?: SkinId; // launcher skin — mirrors nika_launcher_pro.HYPER's SKINS
   tokens: Record<string, TokenRecord>;
   activeToken?: string;
   panels: PanelRecord[];
@@ -54,6 +57,7 @@ const PREFIX = "u:";
 const DEFAULT: UserState = {
   state: "idle",
   lang: "fa",
+  skin: "graphite",
   tokens: {},
   activeToken: undefined,
   panels: [],

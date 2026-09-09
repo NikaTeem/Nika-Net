@@ -1,6 +1,6 @@
 // Nika Net Launcher — "Graphite + Neon" art engine, menus & renderers.
 import { Kb, ReplyKb, kb, replyKb, Btn } from "./telegram";
-import { UserState, PanelRecord, TokenRecord } from "./state";
+import { UserState, PanelRecord, TokenRecord, SkinId } from "./state";
 import { t, Lang } from "./i18n";
 
 declare const NIKA_VERSION: string;
@@ -43,6 +43,31 @@ function card(title: string, lines: string[]): string {
   const out = [`┌─ ${title}`, ...lines.map((ln) => `│ ${ln}`), "└" + "─".repeat(18)];
   return out.join("\n");
 }
+
+/* ============================ skins 🎨 ============================ */
+/* Ported from nika_launcher_pro.HYPER — three art languages on one engine:
+   graphite (default mono ink), neon (teal pulse), paper (warm pastel).  */
+
+interface Skin { line: string; dot: string; fill: string; empty: string; lit: string }
+export const SKINS: Record<SkinId, Skin> = {
+  graphite: { line: "━", dot: "●", fill: "■", empty: "□", lit: "⬢" },
+  neon:     { line: "≋", dot: "◉", fill: "█", empty: "░", lit: "✦" },
+  paper:    { line: "·", dot: "○", fill: "▪", empty: "▫", lit: "◆" },
+};
+export const SKIN_ORDER: SkinId[] = ["graphite", "neon", "paper"];
+
+export function skin(s: UserState | null): Skin {
+  return SKINS[(s?.skin as SkinId) in SKINS ? (s.skin as SkinId) : "graphite"];
+}
+
+/* HYPER.bar() — a colored progress strip drawn with the skin's own glyphs.
+   lit glyphs repeat `done`, then a single tip glyph, then `rest` empties.   */
+export function bar(k: Skin, done: number, total: number, width = 10): string {
+  const p = Math.max(0, Math.min(1, total > 0 ? done / total : 0));
+  const filled = Math.round(p * width);
+  return "▕" + k.fill.repeat(filled) + (filled < width ? k.lit : "") + k.empty.repeat(Math.max(0, width - filled - (filled < width ? 1 : 0))) + "▏";
+}
+
 
 export const party = (lines: string[]): string =>
   ["🎉".repeat(8), ...lines, "🎉".repeat(8)].join("\n");
@@ -304,17 +329,45 @@ export function tokensMenu(s: UserState): { text: string; kb: Kb } {
 
 export function settingsMenu(s: UserState): { text: string; kb: Kb } {
   const lang = L(s);
+  const cur = (s.skin as SkinId) in SKINS ? (s.skin as SkinId) : "graphite";
   const body = [
     card(`📦 ${t(lang, "set_bundle")}`, [`<code>${VERSION}</code>`]),
+    "",
+    card(`🎨 ${t(lang, "set_skin")}`, [`${SKINS[cur].lit} ${t(lang, "skin_" + cur)}`]),
     "",
     card("📊 Stats", [t(lang, "set_stats", { tok: n(s, Object.keys(s.tokens).length), pan: n(s, s.panels.length), b: n(s, s.builds) })]),
   ].join("\n");
   const rows: Btn[][] = [
     [{ text: t(lang, "set_lang"), cb: "do:lang", color: "primary", emoji: false }],
+    [{ text: t(lang, "set_skin"), cb: "do:skin", color: "success", emoji: false }],
     [{ text: t(lang, "set_bundle_get"), cb: "do:getbundle", color: "gray", emoji: false }],
     [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
   ];
   return { text: makeText(t(lang, "set_title"), body, t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
+}
+
+export function skinsMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const k = skin(s);
+  const cur = (s.skin as SkinId) in SKINS ? (s.skin as SkinId) : "graphite";
+  const demos: [SkinId, number][] = [["graphite", 7], ["neon", 5], ["paper", 8]];
+  const preview = demos
+    .map(([id, done]) => {
+      const kk = SKINS[id];
+      const mark = id === cur ? kk.lit : kk.dot;
+      return `<code>${mark} ${t(lang, "skin_" + id)}\n  ${bar(kk, done, 10, 10)}</code>`;
+    })
+    .join("\n");
+  const body = [
+    card(`${k.lit} ${t(lang, "set_skin")} · ${t(lang, "skin_" + cur)}`, [preview]),
+  ].join("\n");
+  const rows: Btn[][] = [
+    [{ text: t(lang, "skin_graphite"), cb: "skin:graphite", color: cur === "graphite" ? "primary" : "gray", emoji: false },
+     { text: t(lang, "skin_neon"), cb: "skin:neon", color: cur === "neon" ? "success" : "gray", emoji: false }],
+    [{ text: t(lang, "skin_paper"), cb: "skin:paper", color: cur === "paper" ? "danger" : "gray", emoji: false },
+     { text: t(lang, "back"), cb: "menu:settings", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "skin_pick"), body, t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
 }
 
 /* ============================ help ℹ️ ============================ */

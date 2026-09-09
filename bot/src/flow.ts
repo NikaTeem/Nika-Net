@@ -989,6 +989,19 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     await tg.sendDocument(env, chatId, "worker.js", BUNDLE).catch(() => {});
     return;
   }
+  if (data === "do:skin") {
+    const m = ui.skinsMenu(s);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+  if (data.startsWith("skin:")) {
+    const id = data.slice(5);
+    s.skin = id === "neon" || id === "paper" ? id : "graphite";
+    await st.saveState(env, chatId, s);
+    const m = ui.skinsMenu(s);
+    await tg.answerCallback(env, cq.id, ui.SKINS[s.skin].lit).catch(() => {});
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
 
   /* ---------- panels ---------- */
   if (data.startsWith("panels:")) {
