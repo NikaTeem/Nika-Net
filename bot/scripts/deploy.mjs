@@ -1,6 +1,9 @@
-// Nika Net Launcher — deploy script.
+// Nika Net Launcher — deploy script (FIRST INSTALL ONLY).
 // Deploys the bot to Cloudflare via the API: KV namespace, worker script,
 // secrets, and Telegram webhook registration. No server required.
+//
+// ⚠️  این اسکریپت هر بار یک KV namespace جدید می‌سازد و دادهٔ کاربران را صفر می‌کند!
+//     برای «آپدیت» نسخهٔ جدید (بدون از دست رفتن داده) از scripts/update.mjs استفاده کن.
 //
 // Usage:
 //   CF_TOKEN=... TELEGRAM_TOKEN=... node scripts/deploy.mjs
