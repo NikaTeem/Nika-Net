@@ -59,7 +59,7 @@ export default {
 
       // 5) client config fetch by uuid
       const m = path.match(/^\/([0-9a-fA-F-]{36})\/?$/);
-      if (m) return handleClientConfig(env, settings, m[1]);
+      if (m) return handleClientConfig(req, env, settings, m[1]);
 
       // 6) health
       if (path === "/health") return jsonResp({ ok: true, name: settings.title });
@@ -234,11 +234,12 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
       const users = await store.getUsers(env);
       const u = users.find((x) => x.id === id);
       if (!u) return jsonResp({ error: "user not found" }, 404);
+      const eff = { ...settings, host: resolveHost(req, settings) };
       return jsonResp({
         user: { id: u.id, name: u.name, quota: u.quota, used: Math.round((u.used || 0) * 100) / 100, days: u.days, active: u.active },
-        base64: gen.buildBase64Bundle(u, settings),
-        clash: gen.buildClashYaml(u, settings),
-        singbox: gen.buildSingboxJson(u, settings),
+        base64: gen.buildBase64Bundle(u, eff),
+        clash: gen.buildClashYaml(u, eff),
+        singbox: gen.buildSingboxJson(u, eff),
         warp: settings.protocols.warp ? gen.buildWarpConfig(u) : null,
       });
     }
@@ -255,6 +256,13 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
 }
 
 /* ---------------------- subscriptions ---------------------- */
+// If the admin hasn't set a real host yet (placeholder default), fall back to
+// the live request host so generated configs route back to this worker.
+function resolveHost(req: Request, s: Settings): string {
+  const h = (s.host || "").trim();
+  return h && h !== DEFAULTS.host ? h : new URL(req.url).hostname;
+}
+
 async function handleSub(req: Request, env: Env, settings: Settings, path: string): Promise<Response> {
   const rest = path.replace("/sub/", "");
   const token = rest.split("/")[0].split(".")[0];
@@ -263,9 +271,14 @@ async function handleSub(req: Request, env: Env, settings: Settings, path: strin
   const user = users.find((u) => u.password === token || u.uuid.replace(/-/g, "").slice(0, 12) === token);
   if (!user) return jsonResp({ error: "invalid token" }, 404);
 
-  // browsers get a beautiful landing page; clients/apps get the raw config
+  // Browsers get the landing page; apps/clients get the raw config.
+  // Real browsers send Sec-Fetch navigation headers — proxy apps don't, so
+  // they reliably receive the config even if their Accept looks browser-like.
   const accept = req.headers.get("Accept") || "";
-  if (accept.includes("text/html")) {
+  const secFetchDest = req.headers.get("Sec-Fetch-Dest") || "";
+  const secFetchMode = req.headers.get("Sec-Fetch-Mode") || "";
+  const browserNav = secFetchDest === "document" || secFetchMode === "navigate";
+  if (accept.includes("text/html") && browserNav) {
     const origin = new URL(req.url).origin;
     return new Response(
       renderSubPage({
@@ -285,22 +298,24 @@ async function handleSub(req: Request, env: Env, settings: Settings, path: strin
 
   const isClash = fmt === "yaml" || fmt === "yml";
   const isSingbox = fmt === "json";
+  const eff = { ...settings, host: resolveHost(req, settings) };
   const body = isClash
-    ? gen.buildClashYaml(user, settings)
+    ? gen.buildClashYaml(user, eff)
     : isSingbox
-      ? gen.buildSingboxJson(user, settings)
-      : "vmess://" + gen.buildBase64Bundle(user, settings);
+      ? gen.buildSingboxJson(user, eff)
+      : gen.buildBase64Bundle(user, eff);
 
   return new Response(body, {
     headers: { "content-type": isClash ? "text/yaml" : isSingbox ? "application/json" : "text/plain" },
   });
 }
 
-async function handleClientConfig(env: Env, settings: Settings, uuid: string): Promise<Response> {
+async function handleClientConfig(req: Request, env: Env, settings: Settings, uuid: string): Promise<Response> {
   const users = await store.getUsers(env);
   const user = users.find((u) => u.uuid.toLowerCase() === uuid.toLowerCase());
   if (!user) return jsonResp({ error: "unknown uuid" }, 404);
-  const body = "vmess://" + gen.buildBase64Bundle(user, settings);
+  const eff = { ...settings, host: resolveHost(req, settings) };
+  const body = gen.buildBase64Bundle(user, eff);
   return new Response(body, { headers: { "content-type": "text/plain" } });
 }
 
