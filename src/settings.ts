@@ -41,11 +41,39 @@ async function rawPut(env: Env, key: string, value: string): Promise<void> {
   else mem.set(key, value);
 }
 
+// Resolver / non-edge anycast IPs that MUST never appear as a connect address:
+// they answer DNS on :443 for their own service, not our worker's TLS, so a
+// config that uses them fails (HTTP 403 / timeout). Older panels persisted
+// some of these — scrub them out on load so the fix reaches existing installs.
+const BAD_IPS = new Set([
+  // DNS resolvers / non-edge anycast (never terminate TLS for our worker)
+  "1.0.0.1", "1.1.1.1", "1.0.0.2", "1.1.1.2", "1.0.0.3", "1.1.1.3",
+  "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112",
+  "208.67.222.222", "208.67.220.220", "64.6.64.6", "64.6.65.6",
+  // legacy defaults that probe-tested as HTTP 403 (don't front our worker)
+  "104.16.132.229",
+]);
+
+function sanitizeCleanIps(s: Settings): boolean {
+  if (!Array.isArray(s.cleanIps)) return false;
+  const kept = s.cleanIps.filter((ip) => !BAD_IPS.has(ip));
+  if (kept.length !== s.cleanIps.length) {
+    s.cleanIps = kept.length ? kept : [...DEFAULTS.cleanIps];
+    return true;
+  }
+  return false;
+}
+
 export async function getSettings(env: Env): Promise<Settings> {
   const raw = await rawGet(env, "settings");
   const base = { ...DEFAULTS };
   if (raw) {
     try { Object.assign(base, JSON.parse(raw)); } catch { /* corrupt → defaults */ }
+  }
+  const scrubbed = sanitizeCleanIps(base);
+  if (scrubbed) {
+    // persist the corrected clean-IP list so legacy panels heal themselves
+    await rawPut(env, "settings", JSON.stringify(base));
   }
   if (!base.sessionSecret) {
     base.sessionSecret = crypto.randomUUID();

@@ -43,7 +43,10 @@ export function makeReadableWebSocketStream(
       // deliver 0-RTT early data straight away
       if (earlyDataHeader) {
         try {
-          const early = Uint8Array.from(atob(earlyDataHeader), (c) => c.charCodeAt(0));
+          // tolerate both standard and URL-safe base64 (and missing padding)
+          let b64 = earlyDataHeader.replace(/-/g, "+").replace(/_/g, "/");
+          while (b64.length % 4) b64 += "=";
+          const early = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
           if (early.length) controller.enqueue(early);
         } catch {
           /* invalid/absent early data header — ignore */

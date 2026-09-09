@@ -10,7 +10,7 @@ import { makeReadableWebSocketStream, wsAccept } from "./common";
 import { User, Settings, Env } from "../types";
 import * as metrics from "../metrics";
 
-export async function handleVless(req: Request, user: User, settings: Settings, env: Env): Promise<Response> {
+export async function handleVless(req: Request, users: User[], settings: Settings, env: Env): Promise<Response> {
   const { client, server } = wsAccept(req);
   server.binaryType = "arraybuffer";
 
@@ -26,6 +26,7 @@ export async function handleVless(req: Request, user: User, settings: Settings, 
   let down = 0;
   let pending: Uint8Array | null = null; // partial header awaiting more bytes
   let connected = false;
+  let userId = "";
 
   stream
     .pipeTo(
@@ -39,7 +40,7 @@ export async function handleVless(req: Request, user: User, settings: Settings, 
           }
 
           const data = pending ? merge(pending, chunk) : chunk;
-          const h = parseVlessHeader(data, user);
+          const h = parseVlessHeader(data);
           if (!h.ok) {
             if (h.incomplete) { pending = data; return; } // wait for more bytes
             pending = null;
@@ -47,6 +48,14 @@ export async function handleVless(req: Request, user: User, settings: Settings, 
             return;
           }
           pending = null;
+
+          // identify & authorize the user from the uuid inside the header
+          const user = users.find((u) => u.uuid.toLowerCase() === h.uuid.toLowerCase());
+          if (!user || !user.active) {
+            try { server.close(); } catch { /* noop */ }
+            return;
+          }
+          userId = user.id;
           connected = true;
 
           remote = connect({ hostname: h.address, port: h.port });
@@ -65,7 +74,7 @@ export async function handleVless(req: Request, user: User, settings: Settings, 
               })
             )
             .catch(() => { try { server.close(); } catch { /* noop */ } })
-            .finally(() => { metrics.recordTraffic(env, user.id, up, down).catch(() => {}); });
+            .finally(() => { metrics.recordTraffic(env, userId, up, down).catch(() => {}); });
         },
         close() {
           try { remote?.close(); } catch { /* noop */ }
@@ -92,18 +101,17 @@ function merge(a: Uint8Array, b: Uint8Array): Uint8Array {
 }
 
 type VlessParse =
-  | { ok: true; address: string; port: number; payload: Uint8Array }
+  | { ok: true; uuid: string; address: string; port: number; payload: Uint8Array }
   | { ok: false; incomplete: boolean };
 
 // VLESS header: version(1) uuid(16) addonsLen(1) addons cmd(1) port(2) atype(1) addr
-function parseVlessHeader(buf: Uint8Array, user: User): VlessParse {
+function parseVlessHeader(buf: Uint8Array): VlessParse {
   try {
     if (buf.length < 1) return { ok: false, incomplete: true };
     if (buf[0] !== 0) return { ok: false, incomplete: false }; // unsupported version
 
     if (buf.length < 1 + 16) return { ok: false, incomplete: true };
     const uuid = bytesToUuid(buf.slice(1, 17));
-    if (uuid.toLowerCase() !== user.uuid.toLowerCase()) return { ok: false, incomplete: false };
 
     if (buf.length < 18) return { ok: false, incomplete: true };
     const addonsLen = buf[17];
@@ -136,7 +144,7 @@ function parseVlessHeader(buf: Uint8Array, user: User): VlessParse {
       return { ok: false, incomplete: false };
     }
 
-    return { ok: true, address, port, payload: buf.slice(i) };
+    return { ok: true, uuid, address, port, payload: buf.slice(i) };
   } catch {
     return { ok: false, incomplete: false };
   }

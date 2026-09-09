@@ -125,16 +125,24 @@ function handleProbe(req: Request): Response {
 async function handleWebsocket(req: Request, env: Env, settings: Settings): Promise<Response> {
   const url = new URL(req.url);
   if (url.searchParams.get("probe") === "nika") return handleProbe(req);
-  const proto = url.searchParams.get("proto") || req.headers.get("x-nika-proto") || "";
+  const proto = (url.searchParams.get("proto") || req.headers.get("x-nika-proto") || "").toLowerCase();
   const users = await store.getUsers(env);
-  const uuid = url.searchParams.get("uuid") || "";
 
-  const user = users.find((u) => u.uuid.toLowerCase() === uuid.toLowerCase());
-  if (!user) return jsonResp({ error: "no user for this uuid" }, 403);
-  if (!user.active) return jsonResp({ error: "user inactive" }, 403);
+  // Authorization happens INSIDE the protocol handlers: the VLESS uuid / the
+  // Trojan SHA-224(password) arrive in the early-data header (ed=2048) or in
+  // the first WebSocket message — never in the URL. Rejecting here by a URL
+  // param used to 403 every real client, so we only pre-check when a client
+  // actually sends `uuid=` in the query (legacy) and defer otherwise.
+  const uuidQ = url.searchParams.get("uuid") || "";
+  if (uuidQ) {
+    const user = users.find((u) => u.uuid.toLowerCase() === uuidQ.toLowerCase());
+    if (!user) return jsonResp({ error: "no user for this uuid" }, 403);
+    if (!user.active) return jsonResp({ error: "user inactive" }, 403);
+    return proto === "trojan" ? handleTrojan(req, users, settings, env) : handleVless(req, users, settings, env);
+  }
 
-  if (proto === "trojan") return handleTrojan(req, user, settings, env);
-  return handleVless(req, user, settings, env);
+  if (proto === "trojan") return handleTrojan(req, users, settings, env);
+  return handleVless(req, users, settings, env);
 }
 
 /* ---------------------- admin API ---------------------- */

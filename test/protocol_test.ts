@@ -99,7 +99,7 @@ async function testVless() {
     headers: { "sec-websocket-protocol": toB64(header) },
   });
 
-  const res = (await handleVless(req, user, settings, env)) as any;
+  const res = (await handleVless(req, [user], settings, env)) as any;
   await sleep(50);
 
   const { client, server } = (globalThis as any).__lastPair;
@@ -144,7 +144,7 @@ async function testTrojan() {
     headers: { "sec-websocket-protocol": toB64(header) },
   });
 
-  const res = (await handleTrojan(req, user, settings, env)) as any;
+  const res = (await handleTrojan(req, [user], settings, env)) as any;
   await sleep(50);
 
   const { client, server } = (globalThis as any).__lastPair;

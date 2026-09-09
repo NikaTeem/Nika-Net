@@ -8,13 +8,12 @@ import { makeReadableWebSocketStream, wsAccept } from "./common";
 import { User, Settings, Env } from "../types";
 import * as metrics from "../metrics";
 
-export async function handleTrojan(req: Request, user: User, settings: Settings, env: Env): Promise<Response> {
+export async function handleTrojan(req: Request, users: User[], settings: Settings, env: Env): Promise<Response> {
   const { client, server } = wsAccept(req);
   server.binaryType = "arraybuffer";
 
   const earlyDataHeader = req.headers.get("sec-websocket-protocol") || "";
   const stream = makeReadableWebSocketStream(server, earlyDataHeader, () => {});
-  const expectedHash = sha224Hex(user.password);
 
   const sendToClient = (d: Uint8Array) => {
     try { server.send(d as unknown as ArrayBuffer); } catch { /* noop */ }
@@ -25,6 +24,7 @@ export async function handleTrojan(req: Request, user: User, settings: Settings,
   let down = 0;
   let pending: Uint8Array | null = null;
   let connected = false;
+  let userId = "";
 
   stream
     .pipeTo(
@@ -38,7 +38,7 @@ export async function handleTrojan(req: Request, user: User, settings: Settings,
           }
 
           const data = pending ? merge(pending, chunk) : chunk;
-          const h = parseTrojanHeader(data, expectedHash);
+          const h = parseTrojanHeader(data);
           if (!h.ok) {
             if (h.incomplete) { pending = data; return; }
             pending = null;
@@ -46,6 +46,14 @@ export async function handleTrojan(req: Request, user: User, settings: Settings,
             return;
           }
           pending = null;
+
+          // identify & authorize the user from SHA-224(password) in the header
+          const user = users.find((u) => sha224Hex(u.password) === h.hash);
+          if (!user || !user.active) {
+            try { server.close(); } catch { /* noop */ }
+            return;
+          }
+          userId = user.id;
           connected = true;
 
           remote = connect({ hostname: h.address, port: h.port });
@@ -63,7 +71,7 @@ export async function handleTrojan(req: Request, user: User, settings: Settings,
               })
             )
             .catch(() => { try { server.close(); } catch { /* noop */ } })
-            .finally(() => { metrics.recordTraffic(env, user.id, up, down).catch(() => {}); });
+            .finally(() => { metrics.recordTraffic(env, userId, up, down).catch(() => {}); });
         },
         close() {
           try { remote?.close(); } catch { /* noop */ }
@@ -90,15 +98,14 @@ function merge(a: Uint8Array, b: Uint8Array): Uint8Array {
 }
 
 type TrojanParse =
-  | { ok: true; address: string; port: number; payload: Uint8Array }
+  | { ok: true; hash: string; address: string; port: number; payload: Uint8Array }
   | { ok: false; incomplete: boolean };
 
 // SHA224(password) hex (56) + CRLF(2) + cmd(1) + atype(1) + addr + port(2) + CRLF(2)
-function parseTrojanHeader(buf: Uint8Array, expectedHash: string): TrojanParse {
+function parseTrojanHeader(buf: Uint8Array): TrojanParse {
   try {
     if (buf.length < 56) return { ok: false, incomplete: true };
     const hash = new TextDecoder().decode(buf.slice(0, 56));
-    if (hash !== expectedHash) return { ok: false, incomplete: false };
 
     if (buf.length < 58) return { ok: false, incomplete: true };
     if (buf[56] !== 0x0d || buf[57] !== 0x0a) return { ok: false, incomplete: false };
@@ -136,7 +143,7 @@ function parseTrojanHeader(buf: Uint8Array, expectedHash: string): TrojanParse {
     if (buf[i] !== 0x0d || buf[i + 1] !== 0x0a) return { ok: false, incomplete: false };
     i += 2;
 
-    return { ok: true, address, port, payload: buf.slice(i) };
+    return { ok: true, hash, address, port, payload: buf.slice(i) };
   } catch {
     return { ok: false, incomplete: false };
   }
