@@ -256,6 +256,27 @@
     .scan-ms{font-family:var(--mono);font-size:11.5px;min-width:56px;text-align:left}
     .scan-ms.ok{color:var(--ok)} .scan-ms.warn{color:var(--warn)} .scan-ms.bad{color:var(--bad)}
 
+    /* ---------- Proxy IP Pool ---------- */
+    .pool-search{width:100%;margin-bottom:12px}
+    .country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;max-height:210px;overflow:auto;padding:2px}
+    .country-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--card-2);
+      border:1px solid var(--border);cursor:pointer;transition:all .15s;font-size:12.5px;font-weight:600;text-align:right}
+    .country-chip:hover{border-color:var(--accent);transform:translateY(-1px)}
+    .country-chip.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:var(--glow)}
+    .country-chip .fl{font-size:16px;line-height:1}
+    .country-chip .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .country-chip .cnt{font-family:var(--mono);font-size:10px;opacity:.75}
+    .country-chip.on .cnt{color:#fff}
+    .pool-hint{font-size:12px;color:var(--muted);line-height:1.9;margin-top:10px;font-family:var(--mono)}
+    .pool-hint b{color:var(--warn)}
+    .cf-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;font-family:var(--mono)}
+    .cf-badge.cf{background:rgba(52,211,153,.14);color:var(--ok)}
+    .cf-badge.nocf{background:rgba(251,191,36,.15);color:var(--warn)}
+    .fixed-chip{display:inline-flex;align-items:center;gap:8px;background:var(--grad-soft);border:1px solid var(--border);
+      border-radius:11px;padding:7px 13px;margin-top:10px;font-family:var(--mono);font-size:12px}
+    .fixed-chip code{color:var(--accent);font-weight:700}
+
+
     /* ---------- بروزرسانی ---------- */
     .upd-ver{font-family:var(--mono);font-size:14px;font-weight:700;
       background:var(--grad-2);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
@@ -437,12 +458,50 @@
       <div class="card" style="margin-top:16px">
         <div class="card-title"><span>✎ <span data-i18n="set.cleanip">IP های تمیز</span></span><span class="mini" data-i18n="set.cleanipD">هر خط یک IP</span></div>
         <textarea class="input" id="setIps" dir="ltr"></textarea>
+        <div class="field" style="margin-top:14px"><label data-i18n="set.fixedip">IP ثابت (اختیاری)</label>
+          <input class="input" id="setFixedIp" dir="ltr" placeholder="188.114.96.9 یا 104.16.1.1:443" />
+          <div class="d" style="color:var(--muted);font-size:12px;margin-top:6px;font-family:var(--mono)" data-i18n="set.fixedipD">وقتی ست شود، همهٔ کانفیگ‌ها با همین IP ساخته می‌شوند (بدون چرخش تصادفی). خالی = تصادفی از بین IP های تمیز</div>
+        </div>
         <div class="copy-row"><button class="btn btn-primary" id="saveBtn" style="width:auto">💾 <span data-i18n="set.save">ذخیره تنظیمات</span></button></div>
       </div>
     </section>
 
     <!-- اسکنر IP -->
     <section id="page-scanner" class="hidden">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><span>🌍 <span data-i18n="pool.title">Proxy IP Pool</span></span><span class="mini" data-i18n="pool.sub">گلچین خودکار بهترین IP از کشور انتخابی</span></div>
+        <div class="d" style="margin-top:6px" data-i18n="pool.desc">کشور مورد نظرت را انتخاب کن تا سیستم خودکار IP های آن کشور را تست و بهترین‌ها را گلچین کند. بهترین IP را می‌توانی به‌عنوان «IP ثابت» قفل کنی تا همهٔ کانفیگ‌ها با همان IP سریع و پایدار ساخته شوند.</div>
+        <div class="field" style="margin-top:14px"><label data-i18n="pool.search">جستجوی کشور</label>
+          <input class="input pool-search" id="poolSearch" dir="ltr" data-i18n-ph="pool.searchPh" placeholder="Germany, ایران, NL, …" />
+        </div>
+        <div class="country-grid" id="poolGrid"></div>
+        <div class="pool-hint" id="poolNote"></div>
+        <div class="field-grid" style="margin-top:14px">
+          <div class="field"><label data-i18n="pool.selected">کشور انتخاب‌شده</label><div class="input" id="poolSel" dir="ltr" style="display:flex;align-items:center;gap:8px">—</div></div>
+          <div class="field"><label data-i18n="pool.sample">تعداد نمونه برای تست</label>
+            <select class="input" id="poolSample">
+              <option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="0">همه</option>
+            </select>
+          </div>
+        </div>
+        <div class="copy-row" style="margin-top:14px">
+          <button class="btn btn-primary" id="poolStart" style="width:auto">▶ <span data-i18n="pool.start">تست خودکار و گلچین</span></button>
+          <button class="btn btn-danger hidden" id="poolStop" style="width:auto">■ <span data-i18n="scan.stop">توقف</span></button>
+          <button class="btn btn-primary hidden" id="poolLock" style="width:auto">🔒 <span data-i18n="pool.lock">قفل بهترین IP به‌عنوان IP ثابت</span></button>
+        </div>
+        <div class="progress" style="margin-top:16px"><div id="poolBar" style="width:0%"></div></div>
+        <div class="scan-counters" id="poolStatus" style="margin-top:10px"><span data-i18n="pool.empty">هنوز کشوری انتخاب نشده</span></div>
+        <div class="scan-counters">
+          <div class="sc"><div class="v" id="poTested">0</div><div class="l" data-i18n="scan.tested">تست شده</div></div>
+          <div class="sc ok"><div class="v" id="poAlive">0</div><div class="l" data-i18n="scan.alive">سالم</div></div>
+          <div class="sc bad"><div class="v" id="poDead">0</div><div class="l" data-i18n="scan.dead">مرده</div></div>
+        </div>
+        <div class="scan-top" id="poolTop"></div>
+        <div class="scan-list" id="poolList" style="margin-top:10px;max-height:300px"><div class="empty" data-i18n="pool.empty">هنوز کشوری انتخاب نشده</div></div>
+        <div class="row" style="margin-top:10px"><div><div class="k">🔒 <span data-i18n="pool.fixed">IP ثابت فعلی</span></div><div class="d" data-i18n="pool.fixedD">وقتی خالی باشد، کانفیگ‌ها از بین IP های تمیز تصادفی انتخاب می‌کنند</div></div>
+          <div style="display:flex;gap:8px;align-items:center"><span id="poolFixed" class="fixed-chip" style="margin-top:0">—</span><button class="btn btn-ghost hidden" id="poolUnlock" style="padding:8px 14px;font-size:12px">🔓 <span data-i18n="pool.unlock">باز کردن</span></button></div>
+        </div>
+      </div>
       <div class="grid two-col">
         <div class="card">
           <div class="card-title"><span>✎ <span data-i18n="scanner.title">اسکنر IP تمیز</span></span><span class="mini" data-i18n="scan.source">منبع IP ها</span></div>
@@ -514,6 +573,7 @@
           <span style="display:flex;gap:8px">
             <button class="btn btn-ghost" id="scanCopy" style="padding:8px 14px;font-size:12px">📋 <span data-i18n="scan.copy">کپی</span></button>
             <button class="btn btn-ghost" id="scanExport" style="padding:8px 14px;font-size:12px">⬇ <span data-i18n="scan.export">خروجی</span></button>
+            <button class="btn btn-ghost" id="scanLock" style="padding:8px 14px;font-size:12px" title="" data-i18n="scan.lock">🔒 IP ثابت</button>
             <button class="btn btn-primary" id="scanApply" style="padding:8px 14px;font-size:12px" title="" data-i18n="scan.apply">⚡ اعمال به پنل</button>
           </span>
         </div>
@@ -974,6 +1034,7 @@ function fillSettingsForm() {
   $("#setSni").value = (state.settings && state.settings.sni) || "";
   $("#setWsPath").value = (state.settings && state.settings.wsPath) || "";
   $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("\n");
+  $("#setFixedIp").value = (state.settings && state.settings.fixedIp) || "";
 }
 $("#saveBtn").onclick = async () => {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
@@ -983,6 +1044,7 @@ $("#saveBtn").onclick = async () => {
     sni: $("#setSni").value,
     wsPath: $("#setWsPath").value || "/nika-ws",
     cleanIps: $("#setIps").value.split("\n").map((x) => x.trim()).filter(Boolean),
+    fixedIp: $("#setFixedIp").value.trim(),
     protocols: proto,
   };
   const res = await api("/api/settings", { method: "POST", body });
@@ -1725,7 +1787,12 @@ const SCANNER = (() => {
     } else toast(t("common.error"));
   }
 
-  return { onOpen, copyIp, initUI, _seed: SEED.length };
+  return {
+    onOpen, copyIp, initUI, _seed: SEED.length,
+    /* best alive results as "ip" / "ip:port" (for the fixed-IP lock) */
+    topAlive: () => aliveResults().slice(0, 20).map((r) => (r.port && r.port !== 443 ? r.ip + ":" + r.port : r.ip)),
+    aliveCount: () => aliveResults().length,
+  };
 })();
 
 /* expose for inline onclick */
@@ -1734,5 +1801,303 @@ SCANNER.initUI();
 if (typeof applyLang === "function") applyLang(); // translate scanner labels (keys added above)
 
 </script>
+<script>
+/* ================================================================
+   Nika Net — Proxy IP Pool (per-country, auto-test & best-pick)
+   + "fixed IP" lock so configs are built with one stable, fast IP.
+   ================================================================ */
+/* pool data (injected at build time) */
+window.PROXY_POOL = __POOL_DATA__;
+window.POOL_META = __META_DATA__;
+
+/* i18n */
+I18N.fa["pool.title"] = "Proxy IP Pool";
+I18N.fa["pool.sub"] = "گلچین خودکار بهترین IP از کشور انتخابی";
+I18N.fa["pool.desc"] = "کشور مورد نظرت را انتخاب کن تا سیستم خودکار IP های آن کشور را تست و بهترین‌ها را گلچین کند. بهترین IP را می‌توانی به‌عنوان «IP ثابت» قفل کنی تا همهٔ کانفیگ‌ها با همان IP سریع و پایدار ساخته شوند.";
+I18N.fa["pool.search"] = "جستجوی کشور";
+I18N.fa["pool.searchPh"] = "آلمان، Germany، NL، …";
+I18N.fa["pool.selected"] = "کشور انتخاب‌شده";
+I18N.fa["pool.sample"] = "تعداد نمونه برای تست";
+I18N.fa["pool.start"] = "تست خودکار و گلچین";
+I18N.fa["pool.lock"] = "قفل بهترین IP به‌عنوان IP ثابت";
+I18N.fa["pool.lockWarn"] = "⚠️ این IP کلادفلر نیست — کانفیگ با آن وصل نمی‌شود! برای تأیید دوباره بزن";
+I18N.fa["pool.empty"] = "هنوز کشوری انتخاب نشده";
+I18N.fa["pool.fixed"] = "IP ثابت فعلی";
+I18N.fa["pool.fixedD"] = "وقتی خالی باشد، کانفیگ‌ها از بین IP های تمیز تصادفی انتخاب می‌کنند";
+I18N.fa["pool.unlock"] = "باز کردن";
+I18N.fa["pool.done"] = "تست تمام شد — بهترین‌ها بالا گلچین شدند ✓";
+I18N.fa["pool.none"] = "هیچ IP سالمی در این کشور پیدا نشد";
+I18N.fa["pool.best"] = "بهترین";
+I18N.fa["pool.cf"] = "کلادفلر ✓";
+I18N.fa["pool.nocf"] = "دیتاسنتر";
+I18N.fa["pool.locked"] = "IP ثابت قفل شد ✓ — کانفیگ‌ها از الان با همین IP ساخته می‌شوند";
+I18N.fa["pool.unlocked"] = "قفل IP ثابت باز شد — کانفیگ‌ها دوباره تصادفی از IP های تمیز انتخاب می‌شوند";
+I18N.fa["pool.note"] = "⚠️ این لیست از اسکن سراسری جمع شده؛ اکثر IP ها «دیتاسنتر» هستند نه کلادفلر. کانفیگ فقط با IP کلادفلر (☁️) وصل می‌شود. برای IP ثابتِ واقعاً وصل‌شونده، از «اسکنر IP تمیز» پایین، بهترین IP را با دکمهٔ 🔒 قفل کن.";
+I18N.fa["pool.running"] = "در حال تست IP های کشور انتخابی…";
+I18N.fa["pool.selCount"] = "IP";
+I18N.fa["scan.lock"] = "🔒 IP ثابت";
+I18N.fa["set.fixedip"] = "IP ثابت (اختیاری)";
+I18N.fa["set.fixedipD"] = "وقتی ست شود، همهٔ کانفیگ‌ها با همین IP ساخته می‌شوند (بدون چرخش تصادفی). خالی = تصادفی از بین IP های تمیز";
+
+I18N.en["pool.title"] = "Proxy IP Pool";
+I18N.en["pool.sub"] = "Auto-test & pick the best IP of a country";
+I18N.en["pool.desc"] = "Pick a country and the system auto-tests its IPs and selects the best ones. Lock the best as a \"fixed IP\" so every config is built with the same fast, stable IP.";
+I18N.en["pool.search"] = "Search country";
+I18N.en["pool.searchPh"] = "Germany, ایران, NL, …";
+I18N.en["pool.selected"] = "Selected country";
+I18N.en["pool.sample"] = "Sample size to test";
+I18N.en["pool.start"] = "Auto-test & pick best";
+I18N.en["pool.lock"] = "Lock best IP as fixed IP";
+I18N.en["pool.lockWarn"] = "⚠️ Not a Cloudflare IP — configs won't connect! Tap again to confirm";
+I18N.en["pool.empty"] = "No country selected yet";
+I18N.en["pool.fixed"] = "Current fixed IP";
+I18N.en["pool.fixedD"] = "When empty, configs pick a random clean IP";
+I18N.en["pool.unlock"] = "Unlock";
+I18N.en["pool.done"] = "Test finished — best picked above ✓";
+I18N.en["pool.none"] = "No alive IP found in this country";
+I18N.en["pool.best"] = "best";
+I18N.en["pool.cf"] = "Cloudflare ✓";
+I18N.en["pool.nocf"] = "datacenter";
+I18N.en["pool.locked"] = "Fixed IP locked ✓ — configs now use this IP";
+I18N.en["pool.unlocked"] = "Fixed IP unlocked — configs pick randomly again";
+I18N.en["pool.note"] = "⚠️ This list comes from a global scan; most IPs are datacenter IPs, not Cloudflare. Configs only connect via Cloudflare IPs (☁️). For a truly working fixed IP, use the Clean IP Scanner below and lock its best IP with 🔒.";
+I18N.en["pool.running"] = "Testing the selected country's IPs…";
+I18N.en["pool.selCount"] = "IPs";
+I18N.en["scan.lock"] = "🔒 Fixed IP";
+I18N.en["set.fixedip"] = "Fixed IP (optional)";
+I18N.en["set.fixedipD"] = "When set, all configs use this IP (no random rotation). Empty = random from clean IPs";
+
+window.POOL = (() => {
+  const P = (typeof PROXY_POOL !== "undefined" && PROXY_POOL) ? PROXY_POOL : {};
+  const M = (typeof POOL_META !== "undefined" && POOL_META) ? POOL_META : {};
+
+  /* Cloudflare IPv4 ranges (for the ☁️ badge) */
+  const CF = ["173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18","108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17","162.158.0.0/15","104.16.0.0/12","172.64.0.0/17","172.64.128.0/18","172.64.192.0/19","172.64.224.0/22","172.64.229.0/24","172.64.230.0/23","172.64.232.0/22","172.64.236.0/23","172.64.238.0/23","172.64.240.0/22","172.64.244.0/22","172.64.248.0/22","131.0.72.0/22"];
+  function isCf(ip) {
+    const b = ip.split(".").map(Number);
+    if (b.length !== 4 || b.some((x) => isNaN(x) || x < 0 || x > 255)) return false;
+    const v = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
+    for (const c of CF) {
+      const [ip2, bits] = c.split("/");
+      const p = ip2.split(".").map(Number);
+      const base = ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) >>> 0;
+      const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
+      if ((v & mask) === (base & mask)) return true;
+    }
+    return false;
+  }
+
+  const flag = (cc) => cc === "Unknown" ? "🏳️" : String.fromCodePoint(...[...cc.toUpperCase()].map((c) => 0x1F1E6 + c.charCodeAt(0) - 65));
+  const ccName = (cc) => { const m = M[cc] || { en: cc, fa: cc }; return LANG === "fa" ? m.fa : m.en; };
+
+  const S = { selected: null, running: false, ctl: null, tested: 0, alive: 0, dead: 0, results: [], lockArmed: false };
+  const countries = Object.keys(P).sort((a, b) => P[b].length - P[a].length);
+
+  function probe(ip, port) {
+    return new Promise((resolve) => {
+      const ctl = new AbortController();
+      const t0 = setTimeout(() => ctl.abort(), 3500);
+      const start = performance.now();
+      fetch(`https://${ip}:${port}/`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
+        .then(() => { clearTimeout(t0); resolve({ ok: true, ms: Math.max(1, performance.now() - start) }); })
+        .catch(() => {
+          clearTimeout(t0);
+          const ms = performance.now() - start;
+          resolve({ ok: !ctl.signal.aborted && ms >= 12, ms });
+        });
+    });
+  }
+
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  function renderGrid() {
+    const q = ($("#poolSearch").value || "").trim().toLowerCase();
+    const el = $("#poolGrid");
+    const rows = countries.filter((cc) => {
+      if (!q) return true;
+      return cc.toLowerCase().includes(q) || ccName(cc).toLowerCase().includes(q) || (M[cc] && M[cc].en.toLowerCase().includes(q));
+    });
+    el.innerHTML = rows.map((cc) =>
+      `<div class="country-chip ${cc === S.selected ? "on" : ""}" data-cc="${cc}" onclick="POOL.select('${cc}')">
+        <span class="fl">${flag(cc)}</span><span class="nm">${ccName(cc)}</span><span class="cnt">${num(P[cc].length)}</span>
+      </div>`).join("") || `<div class="empty">—</div>`;
+  }
+
+  function select(cc) {
+    S.selected = cc;
+    S.lockArmed = false;
+    $("#poolLock").classList.add("hidden");
+    renderGrid();
+    const el = $("#poolSel");
+    el.innerHTML = `${flag(cc)} <b>${ccName(cc)}</b> · <span style="color:var(--muted);font-family:var(--mono)">${num(P[cc].length)} ${t("pool.selCount")}</span>`;
+    $("#poolStatus").textContent = t("pool.selCount") + ": " + num(P[cc].length);
+    $("#poolStart").classList.remove("hidden");
+    $("#poolList").innerHTML = `<div class="empty">${t("pool.empty")}</div>`;
+    $("#poolTop").innerHTML = "";
+  }
+
+  function aliveList() { return S.results.filter((r) => r.alive).sort((a, b) => a.min - b.min); }
+
+  async function scan() {
+    if (!S.selected) { toast(t("pool.empty")); return; }
+    if (S.running) return;
+    let list = P[S.selected].slice();
+    const sample = +($("#poolSample").value || 100);
+    if (sample > 0 && list.length > sample) list = shuffle(list).slice(0, sample);
+    const queue = list.map((e) => { const i = e.lastIndexOf(":"); return { ip: e.slice(0, i), port: +e.slice(i + 1) || 443 }; });
+    if (!queue.length) { toast(t("pool.none")); return; }
+
+    S.running = true; S.ctl = new AbortController(); S.results = []; S.tested = S.alive = S.dead = 0; S.lockArmed = false;
+    $("#poolStart").classList.add("hidden");
+    $("#poolStop").classList.remove("hidden");
+    $("#poolLock").classList.add("hidden");
+    $("#poolStatus").textContent = t("pool.running");
+    renderCounters(); renderList(true);
+
+    let cursor = 0;
+    const workers = [];
+    const n = Math.min(30, queue.length);
+    const signal = S.ctl.signal;
+    for (let w = 0; w < n; w++) {
+      workers.push((async () => {
+        while (cursor < queue.length && !signal.aborted) {
+          const it = queue[cursor++];
+          const r = await probe(it.ip, it.port);
+          if (signal.aborted) break;
+          S.tested++;
+          if (r.ok) S.alive++; else S.dead++;
+          S.results.push({ ip: it.ip, port: it.port, min: r.ok ? Math.round(r.ms) : null, alive: r.ok });
+          renderCounters();
+          if (S.results.length % 10 === 0 || !S.running) renderList(false);
+        }
+      })());
+    }
+    await Promise.all(workers);
+    S.running = false;
+    $("#poolStart").classList.remove("hidden");
+    $("#poolStop").classList.add("hidden");
+    $("#poolStatus").textContent = t("pool.done");
+    renderList(false); renderTop();
+    const best = aliveList()[0];
+    if (best) $("#poolLock").classList.remove("hidden");
+  }
+
+  function stop() { if (S.ctl) S.ctl.abort(); S.running = false; $("#poolStart").classList.remove("hidden"); $("#poolStop").classList.add("hidden"); $("#poolStatus").textContent = t("pool.done"); }
+
+  function renderCounters() {
+    $("#poTested").textContent = num(S.tested);
+    $("#poAlive").textContent = num(S.alive);
+    $("#poDead").textContent = num(S.dead);
+    const total = queueLen();
+    const pct = total ? Math.min(100, Math.round((S.tested / total) * 100)) : 0;
+    $("#poolBar").style.width = pct + "%";
+    $("#poolBar").textContent = pct + "%";
+  }
+
+  function queueLen() {
+    if (!S.selected) return 0;
+    const sample = +($("#poolSample").value || 100);
+    return sample > 0 ? Math.min(sample, P[S.selected].length) : P[S.selected].length;
+  }
+
+  function renderList(forceEmpty) {
+    const el = $("#poolList");
+    const list = aliveList();
+    if (forceEmpty || (!list.length && !S.running)) { el.innerHTML = `<div class="empty">${S.running ? t("pool.running") : t("pool.none")}</div>`; return; }
+    if (!list.length) { el.innerHTML = `<div class="empty">${t("pool.running")}</div>`; return; }
+    const max = Math.max(...list.map((r) => r.min));
+    el.innerHTML = list.slice(0, 60).map((r) => {
+      const w = Math.max(4, Math.round((r.min / max) * 100));
+      const cls = r.min < 120 ? "ok" : r.min < 300 ? "warn" : "bad";
+      const cf = isCf(r.ip);
+      return `<div class="scan-row" onclick="POOL.copy('${r.ip}:${r.port}')" title="${t("scan.copy")}">
+        <code class="scan-ip">${r.ip}</code><span class="scan-port">:${r.port}</span>
+        <span class="cf-badge ${cf ? "cf" : "nocf"}">${cf ? "☁️ " + t("pool.cf") : "⚠ " + t("pool.nocf")}</span>
+        <div class="scan-latbar"><div class="scan-latfill" style="width:${w}%"></div></div>
+        <code class="scan-ms ${cls}">${r.min}ms</code>
+      </div>`;
+    }).join("");
+  }
+
+  function renderTop() {
+    const el = $("#poolTop");
+    const list = aliveList().slice(0, 5);
+    if (!list.length) { el.innerHTML = ""; return; }
+    el.innerHTML = list.map((r, i) =>
+      `<div class="top-chip" onclick="POOL.copy('${r.ip}:${r.port}')"><span class="top-rank">${i + 1}</span><code>${r.ip}:${r.port}</code><b>${r.min}ms</b></div>`).join("");
+  }
+
+  function copy(txt) { try { navigator.clipboard.writeText(txt).then(() => toast(txt)); } catch (e) {} }
+
+  async function lockFixed(addr) {
+    if (MODE !== "live") { toast(t("toast.preview")); return; }
+    const res = await api("/api/settings", { method: "POST", body: { fixedIp: addr } });
+    if (res.ok) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
+    else toast(t("common.error"));
+  }
+
+  async function poolLock() {
+    const best = aliveList()[0];
+    if (!best) { toast(t("pool.none")); return; }
+    const addr = best.port !== 443 ? `${best.ip}:${best.port}` : best.ip;
+    if (!isCf(best.ip) && !S.lockArmed) {
+      S.lockArmed = true;
+      const btn = $("#poolLock");
+      btn.querySelector("span").textContent = t("pool.lockWarn");
+      btn.classList.remove("btn-primary"); btn.classList.add("btn-danger");
+      return;
+    }
+    await lockFixed(addr);
+  }
+
+  async function unlock() {
+    if (MODE !== "live") { toast(t("toast.preview")); return; }
+    const res = await api("/api/settings", { method: "POST", body: { fixedIp: "" } });
+    if (res.ok) { if (state.settings) state.settings.fixedIp = ""; toast(t("pool.unlocked")); renderFixed(); }
+    else toast(t("common.error"));
+  }
+
+  function renderFixed() {
+    const cur = (state.settings && state.settings.fixedIp) || "";
+    const el = $("#poolFixed");
+    el.innerHTML = cur ? `🔒 <code>${cur}</code>${isCf(cur.split(":")[0]) ? ' <span class="cf-badge cf">☁️ ' + t("pool.cf") + "</span>" : ' <span class="cf-badge nocf">⚠ ' + t("pool.nocf") + "</span>"}` : "—";
+    $("#poolUnlock").classList.toggle("hidden", !cur);
+    if (cur && $("#setFixedIp")) $("#setFixedIp").value = cur;
+  }
+
+  function note() {
+    const el = $("#poolNote");
+    if (el) el.innerHTML = t("pool.note");
+  }
+
+  function onOpen() { renderFixed(); note(); }
+
+  /* wire UI */
+  function initUI() {
+    $("#poolSearch").addEventListener("input", renderGrid);
+    $("#poolStart").onclick = scan;
+    $("#poolStop").onclick = stop;
+    $("#poolLock").onclick = poolLock;
+    $("#poolUnlock").onclick = unlock;
+    $("#poolSample").onchange = renderCounters;
+    $("#scanLock").onclick = () => {
+      const top = (window.SCANNER && SCANNER.topAlive && SCANNER.topAlive()) || [];
+      if (!top.length) { toast(t("scan.none")); return; }
+      lockFixed(top[0]);
+    };
+    if (window.SCANNER && SCANNER.onOpen) {
+      const orig = SCANNER.onOpen;
+      SCANNER.onOpen = () => { orig(); onOpen(); };
+    }
+    renderGrid();
+    renderFixed();
+    note();
+    applyLang();
+  }
+  initUI();
+  return { select, copy, onOpen, _countries: countries.length };
+})();
+</script>
+
 </body>
 </html>

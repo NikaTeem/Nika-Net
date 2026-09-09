@@ -23,6 +23,7 @@ export interface Settings {
   sni: string;         // fake SNI / Host header
   wsPath: string;      // websocket path
   cleanIps: string[];
+  fixedIp: string;     // locked connect address ("ip" or "ip:port") — configs use it instead of a random clean IP
   relayDomain: string; // chosen fronting domain ("دامنهٔ رله") — set by Relay Test
   protocols: Protocols;
   adminPassHash: string | null;
@@ -46,6 +47,7 @@ export const DEFAULTS: Settings = {
   // are DNS resolvers, NOT TLS edges — they 403 all proxied traffic, so they
   // must never appear as connect addresses.
   cleanIps: ["188.114.96.9", "162.159.192.1", "104.17.147.22", "172.67.161.1"],
+  fixedIp: "",
   relayDomain: "",
   protocols: { vless: true, trojan: true, warp: false },
   adminPassHash: null,

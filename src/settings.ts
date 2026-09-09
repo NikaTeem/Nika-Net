@@ -3,7 +3,12 @@
 
 import { Settings, User, Env, DEFAULTS } from "./types";
 
-const cache = new Map<string, string>();
+// In-memory cache with a SHORT TTL. Workers run on many isolates and KV writes
+// are eventually consistent, so an unbounded cache would serve stale settings
+// (e.g. an old fixed-IP lock) for the isolate's whole lifetime. 3 s keeps reads
+// fast while bounding staleness to the blink of an eye.
+const CACHE_TTL = 3000;
+const cache = new Map<string, { v: string; at: number }>();
 const mem = new Map<string, string>();
 
 async function d1get(env: Env, key: string): Promise<string | null> {
@@ -25,17 +30,21 @@ async function d1put(env: Env, key: string, value: string): Promise<void> {
 }
 
 async function rawGet(env: Env, key: string): Promise<string | null> {
-  if (cache.has(key)) return cache.get(key)!;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL) return hit.v;
   let v: string | null = null;
   if (env.NIKA_DB) v = await d1get(env, key);
-  else if (env.NIKA_KV) v = await env.NIKA_KV.get(key);
+  // cacheTtl:30 is the KV minimum — shrinks the edge-cache staleness window
+  // (default is 60 s) so settings changes like the fixed-IP lock propagate
+  // quickly across isolates.
+  else if (env.NIKA_KV) v = await env.NIKA_KV.get(key, { cacheTtl: 30 });
   else v = mem.get(key) ?? null;
-  if (v !== null) cache.set(key, v);
+  if (v !== null) cache.set(key, { v, at: Date.now() });
   return v;
 }
 
 async function rawPut(env: Env, key: string, value: string): Promise<void> {
-  cache.set(key, value);
+  cache.set(key, { v: value, at: Date.now() });
   if (env.NIKA_DB) await d1put(env, key, value);
   else if (env.NIKA_KV) await env.NIKA_KV.put(key, value);
   else mem.set(key, value);
@@ -64,13 +73,35 @@ function sanitizeCleanIps(s: Settings): boolean {
   return false;
 }
 
+// fixedIp must stay a valid "ip" or "ip:port" — and never one of the known-bad
+// resolver IPs (a locked bad IP would break every config).
+function sanitizeFixedIp(s: Settings): boolean {
+  const f = (s.fixedIp || "").trim();
+  if (!f) return false;
+  const m = f.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{1,5}))?$/);
+  if (!m) { s.fixedIp = ""; return true; }
+  if (BAD_IPS.has(m[1])) { s.fixedIp = ""; return true; }
+  const port = m[2] ? parseInt(m[2], 10) : 443;
+  if (port < 1 || port > 65535) { s.fixedIp = m[1]; return true; } // drop bad port, keep ip
+  s.fixedIp = m[2] ? `${m[1]}:${port}` : m[1];
+  return false;
+}
+
+// Runs both scrubbers before a settings write so a bad value is never persisted
+// (getSettings also runs them on read as a second line of defence).
+export function sanitizeSettings(s: Settings): boolean {
+  const a = sanitizeCleanIps(s);
+  const b = sanitizeFixedIp(s);
+  return a || b;
+}
+
 export async function getSettings(env: Env): Promise<Settings> {
   const raw = await rawGet(env, "settings");
   const base = { ...DEFAULTS };
   if (raw) {
     try { Object.assign(base, JSON.parse(raw)); } catch { /* corrupt → defaults */ }
   }
-  const scrubbed = sanitizeCleanIps(base);
+  const scrubbed = sanitizeSettings(base);
   if (scrubbed) {
     // persist the corrected clean-IP list so legacy panels heal themselves
     await rawPut(env, "settings", JSON.stringify(base));

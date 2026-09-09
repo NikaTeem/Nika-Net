@@ -2,7 +2,7 @@
 // Bundles src/worker.ts with esbuild, inlines the panel UI (ui/index.html)
 // and minifies the output into a single deployable dist/worker.js.
 
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { build } from "esbuild";
@@ -11,8 +11,21 @@ import pkg from "../package.json" with { type: "json" };
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
-const html = readFileSync(join(ROOT, "ui/index.html"), "utf8");
+let html = readFileSync(join(ROOT, "ui/index.html"), "utf8");
 const qrcodeLib = readFileSync(join(ROOT, "ui/qrcode.js"), "utf8");
+
+// Proxy IP Pool data (per-country ip:port lists) + country display names.
+// Injected straight into the served HTML so the browser has it offline-ish.
+// Build it with `node scripts/build-pool.mjs`; fall back to empty objects.
+let poolJson = "{}";
+if (existsSync(join(ROOT, "ui", "proxy-pool.json"))) {
+  poolJson = readFileSync(join(ROOT, "ui", "proxy-pool.json"), "utf8");
+}
+let metaJson = "{}";
+if (existsSync(join(ROOT, "ui", "pool-meta.json"))) {
+  metaJson = readFileSync(join(ROOT, "ui", "pool-meta.json"), "utf8");
+}
+html = html.replace("__POOL_DATA__", () => poolJson).replace("__META_DATA__", () => metaJson);
 
 const result = await build({
   entryPoints: [join(ROOT, "src/worker.ts")],

@@ -11,6 +11,24 @@ function pickIp(s: Settings): string {
   return list.length ? list[Math.floor(Math.random() * list.length)] : s.host;
 }
 
+// Connect address + port. When the admin locks a "fixed IP" (ip or ip:port)
+// the configs always use it — stable, fast, no random rotation. Otherwise
+// pick a random clean IP on 443.
+function pickAddr(s: Settings): { host: string; port: number } {
+  const fixed = (s.fixedIp || "").trim();
+  if (fixed) {
+    const m = fixed.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{1,5}))?$/);
+    if (m) {
+      const o = m[1].split(".").map(Number);
+      if (o.every((x) => x >= 0 && x <= 255)) {
+        const port = m[2] ? Math.min(65535, Math.max(1, parseInt(m[2], 10))) : 443;
+        return { host: m[1], port };
+      }
+    }
+  }
+  return { host: pickIp(s), port: 443 };
+}
+
 // The domain that fronts this worker: the Relay-Test-selected domain wins,
 // otherwise the panel host. TLS SNI + WS Host MUST be this domain so
 // Cloudflare routes the connection to our worker. A clean IP is used only as
@@ -21,23 +39,23 @@ function front(s: Settings): string {
 }
 
 export function vlessLink(u: User, s: Settings): string {
-  const host = pickIp(s);
+  const a = pickAddr(s);
   const f = front(s);
   const q = new URLSearchParams({
     encryption: "none", security: "tls", sni: f, fp: "chrome",
     type: "ws", host: f, path: s.wsPath + "?ed=2048&proto=vless",
   });
-  return `vless://${u.uuid}@${host}:443?${q.toString()}#${remark}`;
+  return `vless://${u.uuid}@${a.host}:${a.port}?${q.toString()}#${remark}`;
 }
 
 export function trojanLink(u: User, s: Settings): string {
-  const host = pickIp(s);
+  const a = pickAddr(s);
   const f = front(s);
   const q = new URLSearchParams({
     security: "tls", sni: f, fp: "chrome", type: "ws", host: f,
     path: s.wsPath + "?ed=2048&proto=trojan",
   });
-  return `trojan://${u.password}@${host}:443?${q.toString()}#${remark}`;
+  return `trojan://${u.password}@${a.host}:${a.port}?${q.toString()}#${remark}`;
 }
 
 export function buildBase64Bundle(u: User, s: Settings): string {
@@ -48,20 +66,20 @@ export function buildBase64Bundle(u: User, s: Settings): string {
 }
 
 export function buildClashYaml(u: User, s: Settings): string {
-  const host = pickIp(s);
+  const a = pickAddr(s);
   const f = front(s);
   const names: string[] = [];
   let out = `# Nika Net — ${REMARK}\nmixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: info\n` +
     `dns:\n  enable: true\n  enhanced-mode: fake-ip\n  nameserver: [1.1.1.1, 8.8.8.8]\nproxies:\n`;
   if (s.protocols.vless) {
     names.push(`Nika Paneel - VLESS`);
-    out += `  - name: "Nika Paneel - VLESS"\n    type: vless\n    server: ${host}\n    port: 443\n    uuid: ${u.uuid}\n` +
+    out += `  - name: "Nika Paneel - VLESS"\n    type: vless\n    server: ${a.host}\n    port: ${a.port}\n    uuid: ${u.uuid}\n` +
       `    network: ws\n    tls: true\n    udp: false\n    servername: ${f}\n    client-fingerprint: chrome\n` +
       `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=vless"\n      headers: { Host: "${f}" }\n`;
   }
   if (s.protocols.trojan) {
     names.push(`Nika Paneel - Trojan`);
-    out += `  - name: "Nika Paneel - Trojan"\n    type: trojan\n    server: ${host}\n    port: 443\n    password: ${u.password}\n` +
+    out += `  - name: "Nika Paneel - Trojan"\n    type: trojan\n    server: ${a.host}\n    port: ${a.port}\n    password: ${u.password}\n` +
       `    network: ws\n    tls: true\n    udp: false\n    sni: ${f}\n    client-fingerprint: chrome\n` +
       `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=trojan"\n      headers: { Host: "${f}" }\n`;
   }
@@ -71,14 +89,14 @@ export function buildClashYaml(u: User, s: Settings): string {
 }
 
 export function buildSingboxJson(u: User, s: Settings): string {
-  const host = pickIp(s);
+  const a = pickAddr(s);
   const f = front(s);
   const outbounds: Record<string, unknown>[] = [];
   const tags: string[] = [];
   if (s.protocols.vless) {
     tags.push("Nika Paneel - VLESS");
     outbounds.push({
-      tag: "Nika Paneel - VLESS", type: "vless", server: host, server_port: 443, uuid: u.uuid,
+      tag: "Nika Paneel - VLESS", type: "vless", server: a.host, server_port: a.port, uuid: u.uuid,
       network: "ws", tls: { enabled: true, server_name: f, utls: { enabled: true, fingerprint: "chrome" } },
       transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=vless", headers: { Host: f } },
     });
@@ -86,7 +104,7 @@ export function buildSingboxJson(u: User, s: Settings): string {
   if (s.protocols.trojan) {
     tags.push("Nika Paneel - Trojan");
     outbounds.push({
-      tag: "Nika Paneel - Trojan", type: "trojan", server: host, server_port: 443, password: u.password,
+      tag: "Nika Paneel - Trojan", type: "trojan", server: a.host, server_port: a.port, password: u.password,
       network: "ws", tls: { enabled: true, server_name: f, utls: { enabled: true, fingerprint: "chrome" } },
       transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=trojan", headers: { Host: f } },
     });

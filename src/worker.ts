@@ -284,8 +284,10 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (typeof b.sni === "string") next.sni = b.sni;
         if (typeof b.wsPath === "string") next.wsPath = b.wsPath;
         if (Array.isArray(b.cleanIps)) next.cleanIps = b.cleanIps;
+        if (typeof b.fixedIp === "string") next.fixedIp = b.fixedIp.trim();
         if (typeof b.relayDomain === "string") next.relayDomain = b.relayDomain.trim();
         if (b.protocols) next.protocols = { ...settings.protocols, ...b.protocols };
+        store.sanitizeSettings(next); // never persist a bad clean IP / fixed IP
         await store.saveSettings(env, next);
         await metrics.appendActivity(env, { icon: "⚙️", text: "تنظیمات پنل به‌روزرسانی شد", time: Date.now() });
         return jsonResp({ ok: true });
