@@ -3,6 +3,7 @@
 import { Env } from "./types";
 import * as tg from "./telegram";
 import { handleUpdate, broadcastAll, announceLatest, handleScheduled } from "./flow";
+import { handlePanel } from "./adminpanel";
 
 const infoHtml = `<!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8"/><title>Nika Net Launcher</title>
@@ -15,6 +16,19 @@ h1{margin:0 0 8px} p{color:#8f8e95;font-family:monospace;line-height:1.8}</style
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
+
+    // web admin panel (/panel) — Telegram-code login + forced-join manager
+    if (url.pathname === "/panel" || url.pathname.startsWith("/panel/")) {
+      try {
+        return await handlePanel(env, req, url);
+      } catch (err) {
+        console.error("panel error:", err);
+        return new Response(
+          JSON.stringify({ ok: false, error: String((err as Error)?.message || err) }),
+          { status: 500, headers: { "content-type": "application/json; charset=utf-8" } }
+        );
+      }
+    }
 
     if (req.method === "POST" && url.pathname === "/webhook") {
       const secret = req.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";

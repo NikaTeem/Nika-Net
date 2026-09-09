@@ -6,6 +6,7 @@ import * as st from "./state";
 import * as cf from "./cloudflare";
 import * as ui from "./ui";
 import * as panel from "./panel";
+import * as fj from "./forcedjoin";
 import { t, Lang } from "./i18n";
 import { encryptText, decryptText } from "./crypto";
 import { UserState, TokenRecord } from "./state";
@@ -219,9 +220,16 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text || "").trim();
 
+  // عضویت اجباری — gate every message (owner + exempt always pass, and the
+  // "await_fj_chat" setup state is allowed so the owner can configure it).
+  const pre = await st.getState(env, chatId);
+  if (pre.state !== "await_fj_chat") {
+    if (!(await fj.gateUser(env, chatId))) return;
+  }
+
   if (text === "/start" || text.toLowerCase() === "start") {
-    const owner = await st.getOwner(env);
-    if (owner === null) await st.setOwner(env, chatId);
+    let owner = await st.getOwner(env);
+    if (owner === null) { await st.setOwner(env, chatId); owner = chatId; }
     let s = await st.getState(env, chatId);
     s.state = "idle";
     await st.saveState(env, chatId, s);
@@ -235,7 +243,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         await tg.editMessage(env, chatId, msgId, `🎨 ${intro.slice(0, i)}▌`).catch(() => {});
         await sleep(70);
       }
-      const mm = ui.mainMenu(s, fname);
+      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId));
       await tg.editMessage(env, chatId, msgId, mm.text, mm.kb).catch(() => {});
     }
     return;
@@ -243,7 +251,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
   if (text === "/menu") {
     const s = await st.getState(env, chatId);
-    const m = ui.mainMenu(s, msg.from?.first_name);
+    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
 
@@ -286,7 +294,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   if (rl) {
     const s = await st.getState(env, chatId);
     if (rl === "menu") {
-      const m = ui.mainMenu(s, msg.from?.first_name);
+      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
     if (rl === "panels") {
@@ -312,11 +320,55 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       return await inUquota(env, chatId, text);
     case "await_uexp":
       return await inUexp(env, chatId, text);
+    case "await_fj_chat":
+      return await inFjChat(env, chatId, msg, text);
     default: {
-      const m = ui.mainMenu(s, msg.from?.first_name);
+      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
   }
+}
+
+/* ---------------- owner helpers ---------------- */
+async function isOwner(env: Env, chatId: number): Promise<boolean> {
+  return (await fj.ownerId(env)) === chatId;
+}
+
+/* ---------------- forced-join channel setup (owner) ---------------- */
+async function inFjChat(env: Env, chatId: number, msg: tg.TgMessage, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  if (!(await isOwner(env, chatId))) {
+    s.state = "idle";
+    await st.saveState(env, chatId, s);
+    return;
+  }
+  let raw: string | null = null;
+  const fwd = msg as unknown as {
+    forward_origin?: { chat?: { id?: number; type?: string } };
+    forward_from_chat?: { id?: number };
+  };
+  if (fwd.forward_origin?.chat?.id) raw = String(fwd.forward_origin.chat.id);
+  else if (fwd.forward_from_chat?.id) raw = String(fwd.forward_from_chat.id);
+  else raw = text;
+
+  const chat = fj.normalizeChat(raw || "");
+  if (!chat) {
+    return void (await tg.sendMessage(env, chatId, ui.fjBadChat(s)));
+  }
+  const check = await fj.checkBotAdmin(env, chat);
+  if (!check.ok) {
+    return void (await tg.sendMessage(env, chatId, ui.fjCantSee(s, chat)));
+  }
+  const cfg = await fj.getConfig(env);
+  cfg.chats = Array.from(new Set([...cfg.chats, chat]));
+  cfg.enabled = true;
+  await fj.saveConfig(env, cfg);
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  await tg.sendMessage(env, chatId, ui.fjSetOk(s, chat));
+  const meta = await fj.botMeta(env);
+  const m = ui.ownerMenu(s, meta);
+  await tg.sendMessage(env, chatId, m.text, m.kb);
 }
 
 /* ---------------- token input ---------------- */
@@ -865,7 +917,8 @@ async function navMenu(env: Env, chatId: number, msgId: number, name: string, fi
     case "tokens": m = ui.tokensMenu(s); break;
     case "settings": m = ui.settingsMenu(s); break;
     case "help": m = ui.helpMenu(s); break;
-    default: m = ui.mainMenu(s, firstName);
+    case "owner": m = ui.ownerMenu(s, await fj.botMeta(env)); break;
+    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
   }
   await reply(env, chatId, msgId, m.text, m.kb);
 }
@@ -878,6 +931,23 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   const s = await st.getState(env, chatId);
   const firstName = cq.from?.first_name;
 
+  // عضویت اجباری — verify button (always reachable while blocked)
+  if (data === "fj:verify") {
+    const cfg = await fj.getConfig(env);
+    if (!cfg.enabled || !cfg.chats.length) {
+      return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    }
+    const joined = await fj.verifyAndAnswer(env, chatId, cfg, cq.id, L(s));
+    if (joined) {
+      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
+      await tg.sendMessage(env, chatId, m.text, m.kb);
+    }
+    return;
+  }
+
+  // gate every other callback for non-members
+  if (!(await fj.gateUser(env, chatId))) return;
+
   if (data === "noop") return void (await tg.answerCallback(env, cq.id).catch(() => {}));
   if (data === "menu:close") {
     await tg.deleteMessage(env, chatId, msgId).catch(() => {});
@@ -887,6 +957,24 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     const name = data.split(":")[1];
     await tg.answerCallback(env, cq.id).catch(() => {});
     return await navMenu(env, chatId, msgId, name, firstName);
+  }
+
+  /* ---------- forced join (owner) ---------- */
+  if (data === "fj:setchat") {
+    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    s.state = "await_fj_chat";
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await tg.sendMessage(env, chatId, ui.fjAskChat(s)));
+  }
+  if (data === "fj:status") {
+    const cfg = await fj.getConfig(env);
+    const m = ui.fjStatusMenu(s, {
+      enabled: cfg.enabled, chats: cfg.chats, mode: cfg.mode,
+      recheckHours: cfg.recheckHours, exempt: cfg.exempt,
+    });
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
   }
 
   /* ---------- build ---------- */

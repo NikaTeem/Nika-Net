@@ -114,6 +114,14 @@ export function sendChatAction(env: Env, chatId: number, action = "typing") {
   return tgApi(env, "sendChatAction", { chat_id: chatId, action });
 }
 
+export function getChatMember(env: Env, chatId: string | number, userId: number) {
+  return tgApi(env, "getChatMember", { chat_id: String(chatId), user_id: userId });
+}
+
+export function getMe(env: Env) {
+  return tgApi(env, "getMe", {});
+}
+
 export function answerCallback(env: Env, id: string, text?: string, alert = false) {
   return tgApi(env, "answerCallbackQuery", {
     callback_query_id: id,

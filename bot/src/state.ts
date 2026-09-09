@@ -35,7 +35,8 @@ export type StateName =
   | "await_panel_pass"
   | "await_uname"
   | "await_uquota"
-  | "await_uexp";
+  | "await_uexp"
+  | "await_fj_chat";
 
 export type SkinId = "graphite" | "neon" | "paper";
 

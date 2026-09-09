@@ -57,7 +57,7 @@ export const SKINS: Record<SkinId, Skin> = {
 export const SKIN_ORDER: SkinId[] = ["graphite", "neon", "paper"];
 
 export function skin(s: UserState | null): Skin {
-  return SKINS[(s?.skin as SkinId) in SKINS ? (s.skin as SkinId) : "graphite"];
+  return SKINS[(s?.skin as SkinId) in SKINS ? (s?.skin as SkinId) : "graphite"];
 }
 
 /* HYPER.bar() — a colored progress strip drawn with the skin's own glyphs.
@@ -259,7 +259,7 @@ export const REPLY_LABELS: Record<string, "menu" | "panels" | "new"> = {
 
 /* ============================ main menu ⚡ ============================ */
 
-export function mainMenu(s: UserState, firstName?: string): { text: string; kb: Kb } {
+export function mainMenu(s: UserState, firstName?: string, isOwner = false): { text: string; kb: Kb } {
   const lang = L(s);
   const name = firstName ? esc(firstName) : "دوست";
   const at = activeTok(s);
@@ -284,6 +284,10 @@ export function mainMenu(s: UserState, firstName?: string): { text: string; kb: 
     [{ text: t(lang, "upd_all"), cb: "upd:all", color: "primary", emoji: false }],
     [{ text: t(lang, "b_help"), cb: "menu:help", color: "gray", emoji: false }],
   ];
+  // مالک فقط — مدیریت بات (عضویت اجباری + ادمین کردن در کانال)
+  if (isOwner) {
+    rows.push([{ text: t(lang, "o_menu"), cb: "menu:owner", color: "danger", emoji: false }]);
+  }
   return { text: makeText(t(lang, "main_title"), body, t(lang, "choose"), t(lang, "main_crumb"), "main"), kb: kb(rows) };
 }
 
@@ -378,6 +382,54 @@ export function helpMenu(s: UserState): { text: string; kb: Kb } {
     text: makeText(t(lang, "h_title"), t(lang, "h_body"), t(lang, "choose"), t(lang, "h_crumb"), "help"),
     kb: kb([[{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }]]),
   };
+}
+
+/* ============================ owner 🛡 (مالک فقط) ============================ */
+
+export interface BotMeta { username: string; origin: string }
+export interface FjView { enabled: boolean; chats: string[]; mode: string; recheckHours: number; exempt: number[] }
+
+export function ownerMenu(s: UserState, meta: BotMeta): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = [
+    t(lang, "o_desc"),
+    "",
+    card("🔒 " + t(lang, "o_fj"), [t(lang, "o_fj_d")]),
+    "",
+    card("🔗 " + t(lang, "o_admin"), [t(lang, "o_admin_d")]),
+  ].join("\n");
+  const rows: Btn[][] = [
+    [{
+      text: t(lang, "o_admin_btn"),
+      url: `https://t.me/${meta.username}?startchannel&admin=post_messages+edit_messages+delete_messages+invite_users+restrict_members+promote_members+change_info`,
+      color: "primary", emoji: false,
+    }],
+    [{ text: t(lang, "o_fj_set"), cb: "fj:setchat", color: "success", emoji: false }],
+    [{ text: t(lang, "o_fj_status"), cb: "fj:status", color: "gray", emoji: false }],
+    [{ text: t(lang, "o_panel"), url: `${meta.origin}/panel`, color: "primary", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "o_title"), body, t(lang, "choose"), t(lang, "o_crumb"), "owner"), kb: kb(rows) };
+}
+
+export const fjAskChat = (s: UserState): string => t(L(s), "fj_ask");
+export const fjBadChat = (s: UserState): string => t(L(s), "fj_bad");
+export const fjCantSee = (s: UserState, chat: string): string => t(L(s), "fj_cant", { c: esc(chat) });
+export const fjSetOk = (s: UserState, chat: string): string => t(L(s), "fj_set_ok", { c: esc(chat) });
+
+export function fjStatusMenu(s: UserState, cfg: FjView): { text: string; kb: Kb } {
+  const lang = L(s);
+  const lines = [
+    `${t(lang, "fj_st_en")}: ${cfg.enabled ? "✅ " + t(lang, "fj_on") : "⛔ " + t(lang, "fj_off")}`,
+    `${t(lang, "fj_st_chats")}: ${cfg.chats.length ? cfg.chats.map((c) => "<code>" + esc(c) + "</code>").join("، ") : "—"}`,
+    `${t(lang, "fj_st_mode")}: ${cfg.mode === "all" ? t(lang, "fj_all") : t(lang, "fj_any")}`,
+    `${t(lang, "fj_st_re")}: ${cfg.recheckHours === 0 ? t(lang, "fj_always") : String(cfg.recheckHours) + "h"}`,
+  ];
+  const rows: Btn[][] = [
+    [{ text: t(lang, "o_fj_set"), cb: "fj:setchat", color: "success", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:owner", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "o_fj_status"), lines.join("\n"), t(lang, "choose"), t(lang, "o_crumb"), "owner"), kb: kb(rows) };
 }
 
 /* ============================ panels 🗂 ============================ */
