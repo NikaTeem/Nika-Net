@@ -25,6 +25,9 @@ export interface Settings {
   cleanIps: string[];
   fixedIp: string;     // locked connect address ("ip" or "ip:port") — configs use it instead of a random clean IP
   relayDomain: string; // chosen fronting domain ("دامنهٔ رله") — set by Relay Test
+  poolIps: string[];   // best alive IPs applied from the Proxy IP Pool ("ip[:port]") — configs prefer them (CF-valid only)
+  poolCountry: string; // ISO country code of the applied pool (e.g. "DE") — drives the config name flag
+  poolFlag: string;    // emoji flag of the applied country (e.g. "🇩🇪") — prefixed to the config name
   protocols: Protocols;
   adminPassHash: string | null;
   secretPath: string;  // hidden admin path
@@ -49,6 +52,9 @@ export const DEFAULTS: Settings = {
   cleanIps: ["188.114.96.9", "162.159.192.1", "104.17.147.22", "172.67.161.1"],
   fixedIp: "",
   relayDomain: "",
+  poolIps: [],
+  poolCountry: "",
+  poolFlag: "",
   protocols: { vless: true, trojan: true, warp: false },
   adminPassHash: null,
   secretPath: "nika-admin",

@@ -287,6 +287,9 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (Array.isArray(b.cleanIps)) next.cleanIps = b.cleanIps;
         if (typeof b.fixedIp === "string") next.fixedIp = b.fixedIp.trim();
         if (typeof b.relayDomain === "string") next.relayDomain = b.relayDomain.trim();
+        if (Array.isArray(b.poolIps)) next.poolIps = b.poolIps;
+        if (typeof b.poolCountry === "string") next.poolCountry = b.poolCountry;
+        if (typeof b.poolFlag === "string") next.poolFlag = b.poolFlag;
         if (b.protocols) next.protocols = { ...settings.protocols, ...b.protocols };
         store.sanitizeSettings(next); // never persist a bad clean IP / fixed IP
         await store.saveSettings(env, next);

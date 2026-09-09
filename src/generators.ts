@@ -3,9 +3,24 @@
 import { Settings, User } from "./types";
 import { isCloudflareIp } from "./cfips";
 
-// Brand remark used on every generated config.
-const REMARK = "Nika Paneel | یک سرویس رایگان هست";
-const remark = encodeURIComponent(REMARK);
+// Brand remark used on every generated config. When the admin applied a
+// Proxy-IP-Pool country, configs are named "<flag> سرویس رایگان Nika Net"
+// (e.g. "🇩🇪 سرویس رایگان Nika Net") so users instantly see the location.
+const DEFAULT_REMARK = "Nika Paneel | یک سرویس رایگان هست";
+const DEFAULT_SHORT = "Nika Paneel";
+
+function poolBaseName(s: Settings): string {
+  const f = (s.poolFlag || "").trim();
+  return f ? `${f} سرویس رایگان Nika Net` : "";
+}
+
+function configRemark(s: Settings): string {
+  return encodeURIComponent(poolBaseName(s) || DEFAULT_REMARK);
+}
+
+function configShortName(s: Settings): string {
+  return poolBaseName(s) || DEFAULT_SHORT;
+}
 
 // Only Cloudflare edge IPs can front the worker (anycast → routed by SNI/Host).
 function pickIp(s: Settings): string {
@@ -32,6 +47,21 @@ function pickAddr(s: Settings): { host: string; port: number } {
       }
     }
   }
+  // Proxy-IP-Pool "best IPs" (applied by the admin). Only Cloudflare-valid
+  // entries can front the worker — datacenter IPs are silently skipped so a
+  // pool selection can never produce a broken config.
+  const pool = (s.poolIps || [])
+    .map((x) => String(x).trim())
+    .filter((x) => /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{1,5}))?$/.test(x))
+    .filter((x) => isCloudflareIp(x.split(":")[0]));
+  if (pool.length) {
+    const c = pool[Math.floor(Math.random() * pool.length)];
+    const m = c.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{1,5}))?$/);
+    if (m) {
+      const port = m[2] ? Math.min(65535, Math.max(1, parseInt(m[2], 10))) : 443;
+      return { host: m[1], port };
+    }
+  }
   return { host: pickIp(s), port: 443 };
 }
 
@@ -51,7 +81,7 @@ export function vlessLink(u: User, s: Settings): string {
     encryption: "none", security: "tls", sni: f, fp: "chrome",
     type: "ws", host: f, path: s.wsPath + "?ed=2048&proto=vless",
   });
-  return `vless://${u.uuid}@${a.host}:${a.port}?${q.toString()}#${remark}`;
+  return `vless://${u.uuid}@${a.host}:${a.port}?${q.toString()}#${configRemark(s)}`;
 }
 
 export function trojanLink(u: User, s: Settings): string {
@@ -61,7 +91,7 @@ export function trojanLink(u: User, s: Settings): string {
     security: "tls", sni: f, fp: "chrome", type: "ws", host: f,
     path: s.wsPath + "?ed=2048&proto=trojan",
   });
-  return `trojan://${u.password}@${a.host}:${a.port}?${q.toString()}#${remark}`;
+  return `trojan://${u.password}@${a.host}:${a.port}?${q.toString()}#${configRemark(s)}`;
 }
 
 export function buildBase64Bundle(u: User, s: Settings): string {
@@ -74,43 +104,45 @@ export function buildBase64Bundle(u: User, s: Settings): string {
 export function buildClashYaml(u: User, s: Settings): string {
   const a = pickAddr(s);
   const f = front(s);
+  const base = configShortName(s);
   const names: string[] = [];
-  let out = `# Nika Net — ${REMARK}\nmixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: info\n` +
+  let out = `# Nika Net — ${base}\nmixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: info\n` +
     `dns:\n  enable: true\n  enhanced-mode: fake-ip\n  nameserver: [1.1.1.1, 8.8.8.8]\nproxies:\n`;
   if (s.protocols.vless) {
-    names.push(`Nika Paneel - VLESS`);
-    out += `  - name: "Nika Paneel - VLESS"\n    type: vless\n    server: ${a.host}\n    port: ${a.port}\n    uuid: ${u.uuid}\n` +
+    names.push(`${base} - VLESS`);
+    out += `  - name: "${base} - VLESS"\n    type: vless\n    server: ${a.host}\n    port: ${a.port}\n    uuid: ${u.uuid}\n` +
       `    network: ws\n    tls: true\n    udp: false\n    servername: ${f}\n    client-fingerprint: chrome\n` +
       `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=vless"\n      headers: { Host: "${f}" }\n`;
   }
   if (s.protocols.trojan) {
-    names.push(`Nika Paneel - Trojan`);
-    out += `  - name: "Nika Paneel - Trojan"\n    type: trojan\n    server: ${a.host}\n    port: ${a.port}\n    password: ${u.password}\n` +
+    names.push(`${base} - Trojan`);
+    out += `  - name: "${base} - Trojan"\n    type: trojan\n    server: ${a.host}\n    port: ${a.port}\n    password: ${u.password}\n` +
       `    network: ws\n    tls: true\n    udp: false\n    sni: ${f}\n    client-fingerprint: chrome\n` +
       `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=trojan"\n      headers: { Host: "${f}" }\n`;
   }
-  out += `proxy-groups:\n  - name: "Nika Paneel"\n    type: select\n    proxies: [${names.map((n) => `"${n}"`).join(", ")}]\n`;
-  out += `rules:\n  - GEOIP,IR,DIRECT\n  - MATCH,Nika Paneel\n`;
+  out += `proxy-groups:\n  - name: "${base}"\n    type: select\n    proxies: [${names.map((n) => `"${n}"`).join(", ")}]\n`;
+  out += `rules:\n  - GEOIP,IR,DIRECT\n  - MATCH,${base}\n`;
   return out;
 }
 
 export function buildSingboxJson(u: User, s: Settings): string {
   const a = pickAddr(s);
   const f = front(s);
+  const base = configShortName(s);
   const outbounds: Record<string, unknown>[] = [];
   const tags: string[] = [];
   if (s.protocols.vless) {
-    tags.push("Nika Paneel - VLESS");
+    tags.push(`${base} - VLESS`);
     outbounds.push({
-      tag: "Nika Paneel - VLESS", type: "vless", server: a.host, server_port: a.port, uuid: u.uuid,
+      tag: `${base} - VLESS`, type: "vless", server: a.host, server_port: a.port, uuid: u.uuid,
       network: "ws", tls: { enabled: true, server_name: f, utls: { enabled: true, fingerprint: "chrome" } },
       transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=vless", headers: { Host: f } },
     });
   }
   if (s.protocols.trojan) {
-    tags.push("Nika Paneel - Trojan");
+    tags.push(`${base} - Trojan`);
     outbounds.push({
-      tag: "Nika Paneel - Trojan", type: "trojan", server: a.host, server_port: a.port, password: u.password,
+      tag: `${base} - Trojan`, type: "trojan", server: a.host, server_port: a.port, password: u.password,
       network: "ws", tls: { enabled: true, server_name: f, utls: { enabled: true, fingerprint: "chrome" } },
       transport: { type: "ws", path: s.wsPath + "?ed=2048&proto=trojan", headers: { Host: f } },
     });

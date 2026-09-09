@@ -87,12 +87,42 @@ function sanitizeFixedIp(s: Settings): boolean {
   return false;
 }
 
+// poolIps (Proxy IP Pool "best IPs") — valid "ip[:port]" only, capped at 16.
+function sanitizePoolIps(s: Settings): boolean {
+  if (!Array.isArray(s.poolIps)) { s.poolIps = []; return true; }
+  const kept: string[] = [];
+  for (const raw of s.poolIps.slice(0, 16)) {
+    const t = String(raw || "").trim();
+    if (!t) continue;
+    const m = t.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{1,5}))?$/);
+    if (!m) continue;
+    const port = m[2] ? parseInt(m[2], 10) : 443;
+    if (port < 1 || port > 65535) continue;
+    kept.push(m[2] ? `${m[1]}:${port}` : m[1]);
+  }
+  const changed = kept.length !== s.poolIps.length;
+  s.poolIps = kept;
+  return changed;
+}
+
+// pool flag/country — short strings; the flag emoji is 2 code points.
+function sanitizePoolMeta(s: Settings): boolean {
+  let changed = false;
+  if (typeof s.poolFlag !== "string") { s.poolFlag = ""; changed = true; }
+  else { const f = [...s.poolFlag].slice(0, 4).join(""); if (f !== s.poolFlag) { s.poolFlag = f; changed = true; } }
+  if (typeof s.poolCountry !== "string") { s.poolCountry = ""; changed = true; }
+  else { const c = s.poolCountry.trim().slice(0, 4); if (c !== s.poolCountry) { s.poolCountry = c; changed = true; } }
+  return changed;
+}
+
 // Runs both scrubbers before a settings write so a bad value is never persisted
 // (getSettings also runs them on read as a second line of defence).
 export function sanitizeSettings(s: Settings): boolean {
   const a = sanitizeCleanIps(s);
   const b = sanitizeFixedIp(s);
-  return a || b;
+  const c = sanitizePoolIps(s);
+  const d = sanitizePoolMeta(s);
+  return a || b || c || d;
 }
 
 export async function getSettings(env: Env): Promise<Settings> {

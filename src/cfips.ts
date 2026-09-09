@@ -25,7 +25,10 @@ const RANGES = CIDRS.map((c) => {
   const n = parseInt(bits, 10);
   const net = ipToInt(ip);
   const mask = n === 0 ? 0 : (0xffffffff << (32 - n)) >>> 0;
-  return { base: net & mask, mask };
+  // `>>> 0` keeps the base unsigned so it compares equal to `(v & mask) >>> 0`
+  // in isCloudflareIp — without it, every range ≥ 128.0.0.0 (e.g. 188.114.96.0/20,
+  // 162.158.0.0/15, 172.64.0.0/13) was wrongly rejected.
+  return { base: (net & mask) >>> 0, mask };
 });
 
 export function isCloudflareIp(ip: string): boolean {
