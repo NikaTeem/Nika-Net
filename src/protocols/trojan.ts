@@ -1,5 +1,7 @@
 // Nika Net — Trojan over WebSocket handler.
 // Trojan header: SHA-224(password) hex + CRLF + cmd + atype + addr + port + CRLF.
+// Same streaming structure as the VLESS handler (single pipeTo, connected flag,
+// client end of the WebSocketPair returned in the 101 response).
 
 import { connect } from "cloudflare:sockets";
 import { makeReadableWebSocketStream, wsAccept } from "./common";
@@ -7,98 +9,136 @@ import { User, Settings, Env } from "../types";
 import * as metrics from "../metrics";
 
 export async function handleTrojan(req: Request, user: User, settings: Settings, env: Env): Promise<Response> {
-  const ws = wsAccept(req);
-  ws.binaryType = "arraybuffer";
+  const { client, server } = wsAccept(req);
+  server.binaryType = "arraybuffer";
 
   const earlyDataHeader = req.headers.get("sec-websocket-protocol") || "";
-  const { stream, removeEarlyData } = makeReadableWebSocketStream(ws, earlyDataHeader, () => {});
+  const stream = makeReadableWebSocketStream(server, earlyDataHeader, () => {});
+  const expectedHash = sha224Hex(user.password);
 
-  const sendToClient = (d: Uint8Array) => { try { ws.send(d as unknown as ArrayBuffer); } catch { /* noop */ } };
+  const sendToClient = (d: Uint8Array) => {
+    try { server.send(d as unknown as ArrayBuffer); } catch { /* noop */ }
+  };
 
+  let remote: any = null;
   let up = 0;
   let down = 0;
+  let pending: Uint8Array | null = null;
+  let connected = false;
 
-  stream.pipeTo(
-    new WritableStream<Uint8Array>({
-      async write(chunk) {
-        let socket: any = null;
-        try {
-          const early = removeEarlyData();
-          const buf = early && early.length ? merge(early, chunk) : chunk;
-          const expected = sha224Hex(user.password);
-          const h = parseTrojanHeader(buf, expected);
-          if (!h) { ws.close(); return; }
-
-          socket = connect({ hostname: h.address, port: h.port });
-          if (h.payload.length) {
-            const w = socket.writable.getWriter();
-            await w.write(h.payload);
-            w.releaseLock();
-            up += h.payload.length;
+  stream
+    .pipeTo(
+      new WritableStream<Uint8Array>({
+        async write(chunk) {
+          if (connected) {
+            up += chunk.byteLength;
+            const w = remote.writable.getWriter();
+            try { await w.write(chunk); } finally { w.releaseLock(); }
+            return;
           }
 
-          stream.pipeTo(
-            new WritableStream<Uint8Array>({
-              async write(d) {
-                up += d.byteLength;
-                const w = socket.writable.getWriter();
-                try { await w.write(d); } finally { w.releaseLock(); }
-              },
-            })
-          ).catch(() => { try { socket.close(); } catch {} });
+          const data = pending ? merge(pending, chunk) : chunk;
+          const h = parseTrojanHeader(data, expectedHash);
+          if (!h.ok) {
+            if (h.incomplete) { pending = data; return; }
+            pending = null;
+            try { server.close(); } catch { /* noop */ }
+            return;
+          }
+          pending = null;
+          connected = true;
 
-          socket.readable
+          remote = connect({ hostname: h.address, port: h.port });
+
+          if (h.payload.length) {
+            up += h.payload.length;
+            const w = remote.writable.getWriter();
+            try { await w.write(h.payload); } finally { w.releaseLock(); }
+          }
+
+          remote.readable
             .pipeTo(
               new WritableStream<Uint8Array>({
                 write(d) { down += d.byteLength; sendToClient(d); },
               })
             )
-            .catch(() => { try { ws.close(); } catch {} })
-            .finally(() => {
-              metrics.recordTraffic(env, user.id, up, down).catch(() => {});
-            });
-        } catch (e) {
-          try { socket?.close(); } catch {}
-          try { ws.close(); } catch {}
-          metrics.recordTraffic(env, user.id, up, down).catch(() => {});
-        }
-      },
-    })
-  ).catch(() => { try { ws.close(); } catch {} });
+            .catch(() => { try { server.close(); } catch { /* noop */ } })
+            .finally(() => { metrics.recordTraffic(env, user.id, up, down).catch(() => {}); });
+        },
+        close() {
+          try { remote?.close(); } catch { /* noop */ }
+        },
+        abort() {
+          try { remote?.close(); } catch { /* noop */ }
+          try { server.close(); } catch { /* noop */ }
+        },
+      })
+    )
+    .catch(() => {
+      try { server.close(); } catch { /* noop */ }
+      try { remote?.close(); } catch { /* noop */ }
+    });
 
-  return new Response(null, { status: 101, webSocket: ws });
+  return new Response(null, { status: 101, webSocket: client });
 }
 
 function merge(a: Uint8Array, b: Uint8Array): Uint8Array {
   const out = new Uint8Array(a.length + b.length);
-  out.set(a); out.set(b, a.length);
+  out.set(a);
+  out.set(b, a.length);
   return out;
 }
 
-interface TrojanHeader { address: string; port: number; payload: Uint8Array }
+type TrojanParse =
+  | { ok: true; address: string; port: number; payload: Uint8Array }
+  | { ok: false; incomplete: boolean };
 
-function parseTrojanHeader(buf: Uint8Array, expectedHash: string): TrojanHeader | null {
+// SHA224(password) hex (56) + CRLF(2) + cmd(1) + atype(1) + addr + port(2) + CRLF(2)
+function parseTrojanHeader(buf: Uint8Array, expectedHash: string): TrojanParse {
   try {
-    let i = 0;
-    const hash = new TextDecoder().decode(buf.slice(i, i + 56));
-    i += 56;
-    if (hash !== expectedHash) return null;
-    if (buf[i] !== 0x0d || buf[i + 1] !== 0x0a) return null;
-    i += 2;
-    const cmd = buf[i]; i += 1;
-    if (cmd !== 1) return null; // CONNECT
-    const atype = buf[i]; i += 1;
+    if (buf.length < 56) return { ok: false, incomplete: true };
+    const hash = new TextDecoder().decode(buf.slice(0, 56));
+    if (hash !== expectedHash) return { ok: false, incomplete: false };
+
+    if (buf.length < 58) return { ok: false, incomplete: true };
+    if (buf[56] !== 0x0d || buf[57] !== 0x0a) return { ok: false, incomplete: false };
+
+    if (buf.length < 60) return { ok: false, incomplete: true };
+    const cmd = buf[58];
+    if (cmd !== 1) return { ok: false, incomplete: false }; // CONNECT only
+    const atype = buf[59];
+    let i = 60;
     let address = "";
-    if (atype === 1) { address = `${buf[i]}.${buf[i + 1]}.${buf[i + 2]}.${buf[i + 3]}`; i += 4; }
-    else if (atype === 3) { const len = buf[i]; i += 1; address = new TextDecoder().decode(buf.slice(i, i + len)); i += len; }
-    else if (atype === 4) { address = bytesToIpv6(buf.slice(i, i + 16)); i += 16; }
-    else return null;
-    const port = (buf[i] << 8) | buf[i + 1]; i += 2;
-    if (buf[i] !== 0x0d || buf[i + 1] !== 0x0a) return null;
+
+    if (atype === 1) {
+      if (buf.length < i + 4) return { ok: false, incomplete: true };
+      address = `${buf[i]}.${buf[i + 1]}.${buf[i + 2]}.${buf[i + 3]}`;
+      i += 4;
+    } else if (atype === 3) {
+      if (buf.length < i + 1) return { ok: false, incomplete: true };
+      const len = buf[i];
+      i += 1;
+      if (buf.length < i + len) return { ok: false, incomplete: true };
+      address = new TextDecoder().decode(buf.slice(i, i + len));
+      i += len;
+    } else if (atype === 4) {
+      if (buf.length < i + 16) return { ok: false, incomplete: true };
+      address = bytesToIpv6(buf.slice(i, i + 16));
+      i += 16;
+    } else {
+      return { ok: false, incomplete: false };
+    }
+
+    if (buf.length < i + 2) return { ok: false, incomplete: true };
+    const port = (buf[i] << 8) | buf[i + 1];
     i += 2;
-    return { address, port, payload: buf.slice(i) };
+    if (buf.length < i + 2) return { ok: false, incomplete: true };
+    if (buf[i] !== 0x0d || buf[i + 1] !== 0x0a) return { ok: false, incomplete: false };
+    i += 2;
+
+    return { ok: true, address, port, payload: buf.slice(i) };
   } catch {
-    return null;
+    return { ok: false, incomplete: false };
   }
 }
 

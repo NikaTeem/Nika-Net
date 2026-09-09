@@ -45,13 +45,13 @@ export function buildClashYaml(u: User, s: Settings): string {
   if (s.protocols.vless) {
     names.push(`NikaNet-VLESS`);
     out += `  - name: "NikaNet-VLESS"\n    type: vless\n    server: ${host}\n    port: 443\n    uuid: ${u.uuid}\n` +
-      `    network: ws\n    tls: true\n    udp: true\n    servername: ${s.host}\n    client-fingerprint: chrome\n` +
+      `    network: ws\n    tls: true\n    udp: false\n    servername: ${s.host}\n    client-fingerprint: chrome\n` +
       `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=vless"\n      headers: { Host: "${s.host}" }\n`;
   }
   if (s.protocols.trojan) {
     names.push(`NikaNet-Trojan`);
     out += `  - name: "NikaNet-Trojan"\n    type: trojan\n    server: ${host}\n    port: 443\n    password: ${u.password}\n` +
-      `    network: ws\n    tls: true\n    udp: true\n    sni: ${s.host}\n    client-fingerprint: chrome\n` +
+      `    network: ws\n    tls: true\n    udp: false\n    sni: ${s.host}\n    client-fingerprint: chrome\n` +
       `    ws-opts:\n      path: "${s.wsPath}?ed=2048&proto=trojan"\n      headers: { Host: "${s.host}" }\n`;
   }
   out += `proxy-groups:\n  - name: "NikaNet"\n    type: select\n    proxies: [${names.map((n) => `"${n}"`).join(", ")}]\n`;

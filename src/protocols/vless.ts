@@ -1,6 +1,9 @@
 // Nika Net — VLESS over WebSocket handler.
-// Protocol: VLESS request in sec-websocket-protocol (early data) + WS stream payload.
-// We connect out via cloudflare:sockets, pipe bytes both ways, and meter real traffic.
+// Protocol: VLESS request in sec-websocket-protocol (early data) + WS stream
+// payload. We connect out via cloudflare:sockets and pipe bytes both ways.
+// Structure mirrors the battle-tested edgetunnel worker: a single pipeTo of
+// the ws stream with a "connected" state flag, and the CLIENT end of the
+// WebSocketPair returned in the 101 response.
 
 import { connect } from "cloudflare:sockets";
 import { makeReadableWebSocketStream, wsAccept } from "./common";
@@ -8,106 +11,134 @@ import { User, Settings, Env } from "../types";
 import * as metrics from "../metrics";
 
 export async function handleVless(req: Request, user: User, settings: Settings, env: Env): Promise<Response> {
-  const ws = wsAccept(req);
-  ws.binaryType = "arraybuffer";
+  const { client, server } = wsAccept(req);
+  server.binaryType = "arraybuffer";
 
   const earlyDataHeader = req.headers.get("sec-websocket-protocol") || "";
-  const { stream, removeEarlyData } = makeReadableWebSocketStream(ws, earlyDataHeader, () => {});
+  const stream = makeReadableWebSocketStream(server, earlyDataHeader, () => {});
 
-  const sendToClient = (d: Uint8Array) => { try { ws.send(d as unknown as ArrayBuffer); } catch { /* noop */ } };
+  const sendToClient = (d: Uint8Array) => {
+    try { server.send(d as unknown as ArrayBuffer); } catch { /* noop */ }
+  };
 
+  let remote: any = null;
   let up = 0;
   let down = 0;
+  let pending: Uint8Array | null = null; // partial header awaiting more bytes
+  let connected = false;
 
-  stream.pipeTo(
-    new WritableStream<Uint8Array>({
-      async write(chunk) {
-        let socket: any = null;
-        try {
-          const early = removeEarlyData();
-          const buf = early && early.length ? merge(early, chunk) : chunk;
-          const h = parseVlessHeader(buf, user);
-          if (!h) { ws.close(); return; }
-
-          socket = connect({ hostname: h.address, port: h.port });
-          sendToClient(new Uint8Array([0, 0]));
-
-          if (h.payload.length) {
-            const w = socket.writable.getWriter();
-            await w.write(h.payload);
-            w.releaseLock();
-            up += h.payload.length;
+  stream
+    .pipeTo(
+      new WritableStream<Uint8Array>({
+        async write(chunk) {
+          if (connected) {
+            up += chunk.byteLength;
+            const w = remote.writable.getWriter();
+            try { await w.write(chunk); } finally { w.releaseLock(); }
+            return;
           }
 
-          // client → remote (upload)
-          stream.pipeTo(
-            new WritableStream<Uint8Array>({
-              async write(d) {
-                up += d.byteLength;
-                const w = socket.writable.getWriter();
-                try { await w.write(d); } finally { w.releaseLock(); }
-              },
-            })
-          ).catch(() => { try { socket.close(); } catch {} });
+          const data = pending ? merge(pending, chunk) : chunk;
+          const h = parseVlessHeader(data, user);
+          if (!h.ok) {
+            if (h.incomplete) { pending = data; return; } // wait for more bytes
+            pending = null;
+            try { server.close(); } catch { /* noop */ }
+            return;
+          }
+          pending = null;
+          connected = true;
 
-          // remote → client (download)
-          socket.readable
+          remote = connect({ hostname: h.address, port: h.port });
+          sendToClient(new Uint8Array([0, 0])); // VLESS response: version 0, addons 0
+
+          if (h.payload.length) {
+            up += h.payload.length;
+            const w = remote.writable.getWriter();
+            try { await w.write(h.payload); } finally { w.releaseLock(); }
+          }
+
+          remote.readable
             .pipeTo(
               new WritableStream<Uint8Array>({
                 write(d) { down += d.byteLength; sendToClient(d); },
               })
             )
-            .catch(() => { try { ws.close(); } catch {} })
-            .finally(() => {
-              ctxWait(env, user.id, up, down);
-            });
-        } catch (e) {
-          try { socket?.close(); } catch {}
-          try { ws.close(); } catch {}
-          ctxWait(env, user.id, up, down);
-        }
-      },
-    })
-  ).catch(() => { try { ws.close(); } catch {} });
+            .catch(() => { try { server.close(); } catch { /* noop */ } })
+            .finally(() => { metrics.recordTraffic(env, user.id, up, down).catch(() => {}); });
+        },
+        close() {
+          try { remote?.close(); } catch { /* noop */ }
+        },
+        abort() {
+          try { remote?.close(); } catch { /* noop */ }
+          try { server.close(); } catch { /* noop */ }
+        },
+      })
+    )
+    .catch(() => {
+      try { server.close(); } catch { /* noop */ }
+      try { remote?.close(); } catch { /* noop */ }
+    });
 
-  return new Response(null, { status: 101, webSocket: ws });
-}
-
-// fire-and-forget traffic persistence
-function ctxWait(env: Env, userId: string, up: number, down: number): void {
-  metrics.recordTraffic(env, userId, up, down).catch(() => {});
+  return new Response(null, { status: 101, webSocket: client });
 }
 
 function merge(a: Uint8Array, b: Uint8Array): Uint8Array {
   const out = new Uint8Array(a.length + b.length);
-  out.set(a); out.set(b, a.length);
+  out.set(a);
+  out.set(b, a.length);
   return out;
 }
 
-interface VlessHeader { address: string; port: number; payload: Uint8Array }
+type VlessParse =
+  | { ok: true; address: string; port: number; payload: Uint8Array }
+  | { ok: false; incomplete: boolean };
 
-function parseVlessHeader(buf: Uint8Array, user: User): VlessHeader | null {
+// VLESS header: version(1) uuid(16) addonsLen(1) addons cmd(1) port(2) atype(1) addr
+function parseVlessHeader(buf: Uint8Array, user: User): VlessParse {
   try {
-    let i = 0;
-    if (buf[i] !== 0) return null;            // version
-    i += 1;
-    const uuid = bytesToUuid(buf.slice(i, i + 16));
-    i += 16;
-    if (uuid.toLowerCase() !== user.uuid.toLowerCase()) return null;
-    const addonsLen = buf[i]; i += 1;
-    i += addonsLen;
-    const cmd = buf[i]; i += 1;               // 1 = TCP
-    if (cmd !== 1) return null;
-    const port = (buf[i] << 8) | buf[i + 1]; i += 2;
-    const atype = buf[i]; i += 1;
+    if (buf.length < 1) return { ok: false, incomplete: true };
+    if (buf[0] !== 0) return { ok: false, incomplete: false }; // unsupported version
+
+    if (buf.length < 1 + 16) return { ok: false, incomplete: true };
+    const uuid = bytesToUuid(buf.slice(1, 17));
+    if (uuid.toLowerCase() !== user.uuid.toLowerCase()) return { ok: false, incomplete: false };
+
+    if (buf.length < 18) return { ok: false, incomplete: true };
+    const addonsLen = buf[17];
+    const i0 = 18 + addonsLen;
+    if (buf.length < i0 + 4) return { ok: false, incomplete: true };
+
+    const cmd = buf[i0];
+    if (cmd !== 1) return { ok: false, incomplete: false }; // only TCP (1)
+    const port = (buf[i0 + 1] << 8) | buf[i0 + 2];
+    const atype = buf[i0 + 3];
+    let i = i0 + 4;
     let address = "";
-    if (atype === 1) { address = `${buf[i]}.${buf[i + 1]}.${buf[i + 2]}.${buf[i + 3]}`; i += 4; }
-    else if (atype === 2) { const len = buf[i]; i += 1; address = new TextDecoder().decode(buf.slice(i, i + len)); i += len; }
-    else if (atype === 3) { address = bytesToIpv6(buf.slice(i, i + 16)); i += 16; }
-    else return null;
-    return { address, port, payload: buf.slice(i) };
+
+    if (atype === 1) {
+      if (buf.length < i + 4) return { ok: false, incomplete: true };
+      address = `${buf[i]}.${buf[i + 1]}.${buf[i + 2]}.${buf[i + 3]}`;
+      i += 4;
+    } else if (atype === 2) {
+      if (buf.length < i + 1) return { ok: false, incomplete: true };
+      const len = buf[i];
+      i += 1;
+      if (buf.length < i + len) return { ok: false, incomplete: true };
+      address = new TextDecoder().decode(buf.slice(i, i + len));
+      i += len;
+    } else if (atype === 3) {
+      if (buf.length < i + 16) return { ok: false, incomplete: true };
+      address = bytesToIpv6(buf.slice(i, i + 16));
+      i += 16;
+    } else {
+      return { ok: false, incomplete: false };
+    }
+
+    return { ok: true, address, port, payload: buf.slice(i) };
   } catch {
-    return null;
+    return { ok: false, incomplete: false };
   }
 }
 
