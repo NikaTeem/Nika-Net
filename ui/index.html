@@ -1813,14 +1813,15 @@ window.POOL_META = __META_DATA__;
 /* i18n */
 I18N.fa["pool.title"] = "Proxy IP Pool";
 I18N.fa["pool.sub"] = "گلچین خودکار بهترین IP از کشور انتخابی";
-I18N.fa["pool.desc"] = "کشور مورد نظرت را انتخاب کن تا سیستم خودکار IP های آن کشور را تست و بهترین‌ها را گلچین کند. بهترین IP را می‌توانی به‌عنوان «IP ثابت» قفل کنی تا همهٔ کانفیگ‌ها با همان IP سریع و پایدار ساخته شوند.";
+I18N.fa["pool.desc"] = "کشور مورد نظرت را انتخاب کن تا سیستم خودکار IP های آن کشور را تست و بهترین‌ها را گلچین کند. توجه: کانفیگ‌ها فقط با IP کلادفلر (☁️) ساخته می‌شوند؛ برای IP ثابتِ وصل‌شونده از «اسکنر IP تمیز» پایین استفاده کن.";
 I18N.fa["pool.search"] = "جستجوی کشور";
 I18N.fa["pool.searchPh"] = "آلمان، Germany، NL، …";
 I18N.fa["pool.selected"] = "کشور انتخاب‌شده";
 I18N.fa["pool.sample"] = "تعداد نمونه برای تست";
 I18N.fa["pool.start"] = "تست خودکار و گلچین";
 I18N.fa["pool.lock"] = "قفل بهترین IP به‌عنوان IP ثابت";
-I18N.fa["pool.lockWarn"] = "⚠️ این IP کلادفلر نیست — کانفیگ با آن وصل نمی‌شود! برای تأیید دوباره بزن";
+I18N.fa["pool.lockWarn"] = "⚠️ فقط IP کلادفلر قابل قفل شدن است — این IP دیتاسنتر است و کانفیگ با آن وصل نمی‌شود";
+I18N.fa["pool.nocflock"] = "⚠️ این IP کلادفلر نیست — کانفیگ با آن وصل نمی‌شود. برای IP ثابتِ وصل‌شونده از «اسکنر IP تمیز» استفاده کن.";
 I18N.fa["pool.empty"] = "هنوز کشوری انتخاب نشده";
 I18N.fa["pool.fixed"] = "IP ثابت فعلی";
 I18N.fa["pool.fixedD"] = "وقتی خالی باشد، کانفیگ‌ها از بین IP های تمیز تصادفی انتخاب می‌کنند";
@@ -1832,7 +1833,7 @@ I18N.fa["pool.cf"] = "کلادفلر ✓";
 I18N.fa["pool.nocf"] = "دیتاسنتر";
 I18N.fa["pool.locked"] = "IP ثابت قفل شد ✓ — کانفیگ‌ها از الان با همین IP ساخته می‌شوند";
 I18N.fa["pool.unlocked"] = "قفل IP ثابت باز شد — کانفیگ‌ها دوباره تصادفی از IP های تمیز انتخاب می‌شوند";
-I18N.fa["pool.note"] = "⚠️ این لیست از اسکن سراسری جمع شده؛ اکثر IP ها «دیتاسنتر» هستند نه کلادفلر. کانفیگ فقط با IP کلادفلر (☁️) وصل می‌شود. برای IP ثابتِ واقعاً وصل‌شونده، از «اسکنر IP تمیز» پایین، بهترین IP را با دکمهٔ 🔒 قفل کن.";
+I18N.fa["pool.note"] = "⚠️ این لیست از اسکن سراسری جمع شده و IPهایش «دیتاسنتر» هستند نه کلادفلر — کانفیگِ ساخته‌شده با آن‌ها وصل نمی‌شود. کانفیگ‌ها فقط با IP کلادفلر (☁️) ساخته می‌شوند. برای IP ثابتِ واقعاً وصل‌شونده، از «اسکنر IP تمیز» پایین استفاده کن و بهترین IP را با دکمهٔ 🔒 قفل کن.";
 I18N.fa["pool.running"] = "در حال تست IP های کشور انتخابی…";
 I18N.fa["pool.selCount"] = "IP";
 I18N.fa["scan.lock"] = "🔒 IP ثابت";
@@ -1841,14 +1842,15 @@ I18N.fa["set.fixedipD"] = "وقتی ست شود، همهٔ کانفیگ‌ها �
 
 I18N.en["pool.title"] = "Proxy IP Pool";
 I18N.en["pool.sub"] = "Auto-test & pick the best IP of a country";
-I18N.en["pool.desc"] = "Pick a country and the system auto-tests its IPs and selects the best ones. Lock the best as a \"fixed IP\" so every config is built with the same fast, stable IP.";
+I18N.en["pool.desc"] = "Pick a country and the system auto-tests its IPs and selects the best ones. Note: configs are only ever built with Cloudflare IPs (☁️); for a working fixed IP use the Clean IP Scanner below.";
 I18N.en["pool.search"] = "Search country";
 I18N.en["pool.searchPh"] = "Germany, ایران, NL, …";
 I18N.en["pool.selected"] = "Selected country";
 I18N.en["pool.sample"] = "Sample size to test";
 I18N.en["pool.start"] = "Auto-test & pick best";
 I18N.en["pool.lock"] = "Lock best IP as fixed IP";
-I18N.en["pool.lockWarn"] = "⚠️ Not a Cloudflare IP — configs won't connect! Tap again to confirm";
+I18N.en["pool.lockWarn"] = "⚠️ Only Cloudflare IPs can be locked — this is a datacenter IP and configs won't connect";
+I18N.en["pool.nocflock"] = "⚠️ Not a Cloudflare IP — configs won't connect. Use the Clean IP Scanner for a working fixed IP.";
 I18N.en["pool.empty"] = "No country selected yet";
 I18N.en["pool.fixed"] = "Current fixed IP";
 I18N.en["pool.fixedD"] = "When empty, configs pick a random clean IP";
@@ -1860,7 +1862,7 @@ I18N.en["pool.cf"] = "Cloudflare ✓";
 I18N.en["pool.nocf"] = "datacenter";
 I18N.en["pool.locked"] = "Fixed IP locked ✓ — configs now use this IP";
 I18N.en["pool.unlocked"] = "Fixed IP unlocked — configs pick randomly again";
-I18N.en["pool.note"] = "⚠️ This list comes from a global scan; most IPs are datacenter IPs, not Cloudflare. Configs only connect via Cloudflare IPs (☁️). For a truly working fixed IP, use the Clean IP Scanner below and lock its best IP with 🔒.";
+I18N.en["pool.note"] = "⚠️ This list comes from a global scan and its IPs are datacenter IPs, not Cloudflare — configs built with them will NOT connect. Configs are only ever built with Cloudflare IPs (☁️). For a truly working fixed IP, use the Clean IP Scanner below and lock its best IP with 🔒.";
 I18N.en["pool.running"] = "Testing the selected country's IPs…";
 I18N.en["pool.selCount"] = "IPs";
 I18N.en["scan.lock"] = "🔒 Fixed IP";
@@ -1871,8 +1873,8 @@ window.POOL = (() => {
   const P = (typeof PROXY_POOL !== "undefined" && PROXY_POOL) ? PROXY_POOL : {};
   const M = (typeof POOL_META !== "undefined" && POOL_META) ? POOL_META : {};
 
-  /* Cloudflare IPv4 ranges (for the ☁️ badge) */
-  const CF = ["173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18","108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17","162.158.0.0/15","104.16.0.0/12","172.64.0.0/17","172.64.128.0/18","172.64.192.0/19","172.64.224.0/22","172.64.229.0/24","172.64.230.0/23","172.64.232.0/22","172.64.236.0/23","172.64.238.0/23","172.64.240.0/22","172.64.244.0/22","172.64.248.0/22","131.0.72.0/22"];
+  /* Cloudflare IPv4 ranges (official, for the ☁️ badge & the lock guard) */
+  const CF = ["173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18","108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17","162.158.0.0/15","104.16.0.0/13","104.24.0.0/14","172.64.0.0/13","131.0.72.0/22"];
   function isCf(ip) {
     const b = ip.split(".").map(Number);
     if (b.length !== 4 || b.some((x) => isNaN(x) || x < 0 || x > 255)) return false;
@@ -1977,7 +1979,10 @@ window.POOL = (() => {
     $("#poolStatus").textContent = t("pool.done");
     renderList(false); renderTop();
     const best = aliveList()[0];
-    if (best) $("#poolLock").classList.remove("hidden");
+    // Only a Cloudflare IP can be locked as a fixed connect address — a
+    // datacenter IP would build configs that never connect.
+    if (best && isCf(best.ip)) $("#poolLock").classList.remove("hidden");
+    else if (best) toast(t("pool.nocflock"));
   }
 
   function stop() { if (S.ctl) S.ctl.abort(); S.running = false; $("#poolStart").classList.remove("hidden"); $("#poolStop").classList.add("hidden"); $("#poolStatus").textContent = t("pool.done"); }
@@ -2029,6 +2034,10 @@ window.POOL = (() => {
 
   async function lockFixed(addr) {
     if (MODE !== "live") { toast(t("toast.preview")); return; }
+    // Guard every lock path (pool, scanner, manual): the fixed IP must be a
+    // Cloudflare edge IP or the generated configs can never connect.
+    const ip = String(addr || "").split(":")[0];
+    if (!isCf(ip)) { toast(t("pool.nocflock")); return; }
     const res = await api("/api/settings", { method: "POST", body: { fixedIp: addr } });
     if (res.ok) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
     else toast(t("common.error"));
@@ -2037,14 +2046,9 @@ window.POOL = (() => {
   async function poolLock() {
     const best = aliveList()[0];
     if (!best) { toast(t("pool.none")); return; }
+    // Hard rule: only Cloudflare edge IPs can front the worker.
+    if (!isCf(best.ip)) { toast(t("pool.nocflock")); return; }
     const addr = best.port !== 443 ? `${best.ip}:${best.port}` : best.ip;
-    if (!isCf(best.ip) && !S.lockArmed) {
-      S.lockArmed = true;
-      const btn = $("#poolLock");
-      btn.querySelector("span").textContent = t("pool.lockWarn");
-      btn.classList.remove("btn-primary"); btn.classList.add("btn-danger");
-      return;
-    }
     await lockFixed(addr);
   }
 
@@ -2058,7 +2062,12 @@ window.POOL = (() => {
   function renderFixed() {
     const cur = (state.settings && state.settings.fixedIp) || "";
     const el = $("#poolFixed");
-    el.innerHTML = cur ? `🔒 <code>${cur}</code>${isCf(cur.split(":")[0]) ? ' <span class="cf-badge cf">☁️ ' + t("pool.cf") + "</span>" : ' <span class="cf-badge nocf">⚠ ' + t("pool.nocf") + "</span>"}` : "—";
+    if (cur && !isCf(cur.split(":")[0])) {
+      // Legacy datacenter lock — configs IGNORE it and use a clean CF IP.
+      el.innerHTML = `🔒 <code>${cur}</code> <span class="cf-badge nocf">⚠ ${t("pool.nocf")}</span> <span class="cf-badge nocf" style="color:var(--bad)">${t("pool.lockWarn")}</span>`;
+    } else {
+      el.innerHTML = cur ? `🔒 <code>${cur}</code> <span class="cf-badge cf">☁️ ${t("pool.cf")}</span>` : "—";
+    }
     $("#poolUnlock").classList.toggle("hidden", !cur);
     if (cur && $("#setFixedIp")) $("#setFixedIp").value = cur;
   }

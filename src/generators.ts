@@ -1,26 +1,32 @@
 // Nika Net — subscription config generators (server-side source of truth).
 
 import { Settings, User } from "./types";
+import { isCloudflareIp } from "./cfips";
 
 // Brand remark used on every generated config.
 const REMARK = "Nika Paneel | یک سرویس رایگان هست";
 const remark = encodeURIComponent(REMARK);
 
+// Only Cloudflare edge IPs can front the worker (anycast → routed by SNI/Host).
 function pickIp(s: Settings): string {
-  const list = (s.cleanIps || []).filter(Boolean);
+  const list = (s.cleanIps || []).filter(Boolean).filter(isCloudflareIp);
   return list.length ? list[Math.floor(Math.random() * list.length)] : s.host;
 }
 
 // Connect address + port. When the admin locks a "fixed IP" (ip or ip:port)
 // the configs always use it — stable, fast, no random rotation. Otherwise
 // pick a random clean IP on 443.
+//
+// Hard rule: the address must be a Cloudflare edge IP, otherwise the config
+// can never reach this worker. A locked datacenter IP is ignored and the
+// config falls back to a clean Cloudflare IP — never a broken config.
 function pickAddr(s: Settings): { host: string; port: number } {
   const fixed = (s.fixedIp || "").trim();
   if (fixed) {
     const m = fixed.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{1,5}))?$/);
     if (m) {
       const o = m[1].split(".").map(Number);
-      if (o.every((x) => x >= 0 && x <= 255)) {
+      if (o.every((x) => x >= 0 && x <= 255) && isCloudflareIp(m[1])) {
         const port = m[2] ? Math.min(65535, Math.max(1, parseInt(m[2], 10))) : 443;
         return { host: m[1], port };
       }
