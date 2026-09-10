@@ -269,18 +269,16 @@ export function supportIntro(s: UserState, appUrl?: string): { text: string; kb:
   const body =
     lang === "fa"
       ? [
-          "سلام! 👋 به پشتیبانی Nika Net خوش اومدی.",
+          "سلام! 👋",
           "",
-          "دو راه برای ارتباط با ما داری:",
-          "• 📱 دکمهٔ زیر رو بزن تا اپ پشتیبانی (چت زنده) باز بشه — مثل یک چت واقعی.",
-          "• یا همین‌جا پیامت رو تایپ کن و بفرست؛ پیامت مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا (پی‌وی خودت) دریافت می‌کنی. 📬",
+          "دکمهٔ «باز کردن اپ پشتیبانی» رو بزن تا چت زنده باز بشه.",
+          "یا همین‌جا پیامت رو بنویس — مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا می‌گیری. 📬",
         ].join("\n")
       : [
-          "Hi! 👋 Welcome to Nika Net support.",
+          "Hi! 👋",
           "",
-          "Two ways to reach us:",
-          "• 📱 Tap the button below to open the support app (live chat) — just like a real chat.",
-          "• Or type your message right here; it goes straight to our team and you'll get the answer right here in your own chat. 📬",
+          "Tap “Open support app” to launch the live chat.",
+          "Or type your message right here — it goes straight to our team and you'll get the answer here. 📬",
         ].join("\n");
   const rows: Btn[][] = [];
   if (appUrl) rows.push([{ text: lang === "fa" ? "📱 باز کردن اپ پشتیبانی" : "📱 Open support app", web_app: appUrl, color: "primary", emoji: false }]);

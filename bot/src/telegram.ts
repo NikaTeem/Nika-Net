@@ -158,6 +158,13 @@ export function sendDocument(env: Env, chatId: number, filename: string, content
   return fetch(`${API}/bot${env.TELEGRAM_TOKEN}/sendDocument`, { method: "POST", body: form });
 }
 
+// دکمهٔ منوی ربات (کنار کادر نوشتن) → باز شدن مستقیم اپ پشتیبانی
+export function setChatMenuButton(env: Env, text: string, webAppUrl: string) {
+  return tgApi(env, "setChatMenuButton", {
+    menu_button: { type: "web_app", text, web_app: { url: webAppUrl } },
+  });
+}
+
 // list every chat id that ever interacted with the bot (state keys start with "u:")
 export async function listUserChatIds(env: Env): Promise<number[]> {
   const ids: number[] = [];

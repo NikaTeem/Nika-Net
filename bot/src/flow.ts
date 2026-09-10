@@ -103,6 +103,7 @@ export async function announceLatest(
 
 export async function handleScheduled(env: Env): Promise<void> {
   try {
+    await ensureMenuButton(env);
     await announceLatest(env);
   } catch (e) {
     console.error("scheduled error", e);
@@ -133,6 +134,20 @@ export async function broadcastAll(env: Env, text: string): Promise<{ sent: numb
     }
   }
   return { sent, total: ids.length };
+}
+
+// دکمهٔ منوی ربات (کنار کادر نوشتن) را روی «🎧 پشتیبانی» (وب‌اپ تلگرام) می‌گذارد — idempotent.
+export async function ensureMenuButton(env: Env): Promise<void> {
+  try {
+    const meta = await fj.botMeta(env);
+    const url = `${meta.origin}/app/support`;
+    const cur = (await env.BOT_KV.get("menuButton")) || "";
+    if (cur === url) return;
+    await tg.setChatMenuButton(env, "🎧 پشتیبانی", url);
+    await env.BOT_KV.put("menuButton", url).catch(() => {});
+  } catch {
+    /* ignore */
+  }
 }
 
 /* ---------------- small helpers ---------------- */
@@ -233,15 +248,23 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     if (!(await fj.gateUser(env, chatId, L(pre)))) return;
   }
 
-  if (text === "/start" || text.toLowerCase() === "start") {
+  const startMatch = /^\/start(?:\s+(.+))?$/i.exec(text);
+  if (text === "/start" || text.toLowerCase() === "start" || startMatch) {
+    const payload = (startMatch?.[1] || "").trim().toLowerCase();
     let owner = await st.getOwner(env);
     if (owner === null) { await st.setOwner(env, chatId); owner = chatId; }
     let s = await st.getState(env, chatId);
     s.state = "idle";
     await st.saveState(env, chatId, s);
-    const fname = msg.from?.first_name || "";
     const meta = await fj.botMeta(env);
     const appUrl = `${meta.origin}/app/support`;
+    await ensureMenuButton(env);
+    // دیپ‌لینک /start support → مستقیم به پشتیبانی (بدون گام میانی)
+    if (payload === "support") {
+      const sm = ui.supportIntro(s, appUrl);
+      return void (await tg.sendMessage(env, chatId, sm.text, sm.kb));
+    }
+    const fname = msg.from?.first_name || "";
     await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, appUrl));
     const m = await tg.sendMessage(env, chatId, "🎨");
     const msgId = m?.result?.message_id as number | undefined;

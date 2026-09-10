@@ -107,8 +107,8 @@ body{font-family:'Vazirmatn',system-ui,'Segoe UI',Tahoma,sans-serif;font-size:15
 
 <div class="not-tg" id="notTg" hidden>
   <div class="ic">📱</div>
-  <p id="notTgText">این اپ باید داخل تلگرام باز شود.<br>ربات را باز کن و از منو روی «🎧 پشتیبانی» بزن.</p>
-  <a href="https://t.me/NikaNetLauncher_bot">باز کردن ربات</a>
+  <p id="notTgText">این اپ باید داخل تلگرام باز شود.<br>ربات را باز کن و روی «🎧 پشتیبانی» بزن.</p>
+  <a href="https://t.me/NikaNetLauncher_bot?start=support">باز کردن پشتیبانی</a>
 </div>
 
 <script>
