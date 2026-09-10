@@ -257,6 +257,74 @@ const tAuto3 = JSON.parse(await kv.get("sup:" + AUTO));
 check("امتیاز کاربر ثبت شد", tAuto3.rating === 5);
 check("امتیاز → پیام تشکر (edit)", edited.some((e) => (e.text || "").includes("ممنون")));
 
+// ===== 5c) رفع باگ «پاسخ دادن» — چت باید بعد از پاسخ ادامه یابد (PM و تیکت) =====
+// الف) پیام شخصی: کاربر دکمهٔ pm:reply را می‌زند → حالت انتظار پاسخ فعال می‌شود
+const REP = 610000001;
+kv.put("sup:" + REP, JSON.stringify({
+  id: REP, kind: "dm", startedBy: "owner", status: "open", unread: 0, lastAt: 1, lastText: "سلام",
+  name: "Reza", username: "reza", msgs: [{ dir: "out", text: "سلام چطوری؟", at: 1 }],
+}));
+kv.put("u:" + REP, JSON.stringify({ state: "idle", lang: "fa", tokens: {}, panels: [], panelAuth: {}, lastBuild: 0, builds: 0, tmp: {} }));
+sent.length = 0;
+await webhook(cb(REP, 1, "pm:reply", REP));
+check("pm:reply → پیام راهنما برای کاربر", (lastTo(REP) || "").includes("همین‌جا بنویس"));
+check("pm:reply → state = await_reply", JSON.parse(await kv.get("u:" + REP)).state === "await_reply");
+
+// پاسخ اول کاربر → باید به همان گفتگو اضافه شود (نه منو/بن‌بست)
+sent.length = 0;
+await webhook(msg(REP, "خوبم مرسی", REP));
+const trep = JSON.parse(await kv.get("sup:" + REP));
+check("پاسخ اول → به گفتگو اضافه شد", trep.msgs.some((m) => m.dir === "in" && m.text.includes("خوبم مرسی")));
+check("پاسخ اول → تأیید «پیام شما ارسال شد»", replyAck(lastTo(REP)));
+check("پاسخ اول → state همچنان await_reply (گفتگو زنده)", JSON.parse(await kv.get("u:" + REP)).state === "await_reply");
+
+// پاسخ دوم پشت‌سرهم هم باید وصل شود — مهم‌ترین بخش باگ (چت بن‌بست می‌شد)
+sent.length = 0;
+await webhook(msg(REP, "راستی یه سوال دیگه هم داشتم", REP));
+const trep2 = JSON.parse(await kv.get("sup:" + REP));
+check("پاسخ دوم → به گفتگو اضافه شد", trep2.msgs.some((m) => m.dir === "in" && m.text.includes("سوال دیگه")));
+check("پاسخ دوم → تأیید followup (چت نمرده)", (lastTo(REP) || "").includes("رسید"));
+
+// خروج از حالت پاسخ با زدن منو
+sent.length = 0;
+await webhook(msg(REP, "🏠 منو", REP));
+check("خروج از حالت پاسخ → state = idle", JSON.parse(await kv.get("u:" + REP)).state === "idle");
+
+// ب) تیکت پشتیبانی: کاربر دکمهٔ sup:reply را می‌زند → پاسخش به همان تیکت اضافه می‌شود
+const RTK = 610000002;
+kv.put("sup:" + RTK, JSON.stringify({
+  id: RTK, kind: "ticket", startedBy: "user", status: "open", unread: 0, lastAt: 1, lastText: "مشکل اتصال",
+  name: "Neda", username: "neda", category: "connect", categoryLabel: "🔌 مشکل اتصال",
+  msgs: [{ dir: "out", text: "سلام، مشکلت چیه؟", at: 1 }],
+}));
+kv.put("u:" + RTK, JSON.stringify({ state: "idle", lang: "fa", tokens: {}, panels: [], panelAuth: {}, lastBuild: 0, builds: 0, tmp: {} }));
+sent.length = 0;
+await webhook(cb(RTK, 1, "sup:reply", RTK));
+check("sup:reply → پیام راهنما", (lastTo(RTK) || "").includes("تیکت پشتیبانی"));
+check("sup:reply → state = await_reply", JSON.parse(await kv.get("u:" + RTK)).state === "await_reply");
+sent.length = 0;
+await webhook(msg(RTK, "اینترنت من قطعه", RTK));
+const trtk = JSON.parse(await kv.get("sup:" + RTK));
+check("پاسخ تیکت → به همان تیکت اضافه شد", trtk.msgs.some((m) => m.dir === "in" && m.text.includes("اینترنت من قطعه")));
+check("پاسخ تیکت → تأیید ارسال", replyAck(lastTo(RTK)));
+check("پاسخ تیکت → state همچنان await_reply", JSON.parse(await kv.get("u:" + RTK)).state === "await_reply");
+
+// ج) مالک هم دکمهٔ «پاسخ دادن» را بزند و بنویسد → به گفتگوی خودش برود، نه منوی اصلی
+kv.put("sup:" + OWNER, JSON.stringify({
+  id: OWNER, kind: "ticket", startedBy: "user", status: "open", unread: 0, lastAt: 1, lastText: "سؤال",
+  name: "Owner", username: "owner", category: "other", categoryLabel: "❓ سوال عمومی",
+  msgs: [{ dir: "out", text: "چطور می‌تونم کمک کنم؟", at: 1 }],
+}));
+kv.put("u:" + OWNER, JSON.stringify({ state: "idle", lang: "fa", tokens: {}, panels: [], panelAuth: {}, lastBuild: 0, builds: 0, tmp: {} }));
+sent.length = 0;
+await webhook(cb(OWNER, 1, "sup:reply", OWNER));
+check("مالک + sup:reply → state = await_reply", JSON.parse(await kv.get("u:" + OWNER)).state === "await_reply");
+sent.length = 0;
+await webhook(msg(OWNER, "پاسخ خود مالک", OWNER));
+const trown = JSON.parse(await kv.get("sup:" + OWNER));
+check("مالک در حالت پاسخ → به تیکت خودش اضافه شد (نه منو)", trown.msgs.some((m) => m.dir === "in" && m.text.includes("پاسخ خود مالک")));
+check("مالک در حالت پاسخ → تأیید ارسال آمد، نه منوی اصلی", replyAck(lastTo(OWNER)));
+
 // ===== 6) ورود پنل (Auth v1) =====
 // 6a) اسکریپت صفحهٔ ورود باید بدون خطای نحوی رندر شود (ریگریشن: escape های \n و \d)
 {
@@ -268,7 +336,7 @@ check("امتیاز → پیام تشکر (edit)", edited.some((e) => (e.text ||
   if (pm) { try { new vm.Script(pm[1]); syntaxOk = true; } catch (e) { errors.push("panel script syntax: " + e.message); } }
   check("اسکریپت صفحهٔ پنل بدون خطای نحوی", syntaxOk);
   check("پنل: هدر cache-control ضد کش", (pres.headers.get("cache-control") || "").includes("no-store"));
-  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.11.0"));
+  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.11.1"));
 }
 
 let lr = await panelRaw("/panel/api/logininfo");

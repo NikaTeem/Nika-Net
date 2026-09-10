@@ -302,14 +302,14 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
   if (text === "/menu") {
     const s = await st.getState(env, chatId);
-    if (s.state === "await_support") { s.state = "idle"; await st.saveState(env, chatId, s); }
+    if (s.state === "await_support" || s.state === "await_reply") { s.state = "idle"; await st.saveState(env, chatId, s); }
     const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
 
   if (text === "/support" || text.toLowerCase() === "support") {
     const s = await st.getState(env, chatId);
-    if (s.state === "await_support") { s.state = "idle"; await st.saveState(env, chatId, s); }
+    if (s.state === "await_support" || s.state === "await_reply") { s.state = "idle"; await st.saveState(env, chatId, s); }
     const m = ui.supportMenu(s);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
@@ -352,6 +352,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   const rl = ui.REPLY_LABELS[text];
   if (rl) {
     const s = await st.getState(env, chatId);
+    if (s.state === "await_reply") { s.state = "idle"; await st.saveState(env, chatId, s).catch(() => {}); }
     if (rl === "menu") {
       const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
@@ -388,6 +389,11 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     case "await_support":
       // پس از انتخاب دسته — پیام کاربر بدنهٔ تیکت می‌شود (حتی اگر مالک باشد)
       return await supportText(env, chatId, msg, text, true);
+    case "await_reply":
+      // کاربر دکمهٔ «پاسخ دادن» را زده — همهٔ پیام‌های بعدی (حتی از مالک)
+      // به همان گفتگو/تیکت اضافه می‌شود تا وقتی خودش منو را باز کند.
+      if (!text) return; // استیکر/عکس بدون متن → نادیده
+      return await supportText(env, chatId, msg, text, false);
     default: {
       // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
       if (await isOwner(env, chatId)) {
@@ -415,10 +421,13 @@ async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: st
   // تأیید بعد از ثبت پیام کاربر:
   //   تیکتِ جدید (یا بدنهٔ تیکت بعد از انتخاب دسته) → «تیکتت ثبت شد»
   //   پاسخ به پیام مالک/پشتیبانی → «پیام شما ارسال شد»
+  //   پیام پشت‌سرهم کاربر (followup) → تأیید کوتاه تا چت زنده بماند
   if (isNewTicket) {
     await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
   } else if (r.verdict === "reply") {
     await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
+  } else if (r.verdict === "followup") {
+    await tg.sendMessage(env, chatId, ui.followupAck()).catch(() => {});
   }
   // بازگشت به حالت عادی پس از ثبت بدنهٔ تیکت
   const s = await st.getState(env, chatId);
@@ -1011,8 +1020,8 @@ async function udetail(env: Env, chatId: number, msgId: number, userId: string):
 
 async function navMenu(env: Env, chatId: number, msgId: number, name: string, firstName?: string): Promise<void> {
   const s = await st.getState(env, chatId);
-  // هر جابه‌جایی بین منوها، حالت انتظارِ نوشتن تیکت را لغو می‌کند
-  if (s.state === "await_support") { s.state = "idle"; await st.saveState(env, chatId, s).catch(() => {}); }
+  // هر جابه‌جایی بین منوها، حالت انتظارِ نوشتن تیکت و پاسخ را لغو می‌کند
+  if (s.state === "await_support" || s.state === "await_reply") { s.state = "idle"; await st.saveState(env, chatId, s).catch(() => {}); }
   let m: { text: string; kb: tg.Kb };
   switch (name) {
     case "tokens": m = ui.tokensMenu(s); break;
@@ -1091,6 +1100,9 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   // دکمهٔ «پاسخ دادن» روی پیام شخصی مالک → کاربر همین‌جا بنویسد (بدون Mini App)
   if (data === "pm:reply") {
     await tg.answerCallback(env, cq.id, "✍️").catch(() => {});
+    // حالت گفتگو: همهٔ پیام‌های بعدی کاربر (حتی اگر مالک باشد) به همین گفتگو اضافه می‌شود
+    s.state = "await_reply";
+    await st.saveState(env, chatId, s).catch(() => {});
     await tg.sendMessage(env, chatId, ui.pmReplyPrompt()).catch(() => {});
     return;
   }
@@ -1098,6 +1110,8 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   // دکمهٔ «پاسخ دادن» روی پاسخ پشتیبانی → کاربر همین‌جا بنویسد (به همان تیکت اضافه می‌شود)
   if (data === "sup:reply") {
     await tg.answerCallback(env, cq.id, "✍️").catch(() => {});
+    s.state = "await_reply";
+    await st.saveState(env, chatId, s).catch(() => {});
     await tg.sendMessage(env, chatId, ui.supportReplyPrompt()).catch(() => {});
     return;
   }
