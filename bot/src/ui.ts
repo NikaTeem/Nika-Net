@@ -320,16 +320,19 @@ export function pmReplyPrompt(): string {
 }
 
 // اعلان به مالک هنگام پیام کاربر — تیکت جدید یا پاسخ جدید
-export function supportNotify(ticket: { name?: string; username?: string; categoryLabel?: string }, text: string, created = true): string {
+export function supportNotify(ticket: { id?: number; name?: string; username?: string; categoryLabel?: string; autoCat?: boolean }, text: string, created = true): string {
   const who = ticket.name ? `<b>${esc(ticket.name)}</b>` : "کاربر ناشناس";
   const un = ticket.username ? ` (@${esc(ticket.username)})` : "";
-  const cat = ticket.categoryLabel ? ` · 🏷 ${esc(ticket.categoryLabel)}` : "";
+  const tid = ticket.id ? ` · #${ticket.id}` : "";
+  const cat = ticket.categoryLabel
+    ? ` · 🏷 ${esc(ticket.categoryLabel)}${ticket.autoCat ? " <i>(هوشمند)</i>" : ""}`
+    : "";
   const snippet = esc(text.slice(0, 140));
   const head = created ? "🎫 <b>تیکت جدید پشتیبانی</b>" : "💬 <b>پاسخ جدید کاربر</b>";
   const hint = created
     ? "برای پاسخ، پنل مدیریت → بخش «پشتیبانی» را باز کن."
     : "برای جواب دادن، پنل مدیریت → «پشتیبانی» یا «پیام شخصی» را باز کن.";
-  return `${head}\n\n👤 ${who}${un}${cat}\n💬 ${snippet}\n\n${hint}`;
+  return `${head}\n\n👤 ${who}${un}${tid}${cat}\n💬 ${snippet}\n\n${hint}`;
 }
 
 // پاکت «پیام شخصی» مالک → کاربر: هدر حریم خصوصی + متن + راهنمای پاسخ
@@ -344,6 +347,85 @@ export function pmEnvelope(escapedText: string): string {
     "──────────────",
     "↩️ برای پاسخ، دکمهٔ «پاسخ دادن» را بزن یا همین‌جا بنویس.",
   ].join("\n");
+}
+
+// پاکت پاسخ پشتیبانی → کاربر: هدر رسمی پشتیبانی + متن + راهنمای ادامهٔ گفتگو
+export function supportEnvelope(escapedText: string): string {
+  return [
+    "🎧 <b>پشتیبانی Nika Net</b>",
+    "این پاسخ رسمی تیم پشتیبانی به تیکت شماست.",
+    "",
+    "──────────────",
+    escapedText,
+    "──────────────",
+    "↩️ برای ادامهٔ گفتگو، دکمهٔ «پاسخ دادن» را بزن یا همین‌جا بنویس.",
+  ].join("\n");
+}
+
+// پیام «بسته شدن تیکت» به کاربر — با دلیل و یادداشت (در صورت وجود)
+export function supportCloseNotice(t: { id: number; categoryLabel?: string; closeReason?: string }, note?: string): string {
+  const cat = t.categoryLabel ? ` · ${esc(t.categoryLabel)}` : "";
+  const reason = closeReasonLabelFa(t.closeReason);
+  const noteLine = note ? `\n💬 یادداشت پشتیبانی: ${esc(note)}` : "";
+  return [
+    "🔒 <b>تیکت شما بسته شد</b>",
+    "",
+    `👤 تیکت #${t.id}${cat}`,
+    `📌 وضعیت: ${reason}${noteLine}`,
+    "",
+    "──────────────",
+    "اگر مشکل هنوز ادامه داره، همین‌جا پیام بده — تیکتت دوباره باز می‌شه. 🌱",
+  ].join("\n");
+}
+
+// پیام «باز شدن دوبارهٔ تیکت» به کاربر
+export function supportReopenNotice(t: { id: number }): string {
+  return [
+    "✅ <b>تیکت شما دوباره باز شد</b>",
+    "",
+    `👤 تیکت #${t.id}`,
+    "تیم پشتیبانی دوباره در حال بررسی مشکل شماست. 🙏",
+  ].join("\n");
+}
+
+// راهنمای پاسخ هنگام زدن دکمهٔ «پاسخ دادن» روی پاسخ پشتیبانی
+export function supportReplyPrompt(): string {
+  return "✍️ جوابت رو همین‌جا بنویس — مستقیم به تیکت پشتیبانی اضافه می‌شه. 📬";
+}
+
+// سؤال امتیاز بعد از بسته شدن تیکت
+export function ratingQuestion(t: { id: number }): { text: string; kb: Kb } {
+  return {
+    text: [
+      "⭐ <b>تجربه‌ات چطور بود؟</b>",
+      "",
+      `به تیکت #${t.id} از ۱ تا ۵ ستاره بده تا بتونیم بهتر شیم:`,
+    ].join("\n"),
+    kb: kb([[
+      { text: "⭐", cb: `sup:rate:${t.id}:1`, color: null, emoji: false },
+      { text: "⭐⭐", cb: `sup:rate:${t.id}:2`, color: null, emoji: false },
+      { text: "⭐⭐⭐", cb: `sup:rate:${t.id}:3`, color: null, emoji: false },
+      { text: "⭐⭐⭐⭐", cb: `sup:rate:${t.id}:4`, color: null, emoji: false },
+      { text: "⭐⭐⭐⭐⭐", cb: `sup:rate:${t.id}:5`, color: null, emoji: false },
+    ]]),
+  };
+}
+
+export function ratingThanks(rating: number): string {
+  return `⭐ ممنون از امتیازت (${"⭐".repeat(rating)}) — نظرت برامون مهمه! 💙`;
+}
+
+// برچسب فارسی دلیل بستن (برای استفاده در پیام‌ها، بدون وابستگی به support.ts)
+function closeReasonLabelFa(id?: string): string {
+  const map: Record<string, string> = {
+    solved: "✅ حل شد",
+    duplicate: "🔁 تکراری",
+    spam: "🤖 اسپم",
+    noreply: "⏳ کاربر بی‌پاسخ",
+    other: "🔕 سایر",
+    close_all: "✅ بسته شد",
+  };
+  return map[id || ""] || "✅ بسته شد";
 }
 
 /* ============================ main menu ⚡ ============================ */

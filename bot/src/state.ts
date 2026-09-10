@@ -116,6 +116,17 @@ export async function saveState(env: Env, chatId: number, s: UserState): Promise
   await env.BOT_KV.put(PREFIX + chatId, JSON.stringify(s));
 }
 
+// اطمینان از اینکه کاربر در لیست کاربران پنل دیده می‌شود، حتی اگر هرگز /start نزده باشد.
+// فقط وقتی کلید وجود ندارد می‌نویسد (یک GET ارزان + یک PUT برای کاربرِ کاملاً جدید).
+export async function ensureUser(env: Env, chatId: number): Promise<void> {
+  try {
+    const raw = await env.BOT_KV.get(PREFIX + chatId);
+    if (!raw) await env.BOT_KV.put(PREFIX + chatId, JSON.stringify({ ...DEFAULT }));
+  } catch {
+    /* ignore */
+  }
+}
+
 /* ---------- light per-user meta (profile + last seen) for the admin panel ---------- */
 export interface UserMeta {
   at?: number;        // last seen (any bot interaction)

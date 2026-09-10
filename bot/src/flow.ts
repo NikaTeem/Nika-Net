@@ -260,6 +260,8 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
   // track last-seen + name for the panel (throttled writes)
   await st.touchMeta(env, chatId, { firstName: msg.from?.first_name, lastName: msg.from?.last_name, username: msg.from?.username });
+  // اطمینان از حضور کاربر در لیست کاربران پنل (حتی بدون /start)
+  await st.ensureUser(env, chatId);
 
   // عضویت اجباری — gate every message (owner + exempt always pass, and the
   // "await_fj_chat" setup state is allowed so the owner can configure it).
@@ -404,7 +406,7 @@ async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: st
     firstName: msg.from?.first_name,
     lastName: msg.from?.last_name,
     username: msg.from?.username,
-  });
+  }, { asTicket: fromCategory });
   const owner = await st.getOwner(env);
   const isNewTicket = fromCategory || r.verdict === "new_ticket";
   if (owner && owner !== chatId) {
@@ -1090,6 +1092,27 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   if (data === "pm:reply") {
     await tg.answerCallback(env, cq.id, "✍️").catch(() => {});
     await tg.sendMessage(env, chatId, ui.pmReplyPrompt()).catch(() => {});
+    return;
+  }
+
+  // دکمهٔ «پاسخ دادن» روی پاسخ پشتیبانی → کاربر همین‌جا بنویسد (به همان تیکت اضافه می‌شود)
+  if (data === "sup:reply") {
+    await tg.answerCallback(env, cq.id, "✍️").catch(() => {});
+    await tg.sendMessage(env, chatId, ui.supportReplyPrompt()).catch(() => {});
+    return;
+  }
+
+  // امتیاز بعد از بسته شدن تیکت — فقط صاحب تیکت می‌تواند امتیاز بدهد
+  if (data.startsWith("sup:rate:")) {
+    const parts = data.split(":");
+    const tid = parseInt(parts[2], 10);
+    const rating = parseInt(parts[3], 10);
+    if (!Number.isInteger(tid) || tid !== chatId || !Number.isInteger(rating)) {
+      return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    }
+    await sup.setRating(env, tid, rating);
+    await tg.answerCallback(env, cq.id, "🙏").catch(() => {});
+    await tg.editMessage(env, chatId, msgId, ui.ratingThanks(rating), tg.kb([])).catch(() => {});
     return;
   }
 

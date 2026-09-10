@@ -194,6 +194,7 @@ if (aliasRow) {
 $('.nav button[data-v="support"]').click();
 await until(() => $$("#ticket-list li").length > 0, 4000, "ticket list");
 check("TK: لیست تیکت‌ها رندر شد", $$("#ticket-list li").length > 0);
+check("TK: نشانگر «در انتظار» در لیست", $$("#ticket-list li")[0].textContent.includes("در انتظار"));
 $("#tkSearch").value = "Sara"; ev($("#tkSearch"), "input");
 await until(() => $$("#ticket-list li").length === 1, 2000, "tk search");
 check("TK: جستجو → ۱ نتیجه", $$("#ticket-list li").length === 1);
@@ -213,12 +214,24 @@ $("#tk-send").click();
 await until(() => $("#tk-text").value === "", 3000, "tk send");
 check("TK: ارسال پاسخ", $("#tk-text").value === "");
 $("#tk-toggle").click();
-await until(() => $("#tk-toggle").textContent.includes("بازکردن"), 3000, "tk toggle");
-check("TK: بستن تیکت → «بازکردن»", $("#tk-toggle").textContent.includes("بازکردن"));
-await until(() => $$("#ticket-list li").length > 0 && $$("#ticket-list li")[0].textContent.includes("بسته"), 2000, "tk list updated");
+await until(() => $("#tkCloseModal") && !$("#tkCloseModal").classList.contains("hidden"), 3000, "close modal opens");
+check("TK: مودال بستن تیکت باز شد", !$("#tkCloseModal").classList.contains("hidden"));
+check("TK: چیپ‌های دلیل بستن رندر شدند", $$("#tkReasons .rchip").length >= 3);
+const reasonChip = Array.from($$("#tkReasons .rchip")).find((c) => c.textContent.includes("حل شد"));
+if (reasonChip) reasonChip.click();
+$("#tkCloseNote").value = "مشکلت حل شد";
+$("#tkCloseGo").click();
+await until(() => $("#tkCloseModal").classList.contains("hidden"), 3000, "close modal hides");
+await until(() => $("#tk-toggle").textContent.includes("بازکردن"), 4000, "tk toggle");
+check("TK: بستن تیکت با دلیل → «بازکردن»", $("#tk-toggle").textContent.includes("بازکردن"));
+await until(() => $$("#ticket-list li").length > 0 && $$("#ticket-list li")[0].textContent.includes("بسته"), 3000, "tk list updated");
 check("TK: لیست بلافاصله «بسته» نشان می‌دهد", $$("#ticket-list li")[0].textContent.includes("بسته"));
 const chip = $$("#tkStatusChips .fchip").find((c) => c.textContent === "باز");
 if (chip) { chip.click(); await until(() => $$("#ticket-list li").length === 0, 2000, "open filter"); check("TK: فیلتر وضعیت «باز»", $$("#ticket-list li").length === 0); $$("#tkStatusChips .fchip")[0].click(); await until(() => $$("#ticket-list li").length > 0, 2000, "all filter"); }
+// بازکردن دوباره بدون مودال
+$("#tk-toggle").click();
+await until(() => $("#tk-toggle").textContent.includes("بستن"), 4000, "tk reopen");
+check("TK: بازکردن دوبارهٔ تیکت", $("#tk-toggle").textContent.includes("بستن"));
 $("#tkCloseAll").click();
 await until(() => $$("#ticket-list li").length >= 0, 2000, "closeall");
 check("TK: بستن همهٔ بازها (بدون خطا)", true);

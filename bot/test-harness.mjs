@@ -202,6 +202,61 @@ check("support/closeall", r.ok && typeof r.j.closed === "number");
 r = await panel("/panel/api/support/list");
 check("closeall بسته شد و status ها closed است", r.j.tickets.filter((t) => t.status === "open").length === 0);
 
+// ---- 5b) پشتیبانی هوشمند v3 ----
+// الف) دسته‌بندی خودکار از متن آزاد + ساخت خودکار رکورد کاربر (بدون /start)
+const AUTO = 551234567;
+sent.length = 0;
+await webhook(msg(AUTO, "اینترنت من مدام قطعه", AUTO));
+const ta = JSON.parse(await kv.get("sup:" + AUTO));
+check("هوشمند: دسته از متن حدس زده شد → connect", ta.category === "connect" && ta.autoCat === true);
+check("هوشمند: تأیید ثبت تیکت", ack(lastTo(AUTO)));
+check("کاربر بدون /start → رکورد u: ساخته شد", !!(await kv.get("u:" + AUTO)));
+
+// ب) تبدیل پیام شخصی → تیکت وقتی کاربر خودش دسته انتخاب کند
+const PM2USER = 559988776;
+kv.put("sup:" + PM2USER, JSON.stringify({ id: PM2USER, startedBy: "owner", status: "open", unread: 0, lastAt: 1, lastText: "پیام شخصی", name: "کاربر", username: "pmuser", msgs: [{ dir: "out", text: "سلام", at: 1 }] }));
+kv.put("u:" + PM2USER, JSON.stringify({ state: "idle", lang: "fa", tokens: {}, panels: [], panelAuth: {}, lastBuild: 0, builds: 0, tmp: {} }));
+sent.length = 0;
+await webhook(msg(PM2USER, "/support", PM2USER));
+const menuIdP = msgId;
+await webhook(cb(PM2USER, menuIdP, "sup:cat:connect", PM2USER));
+const tp = JSON.parse(await kv.get("sup:" + PM2USER));
+check("هوشمند: انتخاب دسته → پیام شخصی به تیکت تبدیل شد", tp.startedBy === "user");
+
+// ج) بستن با دلیل → نوتیف + دکمهٔ امتیاز + ذخیرهٔ دلیل
+sent.length = 0;
+r = await panel("/panel/api/support/toggle", { method: "POST", body: { id: AUTO, reason: "solved", note: "ری‌استارت کن" } });
+const closeMsgs = sent.filter((s) => s.chat_id === AUTO);
+const closeText = closeMsgs.map((s) => s.text).join(" ");
+const ratingMsg = closeMsgs.find((s) => (s.text || "").includes("ستاره"));
+const tAuto2 = JSON.parse(await kv.get("sup:" + AUTO));
+check("بستن با دلیل → status closed", r.ok && r.j.status === "closed");
+check("بستن با دلیل → reason و یادداشت ذخیره شد", tAuto2.closeReason === "solved" && tAuto2.closeNote === "ری‌استارت کن");
+check("بستن → نوتیف برای کاربر", closeText.includes("تیکت شما بسته شد"));
+check("بستن → یادداشت در نوتیف", closeText.includes("ری‌استارت کن"));
+check("بستن → دعوت به امتیاز", !!ratingMsg && JSON.stringify(ratingMsg.reply_markup).includes("sup:rate:" + AUTO));
+
+// د) بازکردن دوباره → نوتیف باز شدن
+sent.length = 0;
+r = await panel("/panel/api/support/toggle", { method: "POST", body: { id: AUTO } });
+const reopenText = sent.filter((s) => s.chat_id === AUTO).map((s) => s.text).join(" ");
+check("بازکردن دوباره → status open", r.ok && r.j.status === "open");
+check("بازکردن → نوتیف برای کاربر", reopenText.includes("دوباره باز شد"));
+
+// هـ) پاسخ پشتیبانی → پاکت رسمی + دکمهٔ sup:reply
+sent.length = 0;
+await panel("/panel/api/support/reply", { method: "POST", body: { id: AUTO, text: "سلام" } });
+const supReply = sent.find((s) => s.chat_id === AUTO);
+check("پاسخ پشتیبانی → پاکت رسمی", supReply && supReply.text.includes("پشتیبانی Nika Net"));
+check("پاسخ پشتیبانی → دکمهٔ sup:reply", supReply && JSON.stringify(supReply.reply_markup).includes("sup:reply"));
+
+// و) امتیاز کاربر (callback از داخل تلگرام)
+sent.length = 0; edited.length = 0;
+await webhook(cb(AUTO, 1, "sup:rate:" + AUTO + ":5", AUTO));
+const tAuto3 = JSON.parse(await kv.get("sup:" + AUTO));
+check("امتیاز کاربر ثبت شد", tAuto3.rating === 5);
+check("امتیاز → پیام تشکر (edit)", edited.some((e) => (e.text || "").includes("ممنون")));
+
 // ===== 6) ورود پنل (Auth v1) =====
 // 6a) اسکریپت صفحهٔ ورود باید بدون خطای نحوی رندر شود (ریگریشن: escape های \n و \d)
 {
@@ -213,7 +268,7 @@ check("closeall بسته شد و status ها closed است", r.j.tickets.filter(
   if (pm) { try { new vm.Script(pm[1]); syntaxOk = true; } catch (e) { errors.push("panel script syntax: " + e.message); } }
   check("اسکریپت صفحهٔ پنل بدون خطای نحوی", syntaxOk);
   check("پنل: هدر cache-control ضد کش", (pres.headers.get("cache-control") || "").includes("no-store"));
-  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.10.4"));
+  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.11.0"));
 }
 
 let lr = await panelRaw("/panel/api/logininfo");

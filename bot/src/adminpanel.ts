@@ -388,6 +388,28 @@ const PANEL_HTML = `<!doctype html>
   .card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)}
   .card-h h2{margin:0;font-size:16px;font-weight:700}
   .card-h .ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:16px;background:var(--glass);border:1px solid var(--border);flex:none}
+  /* ---- پشتیبانی هوشمند v3 ---- */
+  .tk-wait{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;margin-top:5px}
+  .tk-wait.you{background:rgba(255,159,67,.14);color:#ffb163;border:1px solid rgba(255,159,67,.35)}
+  .tk-wait.user{background:rgba(79,140,255,.12);color:#7fb0ff;border:1px solid rgba(79,140,255,.35)}
+  .tk-when{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+  .cat.ai{background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.4);color:#c4b5fd}
+  .stars{color:#fbbf24;letter-spacing:1px}
+  .pulse{animation:supPulse 1.6s ease-in-out infinite}
+  @keyframes supPulse{0%,100%{box-shadow:0 0 0 0 rgba(79,140,255,.45)}50%{box-shadow:0 0 0 6px rgba(79,140,255,0)}}
+  .modal-overlay{position:fixed;inset:0;background:rgba(6,6,8,.66);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:80;padding:18px}
+  .modal{width:100%;max-width:420px;background:linear-gradient(160deg,#1a1815,#14120f);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+  .modal-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);font-weight:800;font-size:15px}
+  .modal-x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer}
+  .modal-x:hover{color:var(--text)}
+  .modal-b{padding:16px 18px}
+  .modal-lbl{font-size:12.5px;color:var(--muted);margin-bottom:10px;font-weight:700}
+  .modal-b textarea{width:100%;box-sizing:border-box;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;color:var(--text);padding:11px 13px;font:inherit;font-size:13.5px;resize:vertical}
+  .modal-f{display:flex;gap:10px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--border)}
+  .reason-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .rchip{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);user-select:none;transition:all .15s}
+  .rchip:hover{border-color:rgba(255,255,255,.25);color:var(--text)}
+  .rchip.on{background:rgba(255,99,99,.16);border-color:rgba(255,99,99,.55);color:#ff9d9d}
 
 </style>
 </head>
@@ -427,7 +449,7 @@ const PANEL_HTML = `<!doctype html>
       </div>
       <div class="hint" id="lgMsg">فقط <b>مالک ربات</b> می‌تواند وارد شود.</div>
       <div class="olink-divider"><span>لینک‌های رسمی Nika Net</span></div><div class="olinks col"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
-      <div class="ver">Nika Net Panel · v0.10.4</div>
+      <div class="ver">Nika Net Panel · v0.11.0</div>
     </div>
   </div>
 </div>
@@ -718,6 +740,22 @@ const PANEL_HTML = `<!doctype html>
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay hidden" id="tkCloseModal">
+  <div class="modal">
+    <div class="modal-h">🔒 بستن تیکت <button class="modal-x" id="tkCloseCancel">✕</button></div>
+    <div class="modal-b">
+      <div class="modal-lbl">دلیل بستن را انتخاب کن:</div>
+      <div class="reason-chips" id="tkReasons"></div>
+      <div class="modal-lbl" style="margin-top:14px">یادداشت برای کاربر <span class="mini">(اختیاری)</span></div>
+      <textarea id="tkCloseNote" rows="2" placeholder="مثلاً: مشکل حل شد، نسخهٔ جدید را نصب کن…"></textarea>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" id="tkCloseCancel2">انصراف</button>
+      <button class="btn btn-danger" id="tkCloseGo">🔒 بستن تیکت</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -740,6 +778,15 @@ const PANEL_HTML = `<!doctype html>
     var d = new Date(ts);
     return d.toLocaleDateString("fa-IR", { month: "long", day: "numeric" }) + " · " +
            d.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
+  }
+  function relTime(ts) {
+    if (!ts) return "—";
+    var s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return "همین حالا";
+    if (s < 3600) return faNum(Math.floor(s / 60)) + " دقیقه پیش";
+    if (s < 86400) return faNum(Math.floor(s / 3600)) + " ساعت پیش";
+    if (s < 172800) return "دیروز";
+    return faNum(Math.floor(s / 86400)) + " روز پیش";
   }
   function countUp(el, to, suffix) {
     var t0 = null, dur = 900;
@@ -845,7 +892,7 @@ const PANEL_HTML = `<!doctype html>
   // ====== Aurora Nika: ناوبری + پیام شخصی + پشتیبانی ======
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
-  var ns = { userList: [], pmThreads: [], activePm: null, tickets: [], activeTicket: null, tkStatus: "all" };
+  var ns = { userList: [], pmThreads: [], activePm: null, tickets: [], activeTicket: null, tkStatus: "all", closeReason: "solved", lastSupOpen: 0, lastSupUnread: -1, lastPmUnread: -1 };
 
   var faTime = function (ts) {
     var d = new Date(ts);
@@ -986,6 +1033,14 @@ const PANEL_HTML = `<!doctype html>
     return Object.keys(set).map(function (k) { return { id: k, label: set[k] }; });
   }
 
+  function closeReasonFa(id) {
+    var map = {
+      solved: "✅ حل شد", duplicate: "🔁 تکراری", spam: "🤖 اسپم",
+      noreply: "⏳ کاربر بی‌پاسخ", other: "🔕 سایر", close_all: "✅ بسته شد"
+    };
+    return map[id] || "✅ بسته شد";
+  }
+
   function renderSupStats() {
     var open = 0, closed = 0, unread = 0;
     ns.tickets.forEach(function (t) {
@@ -1026,11 +1081,23 @@ const PANEL_HTML = `<!doctype html>
       var li = document.createElement("li");
       li.setAttribute("data-id", t.id);
       if (ns.activeTicket === t.id) li.classList.add("on");
+      if (t.unread > 0) li.classList.add("pulse");
+      var catChip = t.categoryLabel
+        ? ' <span class="cat' + (t.autoCat ? " ai" : "") + '">' + (t.autoCat ? "🤖 " : "🏷 ") + esc(t.categoryLabel) + "</span>"
+        : "";
+      var wait = t.status === "open"
+        ? (t.lastDir === "in"
+            ? '<span class="tk-wait you">⏳ در انتظار تو</span>'
+            : '<span class="tk-wait user">👤 در انتظار کاربر</span>')
+        : "";
+      var stars = t.rating ? ' <span class="stars">' + "⭐".repeat(Math.max(1, Math.min(5, t.rating))) + "</span>" : "";
       li.innerHTML = avatar(t.name || t.username || "", t.id, true) +
         '<div class="umeta"><div class="n">' + esc(t.name || "کاربر " + t.id) +
-        (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") +
-        (t.categoryLabel ? ' <span class="cat">🏷 ' + esc(t.categoryLabel) + "</span>" : "") + "</div>" +
-        '<div class="t">' + esc(t.lastText || "") + "</div></div>" +
+        (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + stars +
+        catChip + "</div>" +
+        '<div class="t">' + esc(t.lastText || "") + "</div>" +
+        wait +
+        '<span class="tk-when">' + relTime(t.lastAt) + "</span></div>" +
         '<span class="spill ' + (t.status === "open" ? "ok" : "mut") + '">' + (t.status === "open" ? "باز" : "بسته") + "</span>";
       if (t.unread > 0) li.insertAdjacentHTML("beforeend", '<span class="unread">' + t.unread + "</span>");
       li.onclick = function () { openTicket(t.id); };
@@ -1075,11 +1142,18 @@ const PANEL_HTML = `<!doctype html>
     var r = await api("/panel/api/support/get?id=" + id);
     if (!r.ok) return;
     var t = r.j.ticket;
+    var stars = t.rating ? ' <span class="stars">' + "⭐".repeat(Math.max(1, Math.min(5, t.rating))) + "</span>" : "";
+    var closeInfo = "";
+    if (t.status === "closed") {
+      closeInfo = '<div class="s">📌 دلیل: ' + esc(closeReasonFa(t.closeReason)) +
+        (t.closeNote ? " · " + esc(t.closeNote) : "") + "</div>";
+    }
     $("#tk-head").innerHTML = avatar(t.name || t.username || "", t.id, true) +
-      '<div class="meta"><div class="n">' + esc(t.name || "کاربر " + t.id) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + "</div>" +
-      '<div class="s"><span dir="ltr">' + t.id + "</span> · " +
-      (t.categoryLabel ? "🏷 " + esc(t.categoryLabel) + " · " : "") +
-      "وضعیت: " + (t.status === "open" ? "باز ✅" : "بسته 🔒") + "</div></div>";
+      '<div class="meta"><div class="n">' + esc(t.name || "کاربر " + t.id) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + stars + "</div>" +
+      '<div class="s"><span dir="ltr">#' + t.id + "</span> · " +
+      (t.categoryLabel ? "🏷 " + esc(t.categoryLabel) + (t.autoCat ? " 🤖" : "") + " · " : "") +
+      "وضعیت: " + (t.status === "open" ? "باز ✅" : "بسته 🔒") + "</div>" +
+      closeInfo + "</div>";
     $("#tk-id").value = t.id;
     $("#tk-toggle").textContent = t.status === "open" ? "🔒 بستن تیکت" : "🔓 بازکردن تیکت";
     $$("#ticket-list li").forEach(function (li) { li.classList.toggle("on", Number(li.getAttribute("data-id")) === id); });
@@ -1102,13 +1176,59 @@ const PANEL_HTML = `<!doctype html>
     else toast(r.j.error || "ارسال ناموفق بود");
   }
 
+  function openCloseModal() {
+    var el = $("#tkReasons");
+    var reasons = [
+      ["solved", "✅ حل شد"], ["duplicate", "🔁 تکراری"], ["spam", "🤖 اسپم"],
+      ["noreply", "⏳ کاربر بی‌پاسخ"], ["other", "🔕 سایر"]
+    ];
+    el.innerHTML = "";
+    reasons.forEach(function (r, i) {
+      var b = document.createElement("span");
+      b.className = "rchip" + (i === 0 ? " on" : "");
+      b.textContent = r[1];
+      b.onclick = function () {
+        ns.closeReason = r[0];
+        $$("#tkReasons .rchip").forEach(function (c) { c.classList.remove("on"); });
+        b.classList.add("on");
+      };
+      el.appendChild(b);
+    });
+    ns.closeReason = "solved";
+    $("#tkCloseNote").value = "";
+    $("#tkCloseModal").classList.remove("hidden");
+  }
+
+  function hideCloseModal() { $("#tkCloseModal").classList.add("hidden"); }
+
+  async function doClose() {
+    var id = Number($("#tk-id").value);
+    if (!id) return;
+    var note = $("#tkCloseNote").value.trim().slice(0, 300);
+    hideCloseModal();
+    var r = await api("/panel/api/support/toggle", { method: "POST", body: { id: id, reason: ns.closeReason, note: note } });
+    if (r.ok && r.j.ok) {
+      var nt = ns.tickets.find(function (t) { return t.id === id; });
+      if (nt) { nt.status = r.j.status; nt.closeReason = ns.closeReason; }
+      toast("تیکت بسته شد و علتش برای کاربر ارسال شد ✓");
+      openTicket(id);
+      renderTickets();
+    } else {
+      toast((r.j && r.j.error) || "خطا در بستن تیکت");
+    }
+  }
+
   async function toggleTicket() {
     var id = Number($("#tk-id").value);
     if (!id) return;
+    var t = ns.tickets.find(function (x) { return x.id === id; });
+    if (t && t.status === "open") { openCloseModal(); return; }
+    // بازکردن دوباره — بدون مودال
     var r = await api("/panel/api/support/toggle", { method: "POST", body: { id: id } });
     if (r.ok && r.j.ok) {
-      var nt = ns.tickets.find(function (t) { return t.id === id; });
-      if (nt) nt.status = r.j.status;
+      var nt = ns.tickets.find(function (x) { return x.id === id; });
+      if (nt) { nt.status = r.j.status; nt.closeReason = undefined; }
+      toast("تیکت دوباره باز شد ✓");
       openTicket(id);
       renderTickets();
     }
@@ -1173,10 +1293,46 @@ const PANEL_HTML = `<!doctype html>
     var ca = $("#tkCloseAll"); if (ca) ca.onclick = closeAllTickets;
     var csv = $("#usrCsv"); if (csv) csv.onclick = exportCsv;
     var cp = $("#copyPanel"); if (cp) cp.onclick = function () { copyText(state.bot.origin + "/panel", "آدرس پنل کپی شد ✓"); };
+    // مودال بستن تیکت
+    var ccn = $("#tkCloseCancel"); if (ccn) ccn.onclick = hideCloseModal;
+    var ccn2 = $("#tkCloseCancel2"); if (ccn2) ccn2.onclick = hideCloseModal;
+    var cgo = $("#tkCloseGo"); if (cgo) cgo.onclick = doClose;
     renderStatusChips();
   }
 
-  function bootSupport() { wireNav(); wirePm(); wireTk(); wireExtras(); loadPmThreads(); loadTickets(); }
+  function bootSupport() { wireNav(); wirePm(); wireTk(); wireExtras(); loadPmThreads(); loadTickets(); startPolling(); }
+
+  // به‌روزرسانی زندهٔ صندوق پیام — هر چند ثانیه یک‌بار، بدون بازنشانیِ حالتِ بازِ تیکت
+  function startPolling() {
+    var last = { supUnread: -1, supOpen: -1, pmUnread: -1 };
+    setInterval(async function () {
+      try {
+        var s = await api("/panel/api/support/list");
+        if (s.ok && s.j) {
+          var open = s.j.open || 0, unread = s.j.unread || 0;
+          if (last.supUnread !== -1 && (unread > last.supUnread || open > last.supOpen)) {
+            toast("📬 تیکت جدید رسید");
+          }
+          if (open !== last.supOpen || unread !== last.supUnread) {
+            ns.tickets = s.j.tickets || [];
+            renderSupStats();
+            renderTickets();
+            var b2 = $("#supBadge");
+            if (b2) { b2.textContent = unread; b2.classList.toggle("hide", unread === 0); }
+          }
+          last.supOpen = open; last.supUnread = unread;
+        }
+        var p = await api("/panel/api/pm/list");
+        if (p.ok && p.j) {
+          var pu = p.j.unread || 0;
+          if (last.pmUnread !== -1 && pu > last.pmUnread) toast("💬 پیام شخصی جدید");
+          last.pmUnread = pu;
+          var b1 = $("#pmBadge");
+          if (b1) { b1.textContent = pu; b1.classList.toggle("hide", pu === 0); }
+        }
+      } catch (e) { /* ignore */ }
+    }, 12000);
+  }
 
 
   /* ---------- state ---------- */
@@ -2101,9 +2257,9 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!Number.isInteger(id) || !text) return json({ error: "invalid" }, 400);
     await sup.recordOutgoing(env, id, text, "user");
-    const reply = "🎧 <b>پشتیبانی Nika Net</b>\n\n" + sup.escTg(text);
-    // دکمهٔ «پاسخ دادن» برای ادامهٔ گفتگو از سمت کاربر
-    const kb = tg.kb([[{ text: "💬 پاسخ دادن", cb: "pm:reply", color: "primary", emoji: false }]]);
+    // پاکت رسمی پشتیبانی + دکمهٔ «پاسخ دادن» برای ادامهٔ گفتگو از سمت کاربر
+    const reply = ui.supportEnvelope(sup.escTg(text));
+    const kb = tg.kb([[{ text: "💬 پاسخ دادن", cb: "sup:reply", color: "primary", emoji: false }]]);
     const sent = await tg.sendMessage(env, id, reply, kb).catch(() => null);
     if (!sent || !sent.ok) {
       return json({ ok: false, error: "تلگرام پیام را نپذیرفت (کاربر شاید ربات را بلاک کرده باشد)." });
@@ -2117,13 +2273,33 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     if (!Number.isInteger(id)) return json({ error: "id" }, 400);
     const t = await sup.getTicket(env, id);
     if (!t) return json({ error: "not found" }, 404);
-    const next = t.status === "open" ? "closed" : "open";
-    await sup.setStatus(env, id, next);
+    const next: sup.TicketStatus = t.status === "open" ? "closed" : "open";
+    if (next === "closed") {
+      const reason = typeof b.reason === "string" ? b.reason.slice(0, 40) : undefined;
+      const note = typeof b.note === "string" ? b.note.slice(0, 300) : undefined;
+      await sup.closeTicket(env, id, reason, note);
+      // نوتیف بسته شدن برای کاربر + دعوت به امتیازدهی
+      const notice = ui.supportCloseNotice({ id, categoryLabel: t.categoryLabel, closeReason: reason }, note);
+      const q = ui.ratingQuestion({ id });
+      await tg.sendMessage(env, id, notice, tg.kb([])).catch(() => {});
+      await tg.sendMessage(env, id, q.text, q.kb).catch(() => {});
+    } else {
+      await sup.reopenTicket(env, id);
+      // نوتیف باز شدن دوباره برای کاربر
+      await tg.sendMessage(env, id, ui.supportReopenNotice({ id })).catch(() => {});
+    }
     return json({ ok: true, status: next });
   }
 
   if (path === "/panel/api/support/closeall" && req.method === "POST") {
-    const closed = await sup.closeAll(env);
+    const { tickets } = await sup.listTickets(env, "tickets");
+    const open = tickets.filter((t) => t.status === "open");
+    let closed = 0;
+    for (const t of open) {
+      await sup.closeTicket(env, t.id, "close_all");
+      await tg.sendMessage(env, t.id, ui.supportCloseNotice({ id: t.id, categoryLabel: t.categoryLabel, closeReason: "close_all" })).catch(() => {});
+      closed++;
+    }
     return json({ ok: true, closed });
   }
 

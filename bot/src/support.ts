@@ -1,13 +1,13 @@
-// Nika Net Launcher — پشتیبانی v2 (بازسازی تمیز و مینیمال).
+// Nika Net Launcher — پشتیبانی v3 (هوشمند، با دسته‌بندی خودکار، دلیل بستن و امتیاز).
 //
 // یک مدل دادهٔ واحد: هر کاربر حداکثر یک «گفتگو» دارد (کلید KV = "sup:<chatId>").
 //   - گفتگویی که کاربر شروع کند  → تیکت پشتیبانی (تب «پشتیبانی» در پنل)
 //   - گفتگویی که مالک شروع کند   → پیام شخصی   (تب «پیام شخصی» در پنل)
-// شروع‌کننده (startedBy) فقط هنگام ساخت گفتگو ثبت می‌شود و هرگز تغییر نمی‌کند —
-// به این ترتیب هیچ فیلدی وجود ندارد که به‌صورت ضمنی جابه‌جا شود و باگ بسازد.
 //
-// هر پیامِ ورودی کاربر دقیقاً یکی از ۳ حالت است (IncomingVerdict) و پیام تأیید
-// فقط از همین حالت تعیین می‌شود — یک‌جا، بدون پرچم‌های تودرتو.
+// شروع‌کننده (startedBy) هنگام ساخت ثبت می‌شود؛ فقط در دو حالت عوض می‌شود:
+//   ۱) کاربر خودش دستهٔ تیکت انتخاب کند (قصد صریح ثبت تیکت)
+//   ۲) بدنهٔ تیکت بعد از انتخاب دسته بیاید
+// به این ترتیب «ثبت تیکت» همیشه به تب پشتیبانی می‌رود، حتی اگر مالک قبلاً پیام شخصی زده باشد.
 
 import { Env } from "./types";
 import * as st from "./state";
@@ -29,6 +29,13 @@ export interface Ticket {
   unread: number; // پیام‌های کاربر که مالک هنوز نخوانده
   lastAt: number;
   lastText: string;
+  lastDir: Dir; // آخرین پیام از کی بود → برای نشانگر «در انتظار کی»
+  createdAt: number;
+  closedAt?: number;
+  closeReason?: string; // شناسهٔ دلیل بستن (solved / duplicate / spam / noreply / other / close_all)
+  closeNote?: string;   // یادداشت آزاد پشتیبانی هنگام بستن
+  rating?: number;      // امتیاز کاربر ۱ تا ۵ بعد از بستن
+  autoCat?: boolean;    // دسته به‌صورت خودکار حدس زده شد
   name: string;
   username: string;
   category?: string;      // شناسهٔ دسته (مثلاً "connect")
@@ -49,6 +56,66 @@ const textOf = (s: string) => clip(s, 4096);
 export const escTg = (s: string) =>
   String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/* ---------- دلایل بستن تیکت ---------- */
+export interface CloseReason { id: string; fa: string }
+export const CLOSE_REASONS: CloseReason[] = [
+  { id: "solved", fa: "✅ حل شد" },
+  { id: "duplicate", fa: "🔁 تکراری" },
+  { id: "spam", fa: "🤖 اسپم" },
+  { id: "noreply", fa: "⏳ کاربر بی‌پاسخ" },
+  { id: "other", fa: "🔕 سایر" },
+];
+export const closeReasonLabel = (id?: string): string =>
+  CLOSE_REASONS.find((c) => c.id === id)?.fa || "✅ بسته شد";
+
+/* ---------- دسته‌بندی هوشمند بر اساس کلمات کلیدی ---------- */
+const CAT_KEYWORDS: Array<{ id: string; fa: string; words: string[] }> = [
+  {
+    id: "connect", fa: "🔌 مشکل اتصال",
+    words: ["اتصال", "وصل", "کانکت", "قطع", "قطعی", "پینگ", "سرور", "نت", "اینترنت", "زیرو", "zero",
+      "connect", "connection", "ping", "server", "internet", "offline", "timeout", "دسترسی"],
+  },
+  {
+    id: "buy", fa: "💳 خرید و اشتراک",
+    words: ["خرید", "اشتراک", "پرداخت", "کارت", "تومان", "ریال", "تمدید", "قیمت", "فاکتور", "رسید",
+      "buy", "purchase", "payment", "pay", "subscribe", "renew", "invoice", "price", "قیمت"],
+  },
+  {
+    id: "account", fa: "👤 حساب و ورود",
+    words: ["ورود", "رمز", "پسورد", "حساب", "اکانت", "لاگین", "احراز", "کد ورود", "کد", "هویت",
+      "login", "password", "account", "token", "verify", "auth"],
+  },
+  {
+    id: "bug", fa: "⚙️ باگ یا خطا",
+    words: ["باگ", "خطا", "ارور", "کرش", "مشکل", "کار نمیکنه", "کار نمی‌کنه", "نمیشه", "هنگ", "فریز", "404", "500",
+      "bug", "error", "crash", "broken", "not working", "doesn't work", "issue"],
+  },
+  {
+    id: "idea", fa: "💡 پیشنهاد و انتقاد",
+    words: ["پیشنهاد", "انتقاد", "ایده", "بهتر", "لطفا", "کاش", "امکان", "قابلیت",
+      "suggestion", "idea", "feature", "improve", "feedback"],
+  },
+  {
+    id: "other", fa: "❓ سوال عمومی",
+    words: ["سوال", "چطور", "چجوری", "کجاست", "کی", "چی", "question", "how", "where", "what"],
+  },
+];
+
+// حدس دستهٔ تیکت از متن آزاد کاربر — اگر هیچ کلمه‌ای پیدا نشد null برمی‌گردد.
+export function guessCategory(text: string): { id: string; label: string } | null {
+  const t = String(text || "").toLowerCase();
+  if (!t) return null;
+  let best: { id: string; label: string; score: number } | null = null;
+  for (const cat of CAT_KEYWORDS) {
+    let score = 0;
+    for (const w of cat.words) {
+      if (t.includes(w)) score += w.length > 3 ? 2 : 1;
+    }
+    if (score > 0 && (!best || score > best.score)) best = { id: cat.id, label: cat.fa, score };
+  }
+  return best ? { id: best.id, label: best.label } : null;
+}
+
 // مهاجرت گفتگوهای قدیمی: فیلد `kind` (نسخه‌های قبلی) → `startedBy`
 function normalize(raw: any): Ticket {
   let startedBy: StartedBy = raw.startedBy;
@@ -60,6 +127,13 @@ function normalize(raw: any): Ticket {
     unread: Number(raw.unread) || 0,
     lastAt: Number(raw.lastAt) || 0,
     lastText: String(raw.lastText || ""),
+    lastDir: raw.lastDir === "out" ? "out" : "in",
+    createdAt: Number(raw.createdAt) || raw.lastAt || Date.now(),
+    closedAt: raw.closedAt || undefined,
+    closeReason: raw.closeReason || undefined,
+    closeNote: raw.closeNote || undefined,
+    rating: Number.isFinite(Number(raw.rating)) ? Number(raw.rating) : undefined,
+    autoCat: !!raw.autoCat,
     name: String(raw.name || ""),
     username: String(raw.username || ""),
     category: raw.category || undefined,
@@ -97,8 +171,10 @@ function emptyTicket(id: number, startedBy: StartedBy, who?: Who): Ticket {
     startedBy,
     status: "open",
     unread: 0,
-    lastAt: 0,
+    lastAt: Date.now(),
     lastText: "",
+    lastDir: "in",
+    createdAt: Date.now(),
     name: [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim(),
     username: who?.username || "",
     msgs: [],
@@ -106,11 +182,14 @@ function emptyTicket(id: number, startedBy: StartedBy, who?: Who): Ticket {
 }
 
 // پیام ورودی کاربر → ثبت + تعیین نوع (برای تأیید و اعلان)
+// opts.asTicket = true یعنی کاربر قصد صریح ثبت تیکت داشته (انتخاب دسته یا بدنهٔ تیکت):
+// در این حالت اگر گفتگوی قبلی «پیام شخصی» (شروع‌شده توسط مالک) بود، به تیکت تبدیل می‌شود.
 export async function recordIncoming(
   env: Env,
   id: number,
   text: string,
-  who?: Who
+  who?: Who,
+  opts: { asTicket?: boolean } = {}
 ): Promise<{ verdict: IncomingVerdict; ticket: Ticket }> {
   let t = await getTicket(env, id);
   let verdict: IncomingVerdict;
@@ -120,6 +199,10 @@ export async function recordIncoming(
   } else {
     const last = t.msgs[t.msgs.length - 1];
     verdict = last && last.dir === "out" ? "reply" : "followup";
+    if (opts.asTicket && t.startedBy !== "user") {
+      t.startedBy = "user"; // کاربر تیکت باز کرده → از پیام شخصی به پشتیبانی
+      verdict = "new_ticket";
+    }
     if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
     if (!t.username) t.username = who?.username || "";
   }
@@ -127,8 +210,21 @@ export async function recordIncoming(
   if (t.msgs.length > MAX_MSGS) t.msgs = t.msgs.slice(-MAX_MSGS);
   t.lastAt = Date.now();
   t.lastText = clip(text, 120);
+  t.lastDir = "in";
   t.unread = (t.unread || 0) + 1;
   t.status = "open"; // پیام جدید کاربر، گفتگو را دوباره باز می‌کند
+  t.closedAt = undefined;
+  t.closeReason = undefined;
+  t.closeNote = undefined;
+  // دسته‌بندی هوشمند: اگر دسته‌ای انتخاب نشده، از متن حدس بزن
+  if (!t.category) {
+    const g = guessCategory(text);
+    if (g) {
+      t.category = g.id;
+      t.categoryLabel = g.label;
+      t.autoCat = true;
+    }
+  }
   await putTicket(env, t);
   return { verdict, ticket: t };
 }
@@ -146,6 +242,7 @@ export async function recordOutgoing(
   if (t.msgs.length > MAX_MSGS) t.msgs = t.msgs.slice(-MAX_MSGS);
   t.lastAt = Date.now();
   t.lastText = clip(text, 120);
+  t.lastDir = "out";
   t.unread = 0;
   t.status = "open";
   await putTicket(env, t);
@@ -153,6 +250,7 @@ export async function recordOutgoing(
 }
 
 // انتخاب دستهٔ تیکت: گفتگو را می‌سازد (یا باز می‌کند) و دسته را ثبت می‌کند.
+// اگر گفتگوی قبلی «پیام شخصی» بود، به تیکت پشتیبانی تبدیل می‌شود.
 export async function openCategory(
   env: Env,
   id: number,
@@ -162,10 +260,12 @@ export async function openCategory(
 ): Promise<Ticket> {
   let t = await getTicket(env, id);
   if (!t) t = emptyTicket(id, "user", who);
+  if (t.startedBy !== "user") t.startedBy = "user"; // انتخاب دسته = قصد ثبت تیکت
   if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
   if (!t.username) t.username = who?.username || "";
   t.category = catId;
   t.categoryLabel = catLabel;
+  t.autoCat = false;
   t.status = "open";
   t.lastAt = Date.now();
   await putTicket(env, t);
@@ -204,6 +304,40 @@ export async function setStatus(env: Env, id: number, status: TicketStatus): Pro
   return t;
 }
 
+// بستن تیکت با دلیل + یادداشت (اختیاری)
+export async function closeTicket(env: Env, id: number, reason?: string, note?: string): Promise<Ticket | null> {
+  const t = await getTicket(env, id);
+  if (!t) return null;
+  t.status = "closed";
+  t.closedAt = Date.now();
+  t.closeReason = reason || "solved";
+  t.closeNote = note?.trim().slice(0, 300) || undefined;
+  await putTicket(env, t);
+  return t;
+}
+
+// بازکردن دوبارهٔ تیکت
+export async function reopenTicket(env: Env, id: number): Promise<Ticket | null> {
+  const t = await getTicket(env, id);
+  if (!t) return null;
+  t.status = "open";
+  t.closedAt = undefined;
+  t.closeReason = undefined;
+  t.closeNote = undefined;
+  t.lastAt = Date.now();
+  await putTicket(env, t);
+  return t;
+}
+
+export async function setRating(env: Env, id: number, rating: number): Promise<Ticket | null> {
+  const t = await getTicket(env, id);
+  if (!t) return null;
+  const r = Math.max(1, Math.min(5, Math.round(rating)));
+  t.rating = r;
+  await putTicket(env, t);
+  return t;
+}
+
 export interface TicketMeta {
   id: number;
   startedBy: StartedBy;
@@ -211,6 +345,12 @@ export interface TicketMeta {
   unread: number;
   lastAt: number;
   lastText: string;
+  lastDir: Dir;
+  createdAt: number;
+  closedAt?: number;
+  closeReason?: string;
+  rating?: number;
+  autoCat?: boolean;
   name: string;
   username: string;
   category?: string;
@@ -242,6 +382,12 @@ export async function listTickets(
           unread: t.unread,
           lastAt: t.lastAt,
           lastText: t.lastText,
+          lastDir: t.lastDir,
+          createdAt: t.createdAt,
+          closedAt: t.closedAt,
+          closeReason: t.closeReason,
+          rating: t.rating,
+          autoCat: t.autoCat,
           name: t.name,
           username: t.username,
           category: t.category,
@@ -265,7 +411,7 @@ export async function closeAll(env: Env): Promise<number> {
   let n = 0;
   for (const t of tickets) {
     if (t.status === "open") {
-      await setStatus(env, t.id, "closed");
+      await closeTicket(env, t.id, "close_all");
       n++;
     }
   }
