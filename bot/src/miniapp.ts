@@ -385,7 +385,7 @@ export async function handleMiniApp(env: Env, req: Request, url: URL): Promise<R
 
   if (path === "/app/api/send" && req.method === "POST") {
     const b = await readJson(req);
-    const user = await verifyInitData(env, String(b.initData || ""));
+    const user = await verifyInitData(env, url.searchParams.get("initData") || String(b.initData || ""));
     if (!user) return json({ ok: false, error: "unauthorized" }, 401);
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!text) return json({ ok: false, error: "پیام خالی است" }, 400);
@@ -394,11 +394,9 @@ export async function handleMiniApp(env: Env, req: Request, url: URL): Promise<R
       lastName: user.last_name,
       username: user.username,
     });
-    if (r.created) {
-      const owner = await st.getOwner(env);
-      if (owner && owner !== user.id) {
-        await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text)).catch(() => {});
-      }
+    const owner = await st.getOwner(env);
+    if (owner && owner !== user.id) {
+      await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, r.created)).catch(() => {});
     }
     return json({ ok: true, ticket: r.ticket, created: r.created });
   }

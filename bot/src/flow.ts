@@ -349,13 +349,13 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         lastName: msg.from?.last_name,
         username: msg.from?.username,
       });
+      const owner = await st.getOwner(env);
+      if (owner && owner !== chatId) {
+        await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, r.created)).catch(() => {});
+      }
       if (r.created) {
         const s2 = await st.getState(env, chatId);
         await tg.sendMessage(env, chatId, ui.supportAck(s2));
-        const owner = await st.getOwner(env);
-        if (owner && owner !== chatId) {
-          await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text)).catch(() => {});
-        }
       }
       return;
     }

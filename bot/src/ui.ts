@@ -298,12 +298,30 @@ export function supportAck(s: UserState): string {
     : "🎫 <b>Your ticket has been submitted!</b>\n\nThe Nika Net support team will reply to you right here soon. Feel free to add more details. 📬";
 }
 
-// اعلان به مالک هنگام ثبت تیکت جدید
-export function supportNotify(ticket: { name?: string; username?: string }, text: string): string {
+// اعلان به مالک هنگام پیام کاربر — تیکت جدید یا پاسخ جدید
+export function supportNotify(ticket: { name?: string; username?: string }, text: string, created = true): string {
   const who = ticket.name ? `<b>${esc(ticket.name)}</b>` : "کاربر ناشناس";
   const un = ticket.username ? ` (@${esc(ticket.username)})` : "";
   const snippet = esc(text.slice(0, 140));
-  return `🎫 <b>تیکت جدید پشتیبانی</b>\n\n👤 ${who}${un}\n💬 ${snippet}\n\nبرای پاسخ، پنل مدیریت → بخش «پشتیبانی» را باز کن.`;
+  const head = created ? "🎫 <b>تیکت جدید پشتیبانی</b>" : "💬 <b>پاسخ جدید کاربر</b>";
+  const hint = created
+    ? "برای پاسخ، پنل مدیریت → بخش «پشتیبانی» را باز کن."
+    : "برای جواب دادن، پنل مدیریت → «پشتیبانی» یا «پیام شخصی» را باز کن.";
+  return `${head}\n\n👤 ${who}${un}\n💬 ${snippet}\n\n${hint}`;
+}
+
+// پاکت «پیام شخصی» مالک → کاربر: هدر حریم خصوصی + متن + راهنمای پاسخ
+export function pmEnvelope(escapedText: string): string {
+  return [
+    "🔒 <b>پیام خصوصی از Nika Net</b>",
+    "این پیام خصوصی است و خودِ Nika Net به شما پیام داده.",
+    "نگران نباشید — هیچ‌کس قرار نیست چت ما را ببیند.",
+    "",
+    "──────────────",
+    escapedText,
+    "──────────────",
+    "↩️ برای پاسخ، همین‌جا پیامت را بنویس.",
+  ].join("\n");
 }
 
 /* ============================ main menu ⚡ ============================ */

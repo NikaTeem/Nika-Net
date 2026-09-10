@@ -11,6 +11,7 @@ import * as tg from "./telegram";
 import * as st from "./state";
 import * as fj from "./forcedjoin";
 import * as sup from "./support";
+import * as ui from "./ui";
 
 const PANEL_HTML = `<!doctype html>
 <html lang="fa" dir="rtl">
@@ -1562,7 +1563,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!Number.isInteger(id) || !text) return json({ error: "invalid" }, 400);
     await sup.addOwnerMessage(env, id, text);
-    const sent = await tg.sendMessage(env, id, sup.escTg(text)).catch(() => null);
+    const sent = await tg.sendMessage(env, id, ui.pmEnvelope(sup.escTg(text))).catch(() => null);
     if (!sent || !sent.ok) {
       return json({ ok: false, error: "تلگرام پیام را نپذیرفت (کاربر شاید ربات را بلاک کرده باشد)." });
     }
