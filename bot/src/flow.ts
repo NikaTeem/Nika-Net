@@ -338,6 +338,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         const m = ui.mainMenu(s, msg.from?.first_name, true);
         return void (await tg.sendMessage(env, chatId, m.text, m.kb));
       }
+      if (!text) return; // استیکر/عکس/فایل بدون متن → نادیده بگیر
       const r = await sup.addUserMessage(env, chatId, text, {
         firstName: msg.from?.first_name,
         lastName: msg.from?.last_name,
