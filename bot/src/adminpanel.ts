@@ -335,6 +335,7 @@ const PANEL_HTML = `<!doctype html>
   .spill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;gap:6px;flex:none}
   .spill.ok{background:rgba(49,208,170,.14);color:var(--green)}
   .spill.mut{background:rgba(255,255,255,.08);color:var(--muted)}
+  .cat{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;background:rgba(124,77,255,.14);color:#b39dff;border:1px solid rgba(124,77,255,.3);margin-inline-start:2px}
   .empty{padding:40px 20px;text-align:center;color:var(--muted)}
   .empty .e{font-size:38px;margin-bottom:8px}
   .card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)}
@@ -794,7 +795,8 @@ const PANEL_HTML = `<!doctype html>
       li.setAttribute("data-id", t.id);
       if (ns.activeTicket === t.id) li.classList.add("on");
       li.innerHTML = avatar(t.name || t.username || "", t.id) +
-        '<div class="umeta"><div class="n">' + esc(t.name || "کاربر " + t.id) + "</div>" +
+        '<div class="umeta"><div class="n">' + esc(t.name || "کاربر " + t.id) +
+        (t.categoryLabel ? ' <span class="cat">🏷 ' + esc(t.categoryLabel) + "</span>" : "") + "</div>" +
         '<div class="t">' + esc(t.lastText || "") + "</div></div>" +
         '<span class="spill ' + (t.status === "open" ? "ok" : "mut") + '">' + (t.status === "open" ? "باز" : "بسته") + "</span>";
       if (t.unread > 0) li.insertAdjacentHTML("beforeend", '<span class="unread">' + t.unread + "</span>");
@@ -811,7 +813,9 @@ const PANEL_HTML = `<!doctype html>
     var t = r.j.ticket;
     $("#tk-head").innerHTML = avatar(t.name || t.username || "", t.id) +
       '<div class="meta"><div class="n">' + esc(t.name || "کاربر " + t.id) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + "</div>" +
-      '<div class="s"><span dir="ltr">' + t.id + "</span> · وضعیت: " + (t.status === "open" ? "باز ✅" : "بسته 🔒") + "</div></div>";
+      '<div class="s"><span dir="ltr">' + t.id + "</span> · " +
+      (t.categoryLabel ? "🏷 " + esc(t.categoryLabel) + " · " : "") +
+      "وضعیت: " + (t.status === "open" ? "باز ✅" : "بسته 🔒") + "</div></div>";
     $("#tk-id").value = t.id;
     $("#tk-toggle").textContent = t.status === "open" ? "🔒 بستن تیکت" : "🔓 بازکردن تیکت";
     $$("#ticket-list li").forEach(function (li) { li.classList.toggle("on", Number(li.getAttribute("data-id")) === id); });
@@ -1570,9 +1574,8 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!Number.isInteger(id) || !text) return json({ error: "invalid" }, 400);
     await sup.addOwnerMessage(env, id, text);
-    // دکمهٔ «پاسخ دادن» → اپ پشتیبانی (همان گفتگو) تا کاربر مستقیم پاسخ بدهد
-    const meta = await fj.botMeta(env);
-    const kb = tg.kb([[{ text: "💬 پاسخ دادن", web_app: `${meta.origin}/app/support`, color: "primary", emoji: false }]]);
+    // دکمهٔ «پاسخ دادن» → کاربر پاسخش را مستقیم در چت می‌نویسد (بدون Mini App)
+    const kb = tg.kb([[{ text: "💬 پاسخ دادن", cb: "pm:reply", color: "primary", emoji: false }]]);
     const sent = await tg.sendMessage(env, id, ui.pmEnvelope(sup.escTg(text)), kb).catch(() => null);
     if (!sent || !sent.ok) {
       return json({ ok: false, error: "تلگرام پیام را نپذیرفت (کاربر شاید ربات را بلاک کرده باشد)." });

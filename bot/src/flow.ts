@@ -136,15 +136,21 @@ export async function broadcastAll(env: Env, text: string): Promise<{ sent: numb
   return { sent, total: ids.length };
 }
 
-// دکمهٔ منوی ربات (کنار کادر نوشتن) را روی «🎧 پشتیبانی» (وب‌اپ تلگرام) می‌گذارد — idempotent.
+// دکمهٔ منوی ربات (کنار کادر نوشتن) → لیست دستورها + ثبت دستور /support — idempotent.
 export async function ensureMenuButton(env: Env): Promise<void> {
   try {
-    const meta = await fj.botMeta(env);
-    const url = `${meta.origin}/app/support`;
+    const flag = "commands-v1";
     const cur = (await env.BOT_KV.get("menuButton")) || "";
-    if (cur === url) return;
-    await tg.setChatMenuButton(env, "🎧 پشتیبانی", url);
-    await env.BOT_KV.put("menuButton", url).catch(() => {});
+    if (cur !== flag) {
+      await tg.setCommandsMenuButton(env);
+      await tg.setMyCommands(env, [
+        { command: "start", description: "🏠 شروع / منوی اصلی" },
+        { command: "menu", description: "📋 منوی اصلی" },
+        { command: "support", description: "🎧 پشتیبانی و ثبت تیکت" },
+        { command: "lang", description: "🌐 تغییر زبان / Change language" },
+      ]);
+      await env.BOT_KV.put("menuButton", flag).catch(() => {});
+    }
   } catch {
     /* ignore */
   }
@@ -256,16 +262,14 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     let s = await st.getState(env, chatId);
     s.state = "idle";
     await st.saveState(env, chatId, s);
-    const meta = await fj.botMeta(env);
-    const appUrl = `${meta.origin}/app/support`;
     await ensureMenuButton(env);
-    // دیپ‌لینک /start support → مستقیم به پشتیبانی (بدون گام میانی)
+    // دیپ‌لینک /start support → مستقیم به انتخاب دستهٔ تیکت (بدون گام میانی)
     if (payload === "support") {
-      const sm = ui.supportIntro(s, appUrl);
+      const sm = ui.supportMenu(s);
       return void (await tg.sendMessage(env, chatId, sm.text, sm.kb));
     }
     const fname = msg.from?.first_name || "";
-    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, appUrl));
+    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s));
     const m = await tg.sendMessage(env, chatId, "🎨");
     const msgId = m?.result?.message_id as number | undefined;
     const intro = t(L(s), "w_hello", { n: ui.esc(fname) });
@@ -274,7 +278,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         await tg.editMessage(env, chatId, msgId, `🎨 ${intro.slice(0, i)}▌`).catch(() => {});
         await sleep(70);
       }
-      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId), meta);
+      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId));
       await tg.editMessage(env, chatId, msgId, mm.text, mm.kb).catch(() => {});
     }
     return;
@@ -282,8 +286,13 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
   if (text === "/menu") {
     const s = await st.getState(env, chatId);
-    const meta = await fj.botMeta(env);
-    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId), meta);
+    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
+  if (text === "/support" || text.toLowerCase() === "support") {
+    const s = await st.getState(env, chatId);
+    const m = ui.supportMenu(s);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
 
@@ -291,8 +300,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     const s = await st.getState(env, chatId);
     s.lang = s.lang === "fa" ? "en" : "fa";
     await st.saveState(env, chatId, s);
-    const meta = await fj.botMeta(env);
-    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, `${meta.origin}/app/support`));
+    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s));
     const m = ui.settingsMenu(s);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
@@ -327,7 +335,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   if (rl) {
     const s = await st.getState(env, chatId);
     if (rl === "menu") {
-      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId), await fj.botMeta(env));
+      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
     if (rl === "panels") {
@@ -336,8 +344,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     }
     if (rl === "new") return await buildEntry(env, chatId, msg.message_id);
     if (rl === "support") {
-      const meta = await fj.botMeta(env);
-      const m = ui.supportIntro(s, `${meta.origin}/app/support`);
+      const m = ui.supportMenu(s);
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
   }
@@ -363,7 +370,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     default: {
       // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
       if (await isOwner(env, chatId)) {
-        const m = ui.mainMenu(s, msg.from?.first_name, true, await fj.botMeta(env));
+        const m = ui.mainMenu(s, msg.from?.first_name, true);
         return void (await tg.sendMessage(env, chatId, m.text, m.kb));
       }
       if (!text) return; // استیکر/عکس/فایل بدون متن → نادیده بگیر
@@ -973,8 +980,9 @@ async function navMenu(env: Env, chatId: number, msgId: number, name: string, fi
     case "tokens": m = ui.tokensMenu(s); break;
     case "settings": m = ui.settingsMenu(s); break;
     case "help": m = ui.helpMenu(s); break;
+    case "support": m = ui.supportMenu(s); break;
     case "owner": m = ui.ownerMenu(s, await fj.botMeta(env)); break;
-    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId), await fj.botMeta(env));
+    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
   }
   await reply(env, chatId, msgId, m.text, m.kb);
 }
@@ -997,7 +1005,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     if (joined) {
       const wmsg = cfg.verifyMessage?.trim() || t(L(s), "fj_welcome");
       await tg.sendMessage(env, chatId, wmsg).catch(() => {});
-      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId), await fj.botMeta(env));
+      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
       await tg.sendMessage(env, chatId, m.text, m.kb);
     }
     return;
@@ -1015,6 +1023,25 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     const name = data.split(":")[1];
     await tg.answerCallback(env, cq.id).catch(() => {});
     return await navMenu(env, chatId, msgId, name, firstName);
+  }
+
+  /* ---------- پشتیبانی: انتخاب دستهٔ تیکت ---------- */
+  if (data.startsWith("sup:cat:")) {
+    const cat = ui.catOf(data.slice("sup:cat:".length));
+    if (!cat) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    await sup.openCategory(env, chatId, cat.id, L(s) === "fa" ? cat.fa : cat.en, {
+      firstName: cq.from?.first_name,
+      lastName: cq.from?.last_name,
+      username: cq.from?.username,
+    });
+    await tg.answerCallback(env, cq.id, `🏷 ${L(s) === "fa" ? cat.fa : cat.en}`).catch(() => {});
+    return void (await tg.sendMessage(env, chatId, ui.supportChosen(s, cat)));
+  }
+
+  // دکمهٔ «پاسخ دادن» روی پیام شخصی مالک → کاربر همین‌جا بنویسد (بدون Mini App)
+  if (data === "pm:reply") {
+    await tg.answerCallback(env, cq.id, "✍️ پیامت رو همین‌جا بنویس").catch(() => {});
+    return;
   }
 
   /* ---------- forced join (owner) ---------- */
@@ -1126,8 +1153,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   if (data === "do:lang") {
     s.lang = s.lang === "fa" ? "en" : "fa";
     await st.saveState(env, chatId, s);
-    const meta = await fj.botMeta(env);
-    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, `${meta.origin}/app/support`));
+    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s));
     const m = ui.settingsMenu(s);
     await tg.answerCallback(env, cq.id).catch(() => {});
     return void (await reply(env, chatId, msgId, m.text, m.kb));

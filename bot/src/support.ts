@@ -23,6 +23,8 @@ export interface Ticket {
   lastText: string;
   name: string;
   username: string;
+  category?: string; // دستهٔ انتخاب‌شده (شناسه)
+  categoryLabel?: string; // برچسب فارسی/انگلیسی دسته
   msgs: SupportMsg[];
 }
 
@@ -127,6 +129,40 @@ export async function ensureThread(env: Env, id: number): Promise<void> {
   }
 }
 
+// انتخاب دستهٔ تیکت: اگر گفتگوی بازی نباشد می‌سازد و دسته را ثبت می‌کند.
+// (جایگزین Mini App پشتیبانی — تیکت با انتخاب دسته شروع می‌شود.)
+export async function openCategory(
+  env: Env,
+  id: number,
+  catId: string,
+  catLabel: string,
+  who?: Who
+): Promise<Ticket> {
+  let t = await getTicket(env, id);
+  if (!t || t.status === "closed") {
+    t = {
+      id,
+      kind: "ticket",
+      status: "open",
+      unread: 0,
+      lastAt: Date.now(),
+      lastText: "🏷 " + catLabel,
+      name: [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim(),
+      username: who?.username || "",
+      msgs: [],
+    };
+  } else {
+    t.status = "open";
+  }
+  if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
+  if (!t.username) t.username = who?.username || "";
+  t.category = catId;
+  t.categoryLabel = catLabel;
+  t.lastAt = Date.now();
+  await putTicket(env, t);
+  return t;
+}
+
 export async function markRead(env: Env, id: number): Promise<void> {
   const t = await getTicket(env, id);
   if (t && t.unread) {
@@ -152,6 +188,8 @@ export interface TicketMeta {
   lastText: string;
   name: string;
   username: string;
+  category?: string;
+  categoryLabel?: string;
 }
 
 export async function listTickets(env: Env): Promise<{ tickets: TicketMeta[]; open: number; unread: number }> {
@@ -175,6 +213,8 @@ export async function listTickets(env: Env): Promise<{ tickets: TicketMeta[]; op
           lastText: t.lastText || "",
           name: t.name || "",
           username: t.username || "",
+          category: t.category || "",
+          categoryLabel: t.categoryLabel || "",
         });
       } catch {
         /* skip corrupt */

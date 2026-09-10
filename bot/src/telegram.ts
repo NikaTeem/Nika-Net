@@ -22,7 +22,6 @@ export interface Btn {
   cb?: string;
   url?: string;
   copy?: string;
-  web_app?: string; // آدرس Mini App تلگرام
   color?: Color | string | null; // also accepts فارسی/english aliases & "gray"
   emoji?: string | false; // default "auto" → circle emoji per color
 }
@@ -32,12 +31,11 @@ interface InlineButton {
   callback_data?: string;
   url?: string;
   copy_text?: { text: string };
-  web_app?: { url: string };
   style?: string;
 }
 
 export interface Kb { inline_keyboard: InlineButton[][] }
-export interface ReplyKb { keyboard: Array<Array<{ text: string; web_app?: { url: string } }>>; resize_keyboard: boolean; one_time_keyboard?: boolean }
+export interface ReplyKb { keyboard: Array<Array<{ text: string }>>; resize_keyboard: boolean; one_time_keyboard?: boolean }
 
 const CEMOJI: Record<string, string> = { primary: "🔵", success: "🟢", danger: "🔴", "": "⚪" };
 const ALIAS: Record<string, string | null> = {
@@ -71,7 +69,6 @@ export function kb(rows: Btn[][]): Kb {
         const btn: InlineButton = { text: emojiOf(b.text, style, b.emoji) };
         if (b.copy) btn.copy_text = { text: b.copy };
         else if (b.url) btn.url = b.url;
-        else if (b.web_app) btn.web_app = { url: b.web_app };
         else btn.callback_data = b.cb || "noop";
         if (style) btn.style = style;
         return btn;
@@ -80,7 +77,7 @@ export function kb(rows: Btn[][]): Kb {
   };
 }
 
-export function replyKb(rows: Array<Array<{ text: string; web_app?: { url: string } }>>, oneTime = false): ReplyKb {
+export function replyKb(rows: Array<Array<{ text: string }>>, oneTime = false): ReplyKb {
   return { keyboard: rows, resize_keyboard: true, one_time_keyboard: oneTime };
 }
 
@@ -158,11 +155,13 @@ export function sendDocument(env: Env, chatId: number, filename: string, content
   return fetch(`${API}/bot${env.TELEGRAM_TOKEN}/sendDocument`, { method: "POST", body: form });
 }
 
-// دکمهٔ منوی ربات (کنار کادر نوشتن) → باز شدن مستقیم اپ پشتیبانی
-export function setChatMenuButton(env: Env, text: string, webAppUrl: string) {
-  return tgApi(env, "setChatMenuButton", {
-    menu_button: { type: "web_app", text, web_app: { url: webAppUrl } },
-  });
+// دکمهٔ منوی ربات (کنار کادر نوشتن) → لیست دستورها (پشتیبانی به‌صورت کامند /support)
+export function setCommandsMenuButton(env: Env) {
+  return tgApi(env, "setChatMenuButton", { menu_button: { type: "commands" } });
+}
+
+export function setMyCommands(env: Env, commands: Array<{ command: string; description: string }>) {
+  return tgApi(env, "setMyCommands", { commands });
 }
 
 // list every chat id that ever interacted with the bot (state keys start with "u:")

@@ -4,7 +4,6 @@ import { Env } from "./types";
 import * as tg from "./telegram";
 import { handleUpdate, broadcastAll, announceLatest, handleScheduled } from "./flow";
 import { handlePanel } from "./adminpanel";
-import { handleMiniApp } from "./miniapp";
 
 const infoHtml = `<!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8"/><title>Nika Net Launcher</title>
@@ -24,19 +23,6 @@ export default {
         return await handlePanel(env, req, url);
       } catch (err) {
         console.error("panel error:", err);
-        return new Response(
-          JSON.stringify({ ok: false, error: String((err as Error)?.message || err) }),
-          { status: 500, headers: { "content-type": "application/json; charset=utf-8" } }
-        );
-      }
-    }
-
-    // Telegram Mini App — پشتیبانی (/app/support) + API با تأیید initData
-    if (url.pathname === "/app/support" || url.pathname.startsWith("/app/")) {
-      try {
-        return await handleMiniApp(env, req, url);
-      } catch (err) {
-        console.error("miniapp error:", err);
         return new Response(
           JSON.stringify({ ok: false, error: String((err as Error)?.message || err) }),
           { status: 500, headers: { "content-type": "application/json; charset=utf-8" } }

@@ -243,11 +243,9 @@ function pageRow(lang: Lang, page: number, total: number, prefix: string): Btn[]
 
 /* ============================ reply keyboard ⌨️ ============================ */
 
-export function replyMenu(s: UserState, appUrl?: string): ReplyKb {
+export function replyMenu(s: UserState): ReplyKb {
   const lang = L(s);
-  const supBtn = appUrl
-    ? { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support", web_app: { url: appUrl } }
-    : { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support" };
+  const supBtn = { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support" };
   if (lang === "fa") {
     return replyKb([[{ text: "🚀 ساخت پنل" }], [{ text: "🗂 پنل‌ها" }, { text: "🏠 منو" }], [supBtn]]);
   }
@@ -263,30 +261,47 @@ export const REPLY_LABELS: Record<string, "menu" | "panels" | "new" | "support">
 
 /* ============================ پشتیبانی 🎧 ============================ */
 
-export function supportIntro(s: UserState, appUrl?: string): { text: string; kb: Kb } {
+export interface SupportCat { id: string; fa: string; en: string }
+
+export const SUPPORT_CATS: SupportCat[] = [
+  { id: "connect", fa: "🔌 مشکل اتصال", en: "🔌 Connection issue" },
+  { id: "buy", fa: "💳 خرید و اشتراک", en: "💳 Purchase & subscription" },
+  { id: "account", fa: "👤 حساب و ورود", en: "👤 Account & login" },
+  { id: "bug", fa: "⚙️ باگ یا خطا", en: "⚙️ Bug or error" },
+  { id: "idea", fa: "💡 پیشنهاد و انتقاد", en: "💡 Suggestion & feedback" },
+  { id: "other", fa: "❓ سوال عمومی", en: "❓ General question" },
+];
+
+export const catOf = (id: string): SupportCat | undefined => SUPPORT_CATS.find((c) => c.id === id);
+
+// منوی انتخاب دستهٔ تیکت (جایگزین Mini App پشتیبانی)
+export function supportMenu(s: UserState): { text: string; kb: Kb } {
   const lang = L(s);
   const title = lang === "fa" ? "پشتیبانی Nika Net" : "Nika Net Support";
   const body =
     lang === "fa"
-      ? [
-          "سلام! 👋",
-          "",
-          "دکمهٔ «باز کردن اپ پشتیبانی» رو بزن تا چت زنده باز بشه.",
-          "یا همین‌جا پیامت رو بنویس — مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا می‌گیری. 📬",
-        ].join("\n")
-      : [
-          "Hi! 👋",
-          "",
-          "Tap “Open support app” to launch the live chat.",
-          "Or type your message right here — it goes straight to our team and you'll get the answer here. 📬",
-        ].join("\n");
+      ? ["سلام! 👋", "", "موضوع تیکتت رو انتخاب کن تا سریع‌تر کمکت کنیم:"].join("\n")
+      : ["Hi! 👋", "", "Pick a topic for your ticket so we can help faster:"].join("\n");
   const rows: Btn[][] = [];
-  if (appUrl) rows.push([{ text: lang === "fa" ? "📱 باز کردن اپ پشتیبانی" : "📱 Open support app", web_app: appUrl, color: "primary", emoji: false }]);
+  for (let i = 0; i < SUPPORT_CATS.length; i += 2) {
+    const a = SUPPORT_CATS[i];
+    const b = SUPPORT_CATS[i + 1];
+    const row: Btn[] = [{ text: lang === "fa" ? a.fa : a.en, cb: `sup:cat:${a.id}`, color: "primary", emoji: false }];
+    if (b) row.push({ text: lang === "fa" ? b.fa : b.en, cb: `sup:cat:${b.id}`, color: "primary", emoji: false });
+    rows.push(row);
+  }
   rows.push([{ text: lang === "fa" ? "🏠 بازگشت به منو" : "🏠 Back to menu", cb: "menu:main", color: "gray", emoji: false }]);
   return {
-    text: makeText(title, body, lang === "fa" ? "پیامت رو بنویس…" : "Type your message…", lang === "fa" ? "پشتیبانی" : "Support", "help"),
+    text: makeText(title, body, lang === "fa" ? "یک گزینه را انتخاب کن" : "Pick one", lang === "fa" ? "پشتیبانی" : "Support", "help"),
     kb: kb(rows),
   };
+}
+
+// پس از انتخاب دسته — کاربر توضیحش را می‌نویسد
+export function supportChosen(s: UserState, cat: SupportCat): string {
+  return L(s) === "fa"
+    ? `🎫 <b>دستهٔ «${esc(cat.fa)}» انتخاب شد.</b>\n\nحالا مشکل یا سؤالت رو بنویس — مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا می‌گیری. 📬`
+    : `🎫 <b>Category “${esc(cat.en)}” selected.</b>\n\nNow describe your issue — it goes straight to our team and you'll get the answer right here. 📬`;
 }
 
 // تأیید ثبت تیکت (فقط برای اولین پیام هر تیکت)
@@ -297,15 +312,16 @@ export function supportAck(s: UserState): string {
 }
 
 // اعلان به مالک هنگام پیام کاربر — تیکت جدید یا پاسخ جدید
-export function supportNotify(ticket: { name?: string; username?: string }, text: string, created = true): string {
+export function supportNotify(ticket: { name?: string; username?: string; categoryLabel?: string }, text: string, created = true): string {
   const who = ticket.name ? `<b>${esc(ticket.name)}</b>` : "کاربر ناشناس";
   const un = ticket.username ? ` (@${esc(ticket.username)})` : "";
+  const cat = ticket.categoryLabel ? ` · 🏷 ${esc(ticket.categoryLabel)}` : "";
   const snippet = esc(text.slice(0, 140));
   const head = created ? "🎫 <b>تیکت جدید پشتیبانی</b>" : "💬 <b>پاسخ جدید کاربر</b>";
   const hint = created
     ? "برای پاسخ، پنل مدیریت → بخش «پشتیبانی» را باز کن."
     : "برای جواب دادن، پنل مدیریت → «پشتیبانی» یا «پیام شخصی» را باز کن.";
-  return `${head}\n\n👤 ${who}${un}\n💬 ${snippet}\n\n${hint}`;
+  return `${head}\n\n👤 ${who}${un}${cat}\n💬 ${snippet}\n\n${hint}`;
 }
 
 // پاکت «پیام شخصی» مالک → کاربر: هدر حریم خصوصی + متن + راهنمای پاسخ
@@ -324,7 +340,7 @@ export function pmEnvelope(escapedText: string): string {
 
 /* ============================ main menu ⚡ ============================ */
 
-export function mainMenu(s: UserState, firstName?: string, isOwner = false, meta?: BotMeta): { text: string; kb: Kb } {
+export function mainMenu(s: UserState, firstName?: string, isOwner = false): { text: string; kb: Kb } {
   const lang = L(s);
   const name = firstName ? esc(firstName) : "دوست";
   const at = activeTok(s);
@@ -347,12 +363,11 @@ export function mainMenu(s: UserState, firstName?: string, isOwner = false, meta
       { text: t(lang, "b_settings"), cb: "menu:settings", color: "gray", emoji: false },
     ],
     [{ text: t(lang, "upd_all"), cb: "upd:all", color: "primary", emoji: false }],
-    [{ text: t(lang, "b_help"), cb: "menu:help", color: "gray", emoji: false }],
+    [
+      { text: t(lang, "b_help"), cb: "menu:help", color: "gray", emoji: false },
+      { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support", cb: "menu:support", color: "primary", emoji: false },
+    ],
   ];
-  // اپ پشتیبانی (Mini App تلگرام)
-  if (meta?.origin) {
-    rows.push([{ text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support", web_app: `${meta.origin}/app/support`, color: "primary", emoji: false }]);
-  }
   // مالک فقط — مدیریت بات (عضویت اجباری + ادمین کردن در کانال)
   if (isOwner) {
     rows.push([{ text: t(lang, "o_menu"), cb: "menu:owner", color: "danger", emoji: false }]);
