@@ -47,7 +47,7 @@ const NAMES = {
 
 /* ---------- parse & merge ---------- */
 const pool = new Map(); // CC -> Map("ip:port" -> true) preserving insertion order
-const files = readdirSync(UPLOADS).filter((f) => /^ALL-\d{4}-\d{2}-\d{2}\.txt$/.test(f)).sort();
+const files = readdirSync(UPLOADS).filter((f) => /^ALL-\d{4}-\d{2}-\d{2}( \(\d+\))?\.txt$/.test(f)).sort();
 if (!files.length) { console.error("✘ no ALL-*.txt files found in", UPLOADS); process.exit(1); }
 console.log("reading", files.length, "files:", files.join(", "));
 

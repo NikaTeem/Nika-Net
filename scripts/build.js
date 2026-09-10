@@ -27,6 +27,23 @@ if (existsSync(join(ROOT, "ui", "pool-meta.json"))) {
 }
 html = html.replace("__POOL_DATA__", () => poolJson).replace("__META_DATA__", () => metaJson);
 
+// Colo pool (the "Speed Engine"): verified-anycast IPs mapped to their
+// Cloudflare datacenter + coordinates → per-user low-ping ranking.
+let coloPoolJson = "{}";
+if (existsSync(join(ROOT, "ui", "colo-pool.json"))) {
+  coloPoolJson = readFileSync(join(ROOT, "ui", "colo-pool.json"), "utf8");
+}
+
+// Scanner seed (verified clean IPs) — injected as a JS array into the HTML.
+let scanIpsJson = "[]";
+if (existsSync(join(ROOT, "ui", "scan-ips.json"))) {
+  try {
+    const seed = JSON.parse(readFileSync(join(ROOT, "ui", "scan-ips.json"), "utf8"));
+    scanIpsJson = JSON.stringify(Array.isArray(seed.ips) ? seed.ips : []);
+  } catch { /* fall back to [] */ }
+}
+html = html.replace("__SCAN_IPS__", () => scanIpsJson);
+
 const result = await build({
   entryPoints: [join(ROOT, "src/worker.ts")],
   bundle: true,
@@ -39,6 +56,7 @@ const result = await build({
     PANEL_HTML: JSON.stringify(html),
     NIKA_VERSION: JSON.stringify(pkg.version),
     QRCODE_LIB: JSON.stringify(qrcodeLib),
+    COLO_POOL: JSON.stringify(coloPoolJson),
   },
   legalComments: "none",
 });

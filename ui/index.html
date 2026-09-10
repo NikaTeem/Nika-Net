@@ -689,6 +689,15 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
         <div class="d" id="relayCurrent" style="margin-top:10px"></div>
       </div>
       <div class="card" style="margin-top:16px">
+        <div class="card-title"><span>⚡ <span data-i18n="speed.title">تست سرعت واقعی</span></span><span class="mini" data-i18n="speed.desc">اندازه‌گیری پهنای باند مسیر تو تا ورکر</span></div>
+        <div class="d" style="margin-top:6px" data-i18n="speed.help">یک فایل از همین ورکر دانلود می‌شود (همان مسیر واقعی پروکسی) تا سرعت و تأخیر واقعیِ شبکهٔ تو مشخص شود.</div>
+        <div class="copy-row" style="margin-top:14px">
+          <button class="btn btn-primary" id="speedStart" style="width:auto">⚡ <span data-i18n="speed.start">شروع تست</span></button>
+        </div>
+        <div class="scan-counters" id="speedStatus" style="margin-top:12px"><span data-i18n="speed.empty">هنوز تستی انجام نشده</span></div>
+        <div class="d" id="speedGauge" style="margin-top:10px"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
         <div class="card-title"><span>✎ <span data-i18n="scan.results">نتایج زنده</span></span>
           <span style="display:flex;gap:8px">
             <button class="btn btn-ghost" id="scanCopy" style="padding:8px 14px;font-size:12px">📋 <span data-i18n="scan.copy">کپی</span></button>
@@ -1246,6 +1255,14 @@ I18N.fa["relay.best"] = "بهترین";
 I18N.fa["relay.current"] = "دامنهٔ رلهٔ فعلی";
 I18N.fa["relay.none"] = "هیچ دامنهٔ سالمی پیدا نشد";
 I18N.fa["relay.applied"] = "دامنهٔ رله اعمال شد ✓ — کانفیگ ها از الان از این دامنه استفاده می کنند";
+I18N.fa["speed.title"] = "تست سرعت واقعی";
+I18N.fa["speed.desc"] = "اندازه‌گیری پهنای باند مسیر تو تا ورکر";
+I18N.fa["speed.help"] = "یک فایل از همین ورکر دانلود می‌شود (همان مسیر واقعی پروکسی) تا سرعت و تأخیر واقعیِ شبکهٔ تو مشخص شود.";
+I18N.fa["speed.start"] = "شروع تست";
+I18N.fa["speed.empty"] = "هنوز تستی انجام نشده";
+I18N.fa["speed.running"] = "در حال دانلود و اندازه‌گیری…";
+I18N.fa["speed.done"] = "سرعت: {mbps} مگابیت‌برثانیه · تأخیر: {ping}ms · حجم تست: {mb}MB";
+I18N.fa["speed.failed"] = "تست انجام نشد — دوباره امتحان کن";
 I18N.fa["relay.empty"] = "هنوز تستی انجام نشده";
 I18N.fa["relay.phaseA"] = "بررسی سلامت همهٔ دامنه‌ها…";
 I18N.fa["relay.autopicked"] = "بهترین دامنهٔ رله انتخاب و اعمال شد ✓";
@@ -1305,6 +1322,14 @@ I18N.en["relay.best"] = "Best";
 I18N.en["relay.current"] = "Current relay domain";
 I18N.en["relay.none"] = "No healthy relay domain found";
 I18N.en["relay.applied"] = "Relay domain applied ✓ — configs now use this domain";
+I18N.en["speed.title"] = "Real Speed Test";
+I18N.en["speed.desc"] = "Measure your bandwidth to the worker";
+I18N.en["speed.help"] = "Downloads a file from this worker (the real proxy path) to measure your actual throughput & latency.";
+I18N.en["speed.start"] = "Start test";
+I18N.en["speed.empty"] = "No test yet";
+I18N.en["speed.running"] = "Downloading & measuring…";
+I18N.en["speed.done"] = "Speed: {mbps} Mbps · Latency: {ping}ms · Test size: {mb}MB";
+I18N.en["speed.failed"] = "Test failed — try again";
 I18N.en["relay.empty"] = "No test yet";
 I18N.en["relay.phaseA"] = "Checking health of all domains…";
 I18N.en["relay.autopicked"] = "Best relay domain picked & applied ✓";
@@ -1316,7 +1341,7 @@ I18N.fa["page.scannerD"] = "پیدا کردن سریع‌ترین IP های تم
 
 const SCANNER = (() => {
   /* bundled seed list (curated clean Cloudflare IPv4) */
-  const SEED = ["1.1.1.205", "103.116.7.159", "104.129.164.73", "104.16.0.158", "104.16.104.127", "104.16.105.208", "104.16.12.155", "104.16.122.31", "104.16.127.145", "104.16.134.94", "104.16.138.229", "104.16.15.61", "104.16.172.40", "104.16.200.105", "104.16.209.40", "104.16.228.155", "104.16.231.154", "104.16.234.166", "104.16.235.139", "104.16.241.3", "104.16.25.194", "104.16.33.169", "104.16.4.244", "104.16.42.140", "104.16.45.222", "104.16.66.24", "104.16.76.146", "104.16.78.31", "104.16.84.135", "104.16.84.24", "104.16.96.61", "104.17.101.85", "104.17.110.181", "104.17.112.46", "104.17.121.12", "104.17.122.238", "104.17.128.173", "104.17.146.211", "104.17.148.242", "104.17.150.98", "104.17.171.118", "104.17.18.167", "104.17.185.63", "104.17.187.8", "104.17.192.182", "104.17.195.233", "104.17.196.229", "104.17.197.221", "104.17.205.217", "104.17.207.42", "104.17.223.228", "104.17.228.165", "104.17.240.243", "104.17.246.44", "104.17.25.239", "104.17.251.86", "104.17.253.178", "104.17.255.201", "104.17.27.211", "104.17.29.174", "104.17.31.203", "104.17.34.42", "104.17.36.206", "104.17.38.50", "104.17.44.240", "104.17.48.188", "104.17.5.30", "104.17.61.65", "104.17.64.67", "104.17.82.189", "104.17.82.215", "104.17.9.155", "104.17.90.249", "104.18.1.81", "104.18.111.31", "104.18.114.234", "104.18.121.40", "104.18.146.241", "104.18.158.192", "104.18.160.180", "104.18.163.244", "104.18.164.174", "104.18.167.107", "104.18.170.147", "104.18.185.179", "104.18.188.115", "104.18.191.195", "104.18.193.85", "104.18.204.53", "104.18.209.237", "104.18.213.206", "104.18.216.44", "104.18.218.124", "104.18.220.15", "104.18.236.110", "104.18.237.80", "104.18.247.129", "104.18.248.155", "104.18.251.151", "104.18.253.86", "104.18.33.119", "104.18.34.232", "104.18.35.176", "104.18.5.36", "104.18.54.13", "104.18.54.231", "104.18.55.248", "104.18.79.228", "104.18.83.11", "104.19.103.173", "104.19.104.143", "104.19.107.209", "104.19.114.114", "104.19.114.252", "104.19.119.181", "104.19.134.215", "104.19.136.183", "104.19.144.198", "104.19.145.142", "104.19.158.214", "104.19.181.243", "104.19.186.216", "104.19.186.47", "104.19.189.251", "104.19.202.206", "104.19.229.52", "104.19.232.195", "104.19.237.179", "104.19.29.197", "104.19.38.85", "104.19.39.82", "104.19.41.171", "104.19.41.228", "104.19.50.59", "104.19.52.241", "104.19.56.137", "104.19.60.0", "104.19.62.255", "104.19.66.54", "104.19.74.36", "104.19.75.119", "104.19.80.247", "104.19.80.98", "104.19.85.153", "104.19.91.124", "104.19.94.184", "104.20.12.161", "104.20.32.42", "104.20.40.194", "104.20.59.177", "104.21.106.155", "104.21.112.26", "104.21.113.137", "104.21.118.199", "104.21.18.68", "104.21.20.139", "104.21.221.61", "104.21.223.242", "104.21.224.32", "104.21.225.43", "104.21.23.23", "104.21.23.44", "104.21.231.123", "104.21.236.58", "104.21.25.89", "104.21.31.159", "104.21.36.174", "104.21.36.188", "104.21.37.215", "104.21.38.34", "104.21.42.100", "104.21.48.98", "104.21.5.197", "104.21.60.85", "104.21.62.19", "104.21.62.231", "104.21.63.154", "104.21.64.55", "104.21.67.237", "104.21.69.179", "104.21.70.136", "104.21.71.248", "104.21.72.102", "104.21.73.17", "104.21.75.225", "104.21.81.12", "104.21.83.26", "104.21.86.13", "104.21.87.113", "104.21.88.178", "104.21.88.79", "104.21.92.203", "104.21.93.170", "104.21.94.118", "104.239.72.0", "104.239.72.195", "104.24.142.51", "104.24.143.32", "104.24.150.11", "104.24.151.152", "104.24.158.116", "104.24.172.151", "104.24.172.200", "104.24.180.71", "104.24.181.68", "104.24.188.188", "104.24.189.34", "104.24.197.160", "104.24.20.6", "104.24.203.122", "104.24.211.31", "104.24.225.235", "104.24.233.118", "104.24.235.222", "104.24.236.15", "104.24.236.44", "104.24.241.159", "104.24.246.92", "104.24.26.24", "104.24.27.31", "104.24.29.62", "104.24.33.28", "104.24.34.44", "104.24.41.212", "104.24.45.16", "104.24.63.194", "104.25.1.157", "104.25.101.151", "104.25.107.158", "104.25.110.90", "104.25.115.43", "104.25.120.120", "104.25.124.20", "104.25.126.55", "104.25.127.245", "104.25.13.108", "104.25.130.51", "104.25.133.76", "104.25.141.138", "104.25.142.39", "104.25.148.250", "104.25.160.5", "104.25.173.57", "104.25.188.19", "104.25.198.1", "104.25.203.160", "104.25.204.143", "104.25.206.186", "104.25.209.147", "104.25.209.209", "104.25.209.251", "104.25.210.72", "104.25.226.220", "104.25.236.188", "104.25.244.30", "104.25.245.249", "104.25.27.45", "104.25.4.110", "104.25.62.57", "104.25.64.10", "104.25.79.119", "104.25.83.106", "104.25.96.164", "104.26.1.153", "104.26.13.175", "104.26.15.230", "104.26.5.42", "104.27.101.189", "104.27.110.157", "104.27.118.231", "104.27.17.178", "104.27.193.209", "104.27.200.19", "104.27.206.168", "104.27.26.161", "104.27.36.27", "104.27.37.185", "104.27.38.72", "104.27.4.156", "104.27.44.72", "104.27.49.51", "104.27.52.44", "104.27.54.234", "104.27.88.172", "104.27.97.174", "104.27.97.42", "108.162.193.46", "139.64.235.227", "141.11.202.7", "147.185.161.10", "154.197.65.219", "154.83.2.193", "159.242.242.20", "162.159.1.250", "162.159.132.26", "162.159.141.125", "162.159.151.88", "162.159.156.223", "162.159.156.64", "162.159.229.25", "162.159.233.84", "162.159.245.27", "162.159.40.172", "162.159.43.230", "162.159.60.112", "162.159.93.59", "167.68.11.204", "170.114.52.147", "172.64.157.244", "172.64.189.14", "172.64.49.95", "172.64.53.114", "172.64.74.9", "172.64.82.227", "172.64.85.161", "172.64.87.231", "172.65.217.95", "172.65.223.179", "172.65.237.186", "172.65.54.9", "172.65.58.206", "172.66.147.124", "172.66.147.59", "172.66.148.106", "172.66.149.15", "172.66.152.213", "172.66.152.87", "172.66.159.171", "172.66.162.127", "172.66.169.65", "172.66.174.124", "172.66.174.6", "172.66.216.111", "172.67.126.76", "172.67.127.131", "172.67.133.245", "172.67.134.218", "172.67.135.190", "172.67.135.47", "172.67.136.112", "172.67.140.237", "172.67.140.83", "172.67.143.245", "172.67.144.126", "172.67.147.255", "172.67.153.29", "172.67.154.182", "172.67.156.98", "172.67.160.104", "172.67.169.139", "172.67.170.253", "172.67.172.242", "172.67.176.34", "172.67.187.246", "172.67.188.214", "172.67.190.234", "172.67.195.55", "172.67.196.217", "172.67.197.235", "172.67.199.186", "172.67.199.209", "172.67.200.209", "172.67.211.75", "172.67.214.149", "172.67.217.25", "172.67.218.10", "172.67.220.3", "172.67.221.7", "172.67.238.109", "172.67.240.46", "172.67.250.18", "172.67.253.123", "172.67.73.30", "172.67.74.86", "172.67.93.117", "172.67.93.126", "172.67.94.198", "173.245.49.57", "185.238.228.201", "188.114.96.39", "191.101.251.190", "198.202.211.158", "198.41.193.207", "198.41.205.190", "198.41.211.0", "199.181.197.109", "199.181.197.158", "199.181.197.246", "2.16.0.134", "2.16.0.235", "2.16.1.137", "2.16.1.149", "2.16.1.218", "2.16.105.142", "2.16.11.186", "2.16.125.17", "2.16.164.29", "2.16.168.12", "2.16.168.7", "2.16.190.87", "2.16.192.83", "2.16.2.152", "2.16.222.174", "2.16.31.75", "2.16.31.87", "2.16.33.249", "2.16.39.17", "2.16.42.250", "2.16.42.251", "2.16.93.211", "212.104.128.75", "45.80.110.140", "5.10.214.117", "74.49.215.119", "88.216.66.154", "88.216.66.81", "89.116.161.253", "89.117.112.240", "92.53.188.172", "92.53.188.71"];
+  const SEED = __SCAN_IPS__;
 
   const PORTS_ALL = [443, 2053, 2083, 2087, 2096, 8443];
 
@@ -1922,6 +1947,64 @@ window.SCANNER = SCANNER;
 SCANNER.initUI();
 if (typeof applyLang === "function") applyLang(); // translate scanner labels (keys added above)
 
+/* ================================================================
+   Nika Net — Real Speed Test (bandwidth to this worker)
+   Downloads a generated file from /api/speedtest (the real proxy
+   path user→Cloudflare→worker) and measures Mbps + latency.
+   ================================================================ */
+window.SPEED = (() => {
+  const TEST_BYTES = 4 * 1024 * 1024; // 4 MB
+
+  function fmt(n) { return (n || 0).toFixed ? n.toFixed(1) : String(n); }
+
+  async function run() {
+    if (MODE !== "live") { toast(t("toast.preview")); return; }
+    const btn = $("#speedStart");
+    const status = $("#speedStatus");
+    const gauge = $("#speedGauge");
+    if (btn) btn.disabled = true;
+    status.textContent = t("speed.running");
+    gauge.innerHTML = "";
+    try {
+      // latency probe (small request)
+      const p0 = performance.now();
+      await fetch("/api/info?_=" + Date.now(), { cache: "no-store" });
+      const ping = Math.max(1, Math.round(performance.now() - p0));
+
+      // throughput probe (4 MB download, uncached)
+      const t0 = performance.now();
+      const res = await fetch("/api/speedtest?bytes=" + TEST_BYTES + "&_=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("http " + res.status);
+      const buf = await res.arrayBuffer();
+      const dt = (performance.now() - t0) / 1000;
+      const mbps = (buf.byteLength * 8) / 1e6 / Math.max(0.02, dt);
+
+      const done = t("speed.done")
+        .replace("{mbps}", fmt(mbps))
+        .replace("{ping}", String(ping))
+        .replace("{mb}", fmt(buf.byteLength / 1048576));
+      status.textContent = done;
+      // gauge bar (scale: 100 Mbps = full)
+      const pct = Math.min(100, Math.round((mbps / 100) * 100));
+      const cls = mbps >= 50 ? "ok" : mbps >= 15 ? "warn" : "bad";
+      gauge.innerHTML = `<div class="scan-latbar" style="height:10px"><div class="scan-latfill" style="width:${pct}%"></div></div>` +
+        `<div class="d" style="margin-top:6px">📶 <b class="scan-ms ${cls}">${fmt(mbps)} Mbps</b> · 🕒 ${ping}ms · مسیر: تو ← کلادفلر ← ورکر</div>`;
+    } catch (e) {
+      status.textContent = t("speed.failed");
+      gauge.innerHTML = "";
+    }
+    if (btn) btn.disabled = false;
+  }
+
+  function initUI() {
+    const b = $("#speedStart");
+    if (b) b.onclick = run;
+  }
+
+  initUI();
+  return { run };
+})();
+
 </script>
 <script>
 /* ================================================================
@@ -2059,7 +2142,13 @@ window.POOL = (() => {
       const byAddr = new Map((j.results || []).map((r) => [r.addr, r]));
       return items.map((it, i) => {
         const r = byAddr.get(addrs[i]);
-        return { ip: it.ip, port: it.port, min: r && r.ok ? Math.max(1, Math.round(r.ms)) : null, alive: !!(r && r.ok) };
+        return {
+          ip: it.ip, port: it.port,
+          min: r && r.ok ? Math.max(1, Math.round(r.ms)) : null,
+          alive: !!(r && r.ok),
+          verified: !!(r && r.verified),
+          colo: (r && r.colo) || "", city: (r && r.city) || "",
+        };
       });
     } catch (e) {
       return items.map((it) => ({ ip: it.ip, port: it.port, min: null, alive: false }));
@@ -2123,7 +2212,7 @@ window.POOL = (() => {
       if (S.ctl.signal.aborted) break;
       for (const r of batch) {
         S.tested++;
-        if (r.alive) { S.alive++; if (isCf(r.ip)) S.cf++; } else S.dead++;
+        if (r.alive) { S.alive++; if (r.verified) S.cf++; } else S.dead++;
         S.results.push(r);
       }
       renderCounters(); renderList(false); renderTop();
@@ -2139,8 +2228,8 @@ window.POOL = (() => {
       $("#poolCopyBest").classList.remove("hidden");
     }
     const best0 = best[0];
-    // Only a Cloudflare IP can be locked as a fixed connect address.
-    if (best0 && isCf(best0.ip)) $("#poolLock").classList.remove("hidden");
+    // Only a verified Cloudflare-fronting IP can be locked as a fixed address.
+    if (best0 && best0.verified) $("#poolLock").classList.remove("hidden");
     else if (best0) toast(t("pool.nocflock"));
   }
 
@@ -2180,13 +2269,14 @@ window.POOL = (() => {
     el.innerHTML = list.slice(0, 100).map((r, i) => {
       const w = Math.max(4, Math.round((r.min / max) * 100));
       const cls = r.min < 120 ? "ok" : r.min < 300 ? "warn" : "bad";
-      const cf = isCf(r.ip);
+      const cf = r.verified;
+      const coloTag = r.city ? `<span class="cf-badge cf">✈ ${r.city}${r.colo ? " (" + r.colo + ")" : ""}</span>` : "";
       const top3 = i < 3 ? ' style="border-color:var(--accent);border-style:solid"' : '';
       const addr = addrOf(r);
       return `<div class="scan-row"${top3} onclick="POOL.copy('${addr}')" title="${t("scan.copy")}">
         <span class="scan-rank">${i + 1}</span>
         <code class="scan-ip">${r.ip}</code><span class="scan-port">:${r.port}</span>
-        <span class="cf-badge ${cf ? "cf" : "nocf"}">${cf ? "☁️ " + t("pool.cf") : "⚠ " + t("pool.nocf")}</span>
+        ${coloTag}<span class="cf-badge ${cf ? "cf" : "nocf"}">${cf ? "☁️ " + t("pool.cf") : "⚠ " + t("pool.nocf")}</span>
         <div class="scan-latbar"><div class="scan-latfill" style="width:${w}%"></div></div>
         <code class="scan-ms ${cls}">${r.min}ms</code>
       </div>`;
@@ -2198,9 +2288,10 @@ window.POOL = (() => {
     const list = aliveList().slice(0, TOP_N);
     if (!list.length) { el.innerHTML = ""; return; }
     el.innerHTML = list.map((r, i) => {
-      const cf = isCf(r.ip);
+      const cf = r.verified;
       const addr = addrOf(r);
-      return `<div class="top-chip" onclick="POOL.copy('${addr}')" title="${t("scan.copy")}"><span class="top-rank">${i + 1}</span><code>${addr}</code>${cf ? `<span class="cf-badge cf">☁️</span>` : ""}<b>${r.min}ms</b></div>`;
+      const coloTag = r.city ? `<span class="cf-badge cf">✈ ${r.city}</span>` : "";
+      return `<div class="top-chip" onclick="POOL.copy('${addr}')" title="${t("scan.copy")}"><span class="top-rank">${i + 1}</span><code>${addr}</code>${coloTag}${cf ? `<span class="cf-badge cf">☁️</span>` : ""}<b>${r.min}ms</b></div>`;
     }).join("");
   }
 
@@ -2213,7 +2304,7 @@ window.POOL = (() => {
     if (!best.length) { toast(t("pool.needtest")); return; }
     const sel = S.selected;
     const list = best.slice(0, APPLY_N).map(addrOf);
-    const cfBest = best.filter((r) => isCf(r.ip));
+    const cfBest = best.filter((r) => r.verified);
     const body = { poolIps: list, poolCountry: sel, poolFlag: flag(sel) };
     if (cfBest.length) {
       const addrs = cfBest.slice(0, 6).map(addrOf);
@@ -2264,10 +2355,11 @@ window.POOL = (() => {
   }
 
   /* ---------- قفل IP ثابت (Cloudflare-only) ---------- */
-  async function lockFixed(addr) {
+  async function lockFixed(addr, trusted) {
     if (MODE !== "live") { toast(t("toast.preview")); return; }
     const ip = String(addr || "").split(":")[0];
-    if (!isCf(ip)) { toast(t("pool.nocflock")); return; }
+    // trusted=true → the caller already verified the IP server-side
+    if (!trusted && !isCf(ip)) { toast(t("pool.nocflock")); return; }
     const res = await api("/api/settings", { method: "POST", body: { fixedIp: addr } });
     if (res.ok) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
     else toast(t("common.error"));
@@ -2276,8 +2368,8 @@ window.POOL = (() => {
   async function poolLock() {
     const best = aliveList()[0];
     if (!best) { toast(t("pool.none")); return; }
-    if (!isCf(best.ip)) { toast(t("pool.nocflock")); return; }
-    await lockFixed(addrOf(best));
+    if (!best.verified) { toast(t("pool.nocflock")); return; }
+    await lockFixed(addrOf(best), true);
   }
 
   async function unlock() {
