@@ -28,26 +28,29 @@ const MINIAPP_HTML = `<!doctype html>
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{font-family:'Vazirmatn',system-ui,Segoe UI,Tahoma,sans-serif;font-size:15px;line-height:1.8;color:var(--text);
+body{font-family:'Vazirmatn',system-ui,'Segoe UI',Tahoma,sans-serif;font-size:15px;line-height:1.8;color:var(--text);
   background:var(--bg);
   background-image:radial-gradient(900px 500px at 85% -10%,rgba(124,77,255,.22),transparent 60%),
     radial-gradient(700px 480px at -10% 20%,rgba(79,140,255,.16),transparent 55%),
     radial-gradient(700px 600px at 50% 120%,rgba(49,208,170,.10),transparent 60%);
   background-attachment:fixed;overflow:hidden}
-.app{display:flex;flex-direction:column;height:100dvh}
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 .hdr{display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);
   background:rgba(11,18,32,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);flex:none;z-index:5}
 .hdr .logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;color:#fff;
   background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 16px rgba(79,140,255,.4);flex:none}
 .hdr .t{min-width:0;flex:1}
 .hdr .t .n{font-family:'Lalezar','Vazirmatn',sans-serif;font-weight:400;font-size:17px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hdr .t .n b{background:linear-gradient(90deg,#7cc4ff,#b39dff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hdr .t .n b{color:#b39dff;font-weight:400}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .hdr .t .n b{background:linear-gradient(90deg,#7cc4ff,#b39dff);-webkit-background-clip:text;background-clip:text;color:transparent}
+}
 .hdr .t .s{font-size:11px;color:var(--mut)}
 .hdr .st{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#a9d8c2;background:rgba(49,208,170,.12);
   border:1px solid rgba(49,208,170,.3);border-radius:99px;padding:5px 11px;flex:none}
 .hdr .st .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 2s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(49,208,170,.55)}70%{box-shadow:0 0 0 8px rgba(49,208,170,0)}100%{box-shadow:0 0 0 0 rgba(49,208,170,0)}}
-.msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:9px;-webkit-overflow-scrolling:touch}
+.msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:9px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
 .dayc{text-align:center;color:var(--faint);font-size:10.5px;margin:6px 0}
 .mrow{display:flex;flex-direction:column;max-width:82%}
 .mrow.me{align-self:flex-start;align-items:flex-start}
@@ -55,24 +58,26 @@ body{font-family:'Vazirmatn',system-ui,Segoe UI,Tahoma,sans-serif;font-size:15px
 .bub{padding:9px 13px;border-radius:16px;font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
 .mrow.me .bub{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-bottom-right-radius:5px;box-shadow:0 4px 14px rgba(79,140,255,.28)}
 .mrow.you .bub{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
-.mtime{font-size:10px;color:var(--faint);margin-top:3px;direction:ltr;font-family:'Courier Prime','Vazirmatn',monospace}
+.mtime{font-size:10px;color:var(--faint);margin-top:3px}
 .sys{text-align:center;color:var(--mut);font-size:11.5px;background:rgba(255,255,255,.04);border:1px dashed var(--line);
   border-radius:12px;padding:8px 14px;margin:4px auto;max-width:90%}
-.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mut);text-align:center;padding:20px}
-.empty .e{font-size:44px}
-.empty p{font-size:13px;max-width:260px;line-height:1.9}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--mut);text-align:center;padding:24px 20px}
+.empty .e{width:74px;height:74px;border-radius:24px;display:grid;place-items:center;font-size:36px;
+  background:linear-gradient(135deg,rgba(79,140,255,.18),rgba(124,77,255,.18));border:1px solid rgba(124,77,255,.35);box-shadow:0 12px 30px rgba(124,77,255,.15)}
+.empty p{font-size:13px;max-width:270px;line-height:2}
+.empty p b{color:var(--text)}
 .compose{flex:none;display:flex;gap:9px;align-items:flex-end;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
   border-top:1px solid var(--line);background:rgba(11,18,32,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .compose textarea{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);border-radius:14px;
   padding:11px 14px;font-family:inherit;font-size:14.5px;line-height:1.6;resize:none;min-height:44px;max-height:120px;outline:none;transition:.2s}
 .compose textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(79,140,255,.16)}
 .compose .send{width:46px;height:46px;border-radius:14px;border:none;cursor:pointer;display:grid;place-items:center;flex:none;
-  background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:19px;box-shadow:0 6px 16px rgba(79,140,255,.35);transition:.15s}
+  background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;box-shadow:0 6px 16px rgba(79,140,255,.35);transition:.15s}
 .compose .send:active{transform:scale(.94)}
 .compose .send:disabled{opacity:.5}
 .spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.not-tg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.not-tg{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
 .not-tg .ic{font-size:46px}
 .not-tg p{color:var(--mut);font-size:13.5px;line-height:2;max-width:280px}
 .not-tg a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#fff;font-weight:700;padding:12px 22px;border-radius:13px;
@@ -91,18 +96,18 @@ body{font-family:'Vazirmatn',system-ui,Segoe UI,Tahoma,sans-serif;font-size:15px
     </div>
     <div class="st"><span class="dot"></span>آنلاین</div>
   </div>
-  <div class="msgs" id="msgs">
-    <div class="empty" id="empty"><div class="e">👋</div><p>سلام! به پشتیبانی Nika Net خوش اومدی.<br>سؤالت رو بنویس و بفرست — همین‌جا جوابت رو می‌گیریم.</p></div>
-  </div>
+  <div class="msgs" id="msgs"></div>
   <div class="compose">
     <textarea id="txt" rows="1" placeholder="پیامت را بنویس…"></textarea>
-    <button class="send" id="send" aria-label="ارسال">➤</button>
+    <button class="send" id="send" aria-label="ارسال">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="transform:scaleX(-1)"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
   </div>
 </div>
 
 <div class="not-tg" id="notTg" hidden>
   <div class="ic">📱</div>
-  <p>این اپ باید داخل تلگرام باز شود.<br>ربات را باز کن و از منو روی «🎧 پشتیبانی» بزن.</p>
+  <p id="notTgText">این اپ باید داخل تلگرام باز شود.<br>ربات را باز کن و از منو روی «🎧 پشتیبانی» بزن.</p>
   <a href="https://t.me/NikaNetLauncher_bot">باز کردن ربات</a>
 </div>
 
@@ -112,69 +117,104 @@ body{font-family:'Vazirmatn',system-ui,Segoe UI,Tahoma,sans-serif;font-size:15px
   var TG = window.Telegram && window.Telegram.WebApp;
   var app = document.getElementById("app");
   var notTg = document.getElementById("notTg");
+  var notTgText = document.getElementById("notTgText");
   var msgs = document.getElementById("msgs");
-  var empty = document.getElementById("empty");
   var txt = document.getElementById("txt");
   var send = document.getElementById("send");
+  var rendered = 0;
   var lastAt = 0, lastLen = -1;
+  var polling = false, sending = false;
 
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-    });
-  }
-  function famTime(ts) {
-    var d = new Date(ts);
-    return d.toLocaleDateString("fa-IR", { month: "long", day: "numeric" }) + " · " +
-      d.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
-  }
   function famClock(ts) {
     var d = new Date(ts);
-    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+    var h = ("0" + d.getHours()).slice(-2), m = ("0" + d.getMinutes()).slice(-2);
+    return h + ":" + m;
+  }
+  function famDay(ts) {
+    try {
+      return new Date(ts).toLocaleDateString("fa-IR", { month: "long", day: "numeric" });
+    } catch (e) {
+      return "";
+    }
+  }
+  function dayKey(ts) { return new Date(ts).toDateString(); }
+
+  function msgEl(m) {
+    var row = document.createElement("div");
+    row.className = "mrow " + (m.dir === "in" ? "me" : "you");
+    var b = document.createElement("div");
+    b.className = "bub";
+    b.textContent = m.text;
+    var t = document.createElement("div");
+    t.className = "mtime";
+    t.textContent = famClock(m.at) + " · " + (m.dir === "in" ? "تو" : "پشتیبانی");
+    row.appendChild(b);
+    row.appendChild(t);
+    return row;
+  }
+  function dayDiv(ts) {
+    var d = document.createElement("div");
+    d.className = "dayc";
+    d.textContent = famDay(ts);
+    return d;
   }
 
-  function render(list) {
-    var el = document.createElement("div");
-    el.className = "msgs";
-    if (!list || !list.length) {
-      empty.hidden = false;
-    } else {
-      empty.hidden = true;
-      var lastDay = "";
-      for (var i = 0; i < list.length; i++) {
-        var m = list[i];
-        var day = new Date(m.at).toDateString();
-        if (day !== lastDay) {
-          lastDay = day;
-          var dc = document.createElement("div");
-          dc.className = "dayc";
-          dc.textContent = famTime(m.at).split(" · ")[0];
-          el.appendChild(dc);
-        }
-        var row = document.createElement("div");
-        row.className = "mrow " + (m.dir === "in" ? "me" : "you");
-        var bub = document.createElement("div");
-        bub.className = "bub";
-        bub.textContent = m.text;
-        var tm = document.createElement("div");
-        tm.className = "mtime";
-        tm.textContent = famClock(m.at) + " · " + (m.dir === "in" ? "تو" : "پشتیبانی");
-        row.appendChild(bub);
-        row.appendChild(tm);
-        el.appendChild(row);
-      }
+  function clearList() { msgs.innerHTML = ""; rendered = 0; }
+  function scrollBottom() { setTimeout(function () { msgs.scrollTop = msgs.scrollHeight; }, 30); }
+  function atBottom() { return msgs.scrollTop + msgs.clientHeight >= msgs.scrollHeight - 50; }
+
+  function showEmpty() {
+    clearList();
+    var e = document.createElement("div");
+    e.className = "empty";
+    e.innerHTML = '<div class="e">👋</div>' +
+      '<p><b>سلام!</b> به پشتیبانی Nika Net خوش اومدی.<br>سؤالت رو بنویس و بفرست — همین‌جا جوابت رو می‌گیریم.</p>';
+    msgs.appendChild(e);
+  }
+
+  function appendRange(list, from) {
+    for (var i = from; i < list.length; i++) {
+      var m = list[i];
+      if (i === 0 || dayKey(list[i - 1].at) !== dayKey(m.at)) msgs.appendChild(dayDiv(m.at));
+      msgs.appendChild(msgEl(m));
     }
-    msgs.parentNode.replaceChild(el, msgs);
-    msgs = el;
-    msgs.scrollTop = msgs.scrollHeight;
+    rendered = list.length;
+  }
+
+  function applyList(list) {
+    if (!list || !list.length) { showEmpty(); return; }
+    if (rendered === 0) {
+      if (msgs.querySelector(".empty")) clearList();
+      appendRange(list, 0);
+      scrollBottom();
+    } else if (list.length > rendered) {
+      var stick = atBottom();
+      appendRange(list, rendered);
+      if (stick) msgs.scrollTop = msgs.scrollHeight;
+    }
+  }
+
+  function sysLine(text) {
+    var d = document.createElement("div");
+    d.className = "sys";
+    d.textContent = text;
+    msgs.appendChild(d);
+    scrollBottom();
+    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 3200);
   }
 
   function api(path, opts) {
     opts = opts || {};
-    var url = path + (path.indexOf("?") >= 0 ? "&" : "?") + "initData=" + encodeURIComponent(TG.initData || "");
+    var sep = path.indexOf("?") >= 0 ? "&" : "?";
+    var url = path + sep + "initData=" + encodeURIComponent(TG.initData || "");
     var init = { method: opts.body ? "POST" : "GET", headers: {} };
     if (opts.body) { init.headers["content-type"] = "application/json"; init.body = JSON.stringify(opts.body); }
-    return fetch(url, init).then(function (r) { return r.json(); }).catch(function () { return null; });
+    var ctrl = new AbortController();
+    init.signal = ctrl.signal;
+    var to = setTimeout(function () { ctrl.abort(); }, 10000);
+    return fetch(url, init)
+      .then(function (r) { clearTimeout(to); return r.json(); })
+      .catch(function () { clearTimeout(to); return null; });
   }
 
   if (!TG) {
@@ -186,59 +226,71 @@ body{font-family:'Vazirmatn',system-ui,Segoe UI,Tahoma,sans-serif;font-size:15px
   TG.expand();
   try { TG.setHeaderColor("#0b1220"); TG.setBackgroundColor("#0b1220"); } catch (e) {}
 
-  function toast(msg) {
-    var d = document.createElement("div");
-    d.className = "sys";
-    d.textContent = msg;
-    msgs.appendChild(d);
-    msgs.scrollTop = msgs.scrollHeight;
-    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 2600);
+  function showFatal(text) {
+    app.hidden = true;
+    notTgText.innerHTML = text;
+    notTg.hidden = false;
+  }
+
+  function load() {
+    api("/app/api/me").then(function (r) {
+      if (r && r.ok) {
+        var t = r.ticket;
+        if (t) { lastAt = t.lastAt; lastLen = t.msgs ? t.msgs.length : 0; applyList(t.msgs); }
+        else { showEmpty(); }
+      } else if (r && r.error === "unauthorized") {
+        showFatal("ورود نامعتبر است.<br>لطفاً اپ را از داخل ربات و از دکمهٔ «🎧 پشتیبانی» باز کن.");
+      } else {
+        sysLine("⚠️ خطا در بارگذاری گفتگو — دوباره تلاش می‌کنیم…");
+      }
+    });
   }
 
   function doSend() {
     var text = txt.value.trim();
-    if (!text) return;
+    if (!text || sending) return;
+    sending = true;
     send.disabled = true;
     api("/app/api/send", { text: text }).then(function (r) {
+      sending = false;
       send.disabled = false;
       if (r && r.ok) {
         txt.value = "";
         txt.style.height = "auto";
-        lastAt = r.ticket.lastAt;
-        lastLen = r.ticket.msgs.length;
-        render(r.ticket.msgs);
+        var t = r.ticket;
+        if (t) { lastAt = t.lastAt; lastLen = t.msgs ? t.msgs.length : 0; applyList(t.msgs); }
+        if (r.created) sysLine("🎫 تیکت ثبت شد — تیم پشتیبانی به‌زودی پاسخ می‌دهد");
         try { if (TG.HapticFeedback) TG.HapticFeedback.notificationOccurred("success"); } catch (e) {}
-      } else if (r && r.error) {
-        toast("⚠️ " + r.error);
+      } else if (r && r.error === "unauthorized") {
+        showFatal("ورود نامعتبر است.<br>لطفاً اپ را از داخل ربات و از دکمهٔ «🎧 پشتیبانی» باز کن.");
       } else {
-        toast("⚠️ خطا در ارسال — دوباره تلاش کن");
+        sysLine("⚠️ " + (r && r.error ? r.error : "خطا در ارسال — دوباره تلاش کن"));
       }
     });
   }
 
   send.onclick = doSend;
-  txt.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); doSend(); } });
+  txt.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); }
+  });
   txt.addEventListener("input", function () {
     txt.style.height = "auto";
     txt.style.height = Math.min(txt.scrollHeight, 120) + "px";
   });
 
-  api("/app/api/me").then(function (r) {
-    if (r && r.ok) {
-      if (r.ticket) { lastAt = r.ticket.lastAt; lastLen = r.ticket.msgs.length; render(r.ticket.msgs); }
-    } else {
-      toast("⚠️ ورود نامعتبر — اپ را از داخل ربات باز کن");
-    }
-  });
-
+  load();
   setInterval(function () {
+    if (polling) return;
+    polling = true;
     api("/app/api/poll").then(function (r) {
-      if (r && r.ok && r.ticket && (r.ticket.lastAt !== lastAt || r.ticket.msgs.length !== lastLen)) {
-        var atBottom = msgs.scrollTop + msgs.clientHeight >= msgs.scrollHeight - 50;
-        lastAt = r.ticket.lastAt;
-        lastLen = r.ticket.msgs.length;
-        render(r.ticket.msgs);
-        if (atBottom) msgs.scrollTop = msgs.scrollHeight;
+      polling = false;
+      if (r && r.ok && r.ticket) {
+        var t = r.ticket;
+        if (t.lastAt !== lastAt || t.msgs.length !== lastLen) {
+          lastAt = t.lastAt;
+          lastLen = t.msgs.length;
+          applyList(t.msgs);
+        }
       }
     });
   }, 3000);
@@ -286,6 +338,9 @@ async function verifyInitData(env: Env, initData: string): Promise<tg.TgUser | n
   const params = new URLSearchParams(initData);
   const hash = params.get("hash");
   if (!hash) return null;
+  // initData نباید خیلی قدیمی باشد (حداکثر ۴۸ ساعت)
+  const authDate = parseInt(params.get("auth_date") || "0", 10);
+  if (authDate > 0 && Math.abs(Date.now() / 1000 - authDate) > 48 * 3600) return null;
   const keys: string[] = [];
   for (const k of params.keys()) if (k !== "hash") keys.push(k);
   keys.sort();
@@ -330,7 +385,7 @@ export async function handleMiniApp(env: Env, req: Request, url: URL): Promise<R
 
   if (path === "/app/api/send" && req.method === "POST") {
     const b = await readJson(req);
-    const user = await verifyInitData(env, url.searchParams.get("initData") || String(b.initData || ""));
+    const user = await verifyInitData(env, String(b.initData || ""));
     if (!user) return json({ ok: false, error: "unauthorized" }, 401);
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!text) return json({ ok: false, error: "پیام خالی است" }, 400);

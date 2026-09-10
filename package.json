@@ -1,6 +1,6 @@
 {
   "name": "nika-net",
-  "version": "0.7.9",
+  "version": "0.7.10",
   "private": true,
   "type": "module",
   "description": "Nika Net — a beautiful, self-hosted VLESS/Trojan/WARP panel on a single Cloudflare Worker.",
