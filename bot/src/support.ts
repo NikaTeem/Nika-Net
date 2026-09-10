@@ -66,7 +66,7 @@ export async function addUserMessage(
   id: number,
   text: string,
   who?: Who
-): Promise<{ created: boolean; ticket: Ticket }> {
+): Promise<{ created: boolean; firstUserMessage: boolean; isReply: boolean; ticket: Ticket }> {
   let t = await getTicket(env, id);
   const created = !t;
   if (!t) {
@@ -74,6 +74,10 @@ export async function addUserMessage(
   }
   if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
   if (!t.username) t.username = who?.username || "";
+  // اولین پیام واقعی کاربر (برای پیام «تیکت ثبت شد»)
+  const firstUserMessage = !t.msgs.some((m) => m.dir === "in");
+  // پاسخ به پیام مالک/پشتیبانی (برای پیام «پیام شما ارسال شد»)
+  const isReply = t.msgs.length > 0 && t.msgs[t.msgs.length - 1].dir === "out";
   t.msgs.push({ dir: "in", text: textOf(text), at: Date.now() });
   if (t.msgs.length > MAX_MSGS) t.msgs = t.msgs.slice(-MAX_MSGS);
   t.lastAt = Date.now();
@@ -81,7 +85,7 @@ export async function addUserMessage(
   t.unread = (t.unread || 0) + 1;
   t.status = "open"; // پیام جدید کاربر، تیکت را دوباره باز می‌کند
   await putTicket(env, t);
-  return { created, ticket: t };
+  return { created, firstUserMessage, isReply, ticket: t };
 }
 
 export async function addOwnerMessage(env: Env, id: number, text: string): Promise<Ticket> {
@@ -192,7 +196,7 @@ export interface TicketMeta {
   categoryLabel?: string;
 }
 
-export async function listTickets(env: Env): Promise<{ tickets: TicketMeta[]; open: number; unread: number }> {
+export async function listTickets(env: Env, kind?: "ticket" | "dm"): Promise<{ tickets: TicketMeta[]; open: number; unread: number }> {
   const out: TicketMeta[] = [];
   let cursor: string | undefined;
   do {
@@ -204,6 +208,7 @@ export async function listTickets(env: Env): Promise<{ tickets: TicketMeta[]; op
         const raw = await env.BOT_KV.get(k.name);
         if (!raw) continue;
         const t = JSON.parse(raw) as Ticket;
+        if (kind && (t.kind || "ticket") !== kind) continue;
         out.push({
           id: t.id,
           kind: t.kind || "ticket",

@@ -794,8 +794,9 @@ const PANEL_HTML = `<!doctype html>
       var li = document.createElement("li");
       li.setAttribute("data-id", t.id);
       if (ns.activeTicket === t.id) li.classList.add("on");
-      li.innerHTML = avatar(t.name || t.username || "", t.id) +
+      li.innerHTML = avatar(t.name || t.username || "", t.id, true) +
         '<div class="umeta"><div class="n">' + esc(t.name || "کاربر " + t.id) +
+        (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") +
         (t.categoryLabel ? ' <span class="cat">🏷 ' + esc(t.categoryLabel) + "</span>" : "") + "</div>" +
         '<div class="t">' + esc(t.lastText || "") + "</div></div>" +
         '<span class="spill ' + (t.status === "open" ? "ok" : "mut") + '">' + (t.status === "open" ? "باز" : "بسته") + "</span>";
@@ -811,7 +812,7 @@ const PANEL_HTML = `<!doctype html>
     var r = await api("/panel/api/support/get?id=" + id);
     if (!r.ok) return;
     var t = r.j.ticket;
-    $("#tk-head").innerHTML = avatar(t.name || t.username || "", t.id) +
+    $("#tk-head").innerHTML = avatar(t.name || t.username || "", t.id, true) +
       '<div class="meta"><div class="n">' + esc(t.name || "کاربر " + t.id) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + "</div>" +
       '<div class="s"><span dir="ltr">' + t.id + "</span> · " +
       (t.categoryLabel ? "🏷 " + esc(t.categoryLabel) + " · " : "") +
@@ -1547,7 +1548,8 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   /* ---------- پیام شخصی + پشتیبانی (Aurora) ---------- */
 
   if (path === "/panel/api/pm/list" && req.method === "GET") {
-    const { tickets, unread } = await sup.listTickets(env);
+    // فقط گفتگوهای شخصیِ آغازشده توسط مالک
+    const { tickets, unread } = await sup.listTickets(env, "dm");
     return json({ ok: true, threads: tickets, unread });
   }
 
@@ -1584,7 +1586,8 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/support/list" && req.method === "GET") {
-    const { tickets, open, unread } = await sup.listTickets(env);
+    // فقط تیکت‌های آغازشده توسط کاربران
+    const { tickets, open, unread } = await sup.listTickets(env, "ticket");
     return json({ ok: true, tickets, open, unread });
   }
 

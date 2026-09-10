@@ -104,6 +104,7 @@ export async function announceLatest(
 export async function handleScheduled(env: Env): Promise<void> {
   try {
     await ensureMenuButton(env);
+    await refreshReplyKeyboards(env);
     await announceLatest(env);
   } catch (e) {
     console.error("scheduled error", e);
@@ -151,6 +152,27 @@ export async function ensureMenuButton(env: Env): Promise<void> {
       ]);
       await env.BOT_KV.put("menuButton", flag).catch(() => {});
     }
+  } catch {
+    /* ignore */
+  }
+}
+
+// پس از حذف Mini App، کیبورد قدیمیِ کاربران (با دکمهٔ web_app) باید یک‌بار
+// با کیبورد جدیدِ متنی جایگزین شود — وگرنه دکمهٔ «🎧 پشتیبانی» به آدرس 404 می‌رفت.
+async function refreshReplyKeyboards(env: Env): Promise<void> {
+  const flag = "kb-v0.8.0";
+  try {
+    if ((await env.BOT_KV.get("kbFlag")) === flag) return;
+    const ids = await tg.listUserChatIds(env);
+    for (const id of ids) {
+      try {
+        const s = await st.getState(env, id);
+        await tg.sendMessage(env, id, "⌨️", ui.replyMenu(s)).catch(() => {});
+      } catch {
+        /* skip blocked/unreachable */
+      }
+    }
+    await env.BOT_KV.put("kbFlag", flag).catch(() => {});
   } catch {
     /* ignore */
   }
@@ -381,11 +403,14 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       });
       const owner = await st.getOwner(env);
       if (owner && owner !== chatId) {
-        await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, r.created)).catch(() => {});
+        await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, r.firstUserMessage)).catch(() => {});
       }
-      if (r.created) {
+      // تأیید به کاربر — اولین پیام = «تیکت ثبت شد» · پاسخ به مالک = «پیام ارسال شد»
+      if (r.firstUserMessage) {
         const s2 = await st.getState(env, chatId);
-        await tg.sendMessage(env, chatId, ui.supportAck(s2));
+        await tg.sendMessage(env, chatId, ui.supportAck(s2)).catch(() => {});
+      } else if (r.isReply) {
+        await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
       }
       return;
     }
@@ -1011,8 +1036,11 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     return;
   }
 
-  // gate every other callback for non-members
-  if (!(await fj.gateUser(env, chatId, L(s)))) return;
+  // gate every other callback for non-members (answer so the button doesn't spin forever)
+  if (!(await fj.gateUser(env, chatId, L(s)))) {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return;
+  }
 
   if (data === "noop") return void (await tg.answerCallback(env, cq.id).catch(() => {}));
   if (data === "menu:close") {
@@ -1029,18 +1057,23 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   if (data.startsWith("sup:cat:")) {
     const cat = ui.catOf(data.slice("sup:cat:".length));
     if (!cat) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
-    await sup.openCategory(env, chatId, cat.id, L(s) === "fa" ? cat.fa : cat.en, {
+    await sup.openCategory(env, chatId, cat.id, cat.fa, {
       firstName: cq.from?.first_name,
       lastName: cq.from?.last_name,
       username: cq.from?.username,
     });
-    await tg.answerCallback(env, cq.id, `🏷 ${L(s) === "fa" ? cat.fa : cat.en}`).catch(() => {});
-    return void (await tg.sendMessage(env, chatId, ui.supportChosen(s, cat)));
+    await tg.answerCallback(env, cq.id, `🏷 ${cat.fa}`).catch(() => {});
+    // منوی دسته‌ها را درجا به «دسته انتخاب شد» تبدیل می‌کنیم (بدون پیام اضافه)
+    const done = ui.supportChosen(s, cat);
+    const edited = await tg.editMessage(env, chatId, msgId, done, tg.kb([])).catch(() => null);
+    if (!edited || !edited.ok) await tg.sendMessage(env, chatId, done).catch(() => {});
+    return;
   }
 
   // دکمهٔ «پاسخ دادن» روی پیام شخصی مالک → کاربر همین‌جا بنویسد (بدون Mini App)
   if (data === "pm:reply") {
-    await tg.answerCallback(env, cq.id, "✍️ پیامت رو همین‌جا بنویس").catch(() => {});
+    await tg.answerCallback(env, cq.id, "✍️").catch(() => {});
+    await tg.sendMessage(env, chatId, ui.pmReplyPrompt()).catch(() => {});
     return;
   }
 

@@ -304,11 +304,21 @@ export function supportChosen(s: UserState, cat: SupportCat): string {
     : `🎫 <b>Category “${esc(cat.en)}” selected.</b>\n\nNow describe your issue — it goes straight to our team and you'll get the answer right here. 📬`;
 }
 
-// تأیید ثبت تیکت (فقط برای اولین پیام هر تیکت)
+// تأیید ثبت تیکت (برای اولین پیام هر تیکت)
 export function supportAck(s: UserState): string {
   return L(s) === "fa"
-    ? "🎫 <b>تیکت تو ثبت شد!</b>\n\nتیم پشتیبانی Nika Net به‌زودی همین‌جا جوابت رو می‌ده. اگه جزئیات بیشتری داری، همین‌جا ادامه بده. 📬"
-    : "🎫 <b>Your ticket has been submitted!</b>\n\nThe Nika Net support team will reply to you right here soon. Feel free to add more details. 📬";
+    ? "🎫 <b>تیکت شما ثبت شد!</b>\n\nتیم پشتیبانی Nika Net به‌زودی همین‌جا جوابت رو می‌ده. اگه جزئیات بیشتری داری، همین‌جا ادامه بده. 📬"
+    : "🎫 <b>Your ticket has been registered!</b>\n\nThe Nika Net support team will reply to you right here soon. Feel free to add more details. 📬";
+}
+
+// تأیید پاسخ کاربر به پیام شخصی/پشتیبانی (بعد از ارسال پیامش)
+export function pmReplyAck(): string {
+  return "✅ <b>پیام شما ارسال شد!</b>\n\nجوابت رو خیلی زود می‌دم؛ اگر هم ندادم، دارم روی پروژه کار می‌کنم — شرمنده 🙏";
+}
+
+// پیام راهنما هنگام زدن دکمهٔ «پاسخ دادن» (قبل از نوشتن)
+export function pmReplyPrompt(): string {
+  return "✍️ جوابت رو همین‌جا بنویس، مستقیم به Nika Net می‌رسه. 📬";
 }
 
 // اعلان به مالک هنگام پیام کاربر — تیکت جدید یا پاسخ جدید
