@@ -364,6 +364,7 @@ const PANEL_HTML = `<!doctype html>
       <label style="text-align:right">کد تأیید (به تلگرامت ارسال می‌شود)</label>
       <div class="otp"><input id="lgCode" inputmode="numeric" placeholder="••••••" dir="ltr" maxlength="8" /></div>
       <div class="code-label">کد تا <b style="color:var(--amber)">۵ دقیقه</b> معتبر است</div>
+      <div class="hint" id="lgWho" style="display:none;text-align:right;line-height:1.9"></div>
       <div class="row" style="display:flex;gap:10px;margin-top:18px">
         <button class="btn btn-p" id="lgSend" style="flex:1">📨 دریافت کد</button>
         <button class="btn btn-s" id="lgGo" style="flex:1">✅ ورود</button>
@@ -657,17 +658,29 @@ const PANEL_HTML = `<!doctype html>
   setInterval(tickClock, 1000); tickClock();
 
   /* ---------- login ---------- */
+  // نمایش «مالک این پنل کیست» تا مشخص باشد کد به کدام اکانت تلگرام می‌رود
+  api("/panel/api/logininfo").then(function (r) {
+    var el = $("#lgWho");
+    if (!el || !r.ok || !r.j || !r.j.ownerId) return;
+    el.style.display = "block";
+    var who = r.j.username ? "@" + r.j.username : "";
+    var nm = r.j.name ? r.j.name : "";
+    el.innerHTML = "👤 مالک این پنل: <b>" + (nm ? nm + " " : "") + (who || "آیدی " + r.j.ownerId) + "</b><br>" +
+      "کد ورود فقط به <b>همین اکانت</b> در چت ربات فرستاده می‌شود — همان اکانت را در تلگرام چک کن.";
+  }).catch(function () {});
+
   $("#lgSend").onclick = async function () {
     var id = $("#lgId").value.trim();
     if (!/^\\d{5,}$/.test(id)) { toast("آیدی عددی معتبر وارد کن"); return; }
     var r = await api("/panel/api/request", { method: "POST", body: { id: Number(id) } });
     if (r.ok && r.j.ok) {
+      var dest = r.j.ownerUsername ? "@" + r.j.ownerUsername : "مالک";
       var bot = r.j.bot ? "@" + r.j.bot : "ربات";
       if (r.j.sent === false) {
-        $("#lgMsg").innerHTML = "✅ کد چند لحظه پیش به چت <b>" + bot + "</b> فرستاده شده — همان کد را وارد کن.";
+        $("#lgMsg").innerHTML = "✅ کد چند لحظه پیش به اکانت <b>" + dest + "</b> در چت <b>" + bot + "</b> فرستاده شده — همان کد را وارد کن.";
         toast("کد قبلاً فرستاده شده ✓");
       } else {
-        $("#lgMsg").innerHTML = "✅ کد به چت <b>" + bot + "</b> در تلگرام فرستاده شد.<br>تلگرام را باز کن، چت همین ربات را ببین و کد را اینجا وارد کن.";
+        $("#lgMsg").innerHTML = "✅ کد به اکانت <b>" + dest + "</b> در چت <b>" + bot + "</b> فرستاده شد.<br>در تلگرام همان اکانت را باز کن و کد را اینجا وارد کن.";
         toast("کد فرستاده شد ✓");
       }
     }
@@ -1518,6 +1531,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
       return json({ ok: false, error: "فقط مالک ربات می‌تواند وارد شود" }, 403);
     }
     const meta = await fj.botMeta(env);
+    const om = await st.getMeta(env, id);
 
     // اگر کد معتبری هنوز وجود دارد، همان کد را دوباره می‌فرستیم (به‌جای خطای «صبر کن»)
     let code = (await env.BOT_KV.get(CODE_KEY + id)) || "";
@@ -1529,7 +1543,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     // ضد اسپم نرم: اگر همین چند لحظه پیش فرستادیم، دوباره ارسال نمی‌کنیم
     const lastSend = parseInt((await env.BOT_KV.get(CD_KEY + id)) || "0", 10) || 0;
     if (lastSend && Date.now() - lastSend < 12_000) {
-      return json({ ok: true, sent: false, bot: meta.username });
+      return json({ ok: true, sent: false, bot: meta.username, ownerUsername: om.username || "" });
     }
 
     // ارسال کد با تلاش مجدد خودکار — مثلاً وقتی تلگرام موقتاً محدودیت نرخ (429) بدهد
@@ -1556,7 +1570,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
       }, 502);
     }
     await env.BOT_KV.put(CD_KEY + id, String(Date.now()), { expirationTtl: 60 }).catch(() => {});
-    return json({ ok: true, sent: true, bot: meta.username });
+    return json({ ok: true, sent: true, bot: meta.username, ownerUsername: om.username || "" });
   }
 
   if (path === "/panel/api/verify" && req.method === "POST") {
@@ -1583,6 +1597,32 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const res = json({ ok: true });
     res.headers.set("set-cookie", "npanel=; HttpOnly; Path=/; Max-Age=0");
     return res;
+  }
+
+  // عمومی (بدون نیاز به ورود): نشان می‌دهد کد ورود به کدام اکانت تلگرام می‌رود
+  if (path === "/panel/api/logininfo" && req.method === "GET") {
+    const owner = await fj.ownerId(env);
+    if (owner === null) return json({ ok: true, ownerId: null, name: "", username: "" });
+    let meta = await st.getMeta(env, owner);
+    if (!meta.nameAt || Date.now() - meta.nameAt > 24 * 3600_000 || !meta.firstName) {
+      try {
+        const r: any = await tg.getChat(env, owner);
+        const res = r?.result;
+        if (res && res.type === "private") {
+          meta.firstName = res.first_name || meta.firstName || "";
+          meta.lastName = res.last_name || meta.lastName || "";
+          meta.username = res.username || meta.username || "";
+          meta.nameAt = Date.now();
+          await st.saveMeta(env, owner, meta).catch(() => {});
+        }
+      } catch { /* keep cached meta */ }
+    }
+    return json({
+      ok: true,
+      ownerId: owner,
+      name: [meta.firstName, meta.lastName].filter(Boolean).join(" ").trim(),
+      username: meta.username || "",
+    });
   }
 
   /* ---- everything below requires a valid session ---- */
