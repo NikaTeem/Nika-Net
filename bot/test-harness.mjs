@@ -1,6 +1,7 @@
 // End-to-end harness for Support v2: runs the REAL bundled worker against a
 // mocked Telegram API + in-memory KV, and verifies every support flow.
 import worker from "./dist/bot.js";
+import vm from "node:vm";
 
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json" } });
@@ -202,6 +203,17 @@ r = await panel("/panel/api/support/list");
 check("closeall بسته شد و status ها closed است", r.j.tickets.filter((t) => t.status === "open").length === 0);
 
 // ===== 6) ورود پنل (Auth v1) =====
+// 6a) اسکریپت صفحهٔ ورود باید بدون خطای نحوی رندر شود (ریگریشن: escape های \n و \d)
+{
+  const preq = new Request("https://x/panel", { method: "GET" });
+  const pres = await worker.fetch(preq, env, ctx);
+  const phtml = await pres.text();
+  const pm = phtml.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+  let syntaxOk = false;
+  if (pm) { try { new vm.Script(pm[1]); syntaxOk = true; } catch (e) { errors.push("panel script syntax: " + e.message); } }
+  check("اسکریپت صفحهٔ پنل بدون خطای نحوی", syntaxOk);
+}
+
 let lr = await panelRaw("/panel/api/logininfo");
 check("logininfo عمومی → مالک 8940829322", lr.ok && lr.j.ownerId === 8940829322);
 

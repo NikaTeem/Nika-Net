@@ -735,7 +735,7 @@ const PANEL_HTML = `<!doctype html>
   $("#segPass").onclick = function () { setLgMode("pass"); };
   $("#lgGoPass").onclick = async function () {
     var id = $("#lgId").value.trim(), pw = $("#lgPass").value;
-    if (!/^\d{5,}$/.test(id) || !pw) { toast("آیدی عددی و رمز عبور را کامل وارد کن"); return; }
+    if (!/^\\d{5,}$/.test(id) || !pw) { toast("آیدی عددی و رمز عبور را کامل وارد کن"); return; }
     var r = await api("/panel/api/password", { method: "POST", body: { id: Number(id), password: pw } });
     if (r.ok && r.j.ok) { toast("خوش آمدی ✓"); await load(); }
     else {
@@ -1065,7 +1065,7 @@ const PANEL_HTML = `<!doctype html>
     });
     var csv = rows.map(function (r) {
       return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(",");
-    }).join("\n");
+    }).join("\\n");
     var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
