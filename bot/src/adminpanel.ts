@@ -310,7 +310,8 @@ const PANEL_HTML = `<!doctype html>
   .ulist li{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:center;transition:.15s}
   .ulist li:hover{background:rgba(255,255,255,.05)}
   .ulist li.on{background:rgba(79,140,255,.12);box-shadow:inset 3px 0 0 var(--acc)}
-  .ava{width:40px;height:40px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-weight:800;font-size:16px;color:#fff}
+  .ava{width:40px;height:40px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-weight:800;font-size:16px;color:#fff;position:relative;overflow:hidden}
+  .ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
   .umeta{min-width:0;flex:1}
   .umeta .n{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .umeta .t{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
@@ -667,11 +668,14 @@ const PANEL_HTML = `<!doctype html>
     var d = new Date(ts);
     return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
   };
-  var avatar = function (name, id) {
+  var avatar = function (name, id, withPhoto) {
     var palette = ["#4f8cff", "#7c4dff", "#31d0aa", "#ffb020", "#ff5470", "#0ea5e9", "#8b5cf6", "#f43f5e"];
     var c = palette[Math.abs(Number(id) || 0) % palette.length];
     var initial = (name || "?").trim().charAt(0) || "؟";
-    return '<span class="ava" style="background:linear-gradient(135deg,' + c + ',' + c + '99)">' + esc(initial) + '</span>';
+    var img = withPhoto
+      ? '<img src="/panel/api/photo/' + Number(id) + '" alt="" onerror="this.remove()" />'
+      : "";
+    return '<span class="ava" style="background:linear-gradient(135deg,' + c + ',' + c + '99)">' + img + esc(initial) + '</span>';
   };
 
   // ===== ناوبری =====
@@ -710,8 +714,10 @@ const PANEL_HTML = `<!doctype html>
       var li = document.createElement("li");
       li.setAttribute("data-id", t.id);
       if (ns.activePm === t.id) li.classList.add("on");
-      li.innerHTML = avatar(t.name || t.username || "", t.id) +
-        '<div class="umeta"><div class="n">' + esc(t.name || "کاربر " + t.id) + "</div>" +
+      var disp = t.name || (t.username ? "@" + t.username : "کاربر " + t.id);
+      var sub = t.name && t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "";
+      li.innerHTML = avatar(disp, t.id, true) +
+        '<div class="umeta"><div class="n">' + esc(disp) + sub + "</div>" +
         '<div class="t">' + esc(t.lastText || "") + "</div></div>";
       if (t.unread > 0) li.insertAdjacentHTML("beforeend", '<span class="unread">' + t.unread + "</span>");
       li.onclick = function () { openPm(t.id); };
@@ -725,8 +731,9 @@ const PANEL_HTML = `<!doctype html>
     var r = await api("/panel/api/pm/get?id=" + id);
     if (!r.ok) return;
     var t = r.j.ticket;
-    $("#pm-head").innerHTML = avatar(t.name || t.username || "", t.id) +
-      '<div class="meta"><div class="n">' + esc(t.name || "کاربر " + t.id) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + "</div>" +
+    var disp = t.name || (t.username ? "@" + t.username : "کاربر " + t.id);
+    $("#pm-head").innerHTML = avatar(disp, t.id, true) +
+      '<div class="meta"><div class="n">' + esc(disp) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + "</div>" +
       '<div class="s"><span dir="ltr">' + t.id + "</span> · " + esc(t.kind === "dm" ? "پیام شخصی" : "تیکت") + "</div></div>";
     $("#pm-id").value = t.id;
     $$("#pm-list li").forEach(function (li) { li.classList.toggle("on", Number(li.getAttribute("data-id")) === id); });
@@ -1563,7 +1570,10 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!Number.isInteger(id) || !text) return json({ error: "invalid" }, 400);
     await sup.addOwnerMessage(env, id, text);
-    const sent = await tg.sendMessage(env, id, ui.pmEnvelope(sup.escTg(text))).catch(() => null);
+    // دکمهٔ «پاسخ دادن» → اپ پشتیبانی (همان گفتگو) تا کاربر مستقیم پاسخ بدهد
+    const meta = await fj.botMeta(env);
+    const kb = tg.kb([[{ text: "💬 پاسخ دادن", web_app: `${meta.origin}/app/support`, color: "primary", emoji: false }]]);
+    const sent = await tg.sendMessage(env, id, ui.pmEnvelope(sup.escTg(text)), kb).catch(() => null);
     if (!sent || !sent.ok) {
       return json({ ok: false, error: "تلگرام پیام را نپذیرفت (کاربر شاید ربات را بلاک کرده باشد)." });
     }

@@ -4,6 +4,7 @@
 // Conversations live in KV under the "sup:" prefix (one key per user chat id).
 
 import { Env } from "./types";
+import * as st from "./state";
 
 export type TicketStatus = "open" | "closed";
 
@@ -96,11 +97,33 @@ export async function addOwnerMessage(env: Env, id: number, text: string): Promi
   return t;
 }
 
-// ساخت یک گفتگوی خالی (پیام شخصی مالک) بدون هیچ پیامی
+// ساخت یک گفتگوی خالی (پیام شخصی مالک) — نام/یوزرنیم کاربر را از متادیتا پر می‌کند
+// تا در پنل به‌جای آیدی عددی، پروفایل کاربر دیده شود.
 export async function ensureThread(env: Env, id: number): Promise<void> {
   const t = await getTicket(env, id);
   if (!t) {
-    await putTicket(env, { id, kind: "dm", status: "open", unread: 0, lastAt: Date.now(), lastText: "", name: "", username: "", msgs: [] });
+    const meta = await st.getMeta(env, id);
+    await putTicket(env, {
+      id,
+      kind: "dm",
+      status: "open",
+      unread: 0,
+      lastAt: Date.now(),
+      lastText: "",
+      name: [meta?.firstName, meta?.lastName].filter(Boolean).join(" ").trim(),
+      username: meta?.username || "",
+      msgs: [],
+    });
+    return;
+  }
+  // بک‌فیل: گفتگوهای قدیمی که فقط آیدی عددی دارند
+  if (!t.name && !t.username) {
+    const meta = await st.getMeta(env, id);
+    if (meta) {
+      t.name = [meta.firstName, meta.lastName].filter(Boolean).join(" ").trim();
+      t.username = meta.username || "";
+      await putTicket(env, t);
+    }
   }
 }
 
