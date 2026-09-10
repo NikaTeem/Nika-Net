@@ -294,6 +294,9 @@ const PANEL_HTML = `<!doctype html>
   .otp{display:flex;gap:10px;margin-top:16px}
   .otp input{flex:1;text-align:center;font-size:22px;font-weight:700;letter-spacing:8px;font-family:var(--f-mono);direction:ltr}
   .code-label{text-align:center;color:var(--faint);font-size:11px;margin-top:12px}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:16px;background:rgba(255,255,255,.04);border:1px dashed var(--border);border-radius:11px;padding:4px}
+  .seg button{background:none;border:none;color:var(--muted);font-family:var(--f-body);font-size:12.5px;font-weight:700;padding:9px 6px;border-radius:8px;cursor:pointer;transition:.15s}
+  .seg button.seg-on{background:var(--grad);color:#fff;box-shadow:0 6px 18px -8px rgba(0,0,0,.8)}
 
   /* ===== Aurora Nika: ناوبری + پیام شخصی + پشتیبانی ===== */
   .hide{display:none!important}
@@ -362,15 +365,29 @@ const PANEL_HTML = `<!doctype html>
       <div class="sub">پنل مدیریت بات · ورود امن با کد تلگرام</div>
       <label style="text-align:right">آیدی عددی تلگرام شما</label>
       <input id="lgId" inputmode="numeric" placeholder="8940829322" dir="ltr" />
-      <label style="text-align:right">کد تأیید (به تلگرامت ارسال می‌شود)</label>
-      <div class="otp"><input id="lgCode" inputmode="numeric" placeholder="••••••" dir="ltr" maxlength="8" /></div>
-      <div class="code-label">کد تا <b style="color:var(--amber)">۵ دقیقه</b> معتبر است</div>
-      <div class="hint" id="lgWho" style="display:none;text-align:right;line-height:1.9"></div>
-      <div class="row" style="display:flex;gap:10px;margin-top:18px">
-        <button class="btn btn-p" id="lgSend" style="flex:1">📨 دریافت کد</button>
-        <button class="btn btn-s" id="lgGo" style="flex:1">✅ ورود</button>
+      <div class="seg" id="lgSeg">
+        <button type="button" id="segCode" class="seg-on">کد تلگرام</button>
+        <button type="button" id="segPass">رمز عبور</button>
       </div>
-      <div class="hint" id="lgMsg">فقط <b>مالک ربات</b> می‌تواند کد دریافت کند.</div>
+      <div id="lgModeCode">
+        <label style="text-align:right">کد تأیید (به تلگرامت ارسال می‌شود)</label>
+        <div class="otp"><input id="lgCode" inputmode="numeric" placeholder="••••••" dir="ltr" maxlength="8" /></div>
+        <div class="code-label">کد تا <b style="color:var(--amber)">۵ دقیقه</b> معتبر است</div>
+        <div class="hint" id="lgWho" style="display:none;text-align:right;line-height:1.9"></div>
+        <div class="row" style="display:flex;gap:10px;margin-top:18px">
+          <button class="btn btn-p" id="lgSend" style="flex:1">📨 دریافت کد</button>
+          <button class="btn btn-s" id="lgGo" style="flex:1">✅ ورود</button>
+        </div>
+      </div>
+      <div id="lgModePass" class="hide">
+        <label style="text-align:right">رمز عبور پنل</label>
+        <input id="lgPass" type="password" placeholder="••••••••" dir="ltr" autocomplete="current-password" />
+        <div class="row" style="display:flex;gap:10px;margin-top:18px">
+          <button class="btn btn-p" id="lgGoPass" style="flex:1">🔑 ورود با رمز</button>
+        </div>
+        <div class="hint" id="lgPassMsg" style="text-align:right">اگر رمز نداری، با «کد تلگرام» وارد شو و بعد از پنل رمز تنظیم کن.</div>
+      </div>
+      <div class="hint" id="lgMsg">فقط <b>مالک ربات</b> می‌تواند وارد شود.</div>
       <div class="olink-divider"><span>لینک‌های رسمی Nika Net</span></div><div class="olinks col"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
     </div>
   </div>
@@ -414,6 +431,15 @@ const PANEL_HTML = `<!doctype html>
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>🔑 رمز عبور پنل <span class="mini">ورود بدون کد تلگرام</span></h2>
+      <div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap">
+        <input id="pwNew" type="password" placeholder="رمز عبور جدید (حداقل ۶ کاراکتر)" dir="ltr" style="flex:1;min-width:200px" autocomplete="new-password" />
+        <button class="btn btn-p" id="pwSet" style="flex:0 0 auto">ذخیره رمز</button>
+      </div>
+      <div class="hint" id="pwState" style="margin-top:10px">در حال بررسی…</div>
     </div>
 
     <div class="card">
@@ -696,7 +722,49 @@ const PANEL_HTML = `<!doctype html>
   };
   $("#lgId").addEventListener("keydown", function (e) { if (e.key === "Enter") $("#lgSend").click(); });
   $("#lgCode").addEventListener("keydown", function (e) { if (e.key === "Enter") $("#lgGo").click(); });
+
+  // سوییچ بین «کد تلگرام» و «رمز عبور»
+  function setLgMode(m) {
+    var code = m === "code";
+    $("#segCode").classList.toggle("seg-on", code);
+    $("#segPass").classList.toggle("seg-on", !code);
+    $("#lgModeCode").classList.toggle("hide", !code);
+    $("#lgModePass").classList.toggle("hide", code);
+  }
+  $("#segCode").onclick = function () { setLgMode("code"); };
+  $("#segPass").onclick = function () { setLgMode("pass"); };
+  $("#lgGoPass").onclick = async function () {
+    var id = $("#lgId").value.trim(), pw = $("#lgPass").value;
+    if (!/^\d{5,}$/.test(id) || !pw) { toast("آیدی عددی و رمز عبور را کامل وارد کن"); return; }
+    var r = await api("/panel/api/password", { method: "POST", body: { id: Number(id), password: pw } });
+    if (r.ok && r.j.ok) { toast("خوش آمدی ✓"); await load(); }
+    else {
+      var e = (r.j && r.j.error) ? r.j.error : "ورود ناموفق";
+      $("#lgPassMsg").innerHTML = "<b>⛔ " + e + "</b>";
+      toast(e);
+    }
+  };
+  $("#lgPass").addEventListener("keydown", function (e) { if (e.key === "Enter") $("#lgGoPass").click(); });
+
   $("#logout").onclick = async function () { await api("/panel/api/logout", { method: "POST" }); location.reload(); };
+
+  // تنظیم رمز عبور پنل (بعد از ورود)
+  function pwState() {
+    var el = $("#pwState");
+    if (!el) return;
+    api("/panel/api/haspassword").then(function (r) {
+      if (r.ok && r.j && r.j.set) el.innerHTML = "🔒 رمز عبور <b style='color:var(--green)'>فعال</b> است — برای ورود بعدی از «رمز عبور» استفاده کن یا آن را عوض کن.";
+      else el.innerHTML = "⚪ هنوز رمز عبوری تنظیم نشده — یک رمز بگذار تا بتوانی بدون کد تلگرام وارد شوی.";
+    }).catch(function () { el.innerHTML = "وضعیت رمز عبور در دسترس نیست."; });
+  }
+  $("#pwSet").onclick = async function () {
+    var pw = $("#pwNew").value;
+    if (pw.length < 6) { toast("رمز عبور باید حداقل ۶ کاراکتر باشد"); return; }
+    var r = await api("/panel/api/setpassword", { method: "POST", body: { password: pw } });
+    if (r.ok && r.j.ok) { toast("رمز عبور ذخیره شد ✓"); $("#pwNew").value = ""; pwState(); }
+    else toast((r.j && r.j.error) || "خطا در ذخیره رمز");
+  };
+  pwState();
 
   // ====== Aurora Nika: ناوبری + پیام شخصی + پشتیبانی ======
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
@@ -1531,9 +1599,35 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     return json({ ok: true, ...(await auth.loginInfo(env)) });
   }
 
+  // عمومی: آیا رمز عبور پنل تنظیم شده است؟
+  if (path === "/panel/api/haspassword" && req.method === "GET") {
+    return json({ ok: true, set: await auth.hasPassword(env) });
+  }
+
+  // ورود با رمز عبور (جایگزین کد تلگرام)
+  if (path === "/panel/api/password" && req.method === "POST") {
+    const b = await readJson(req);
+    if (!(await auth.hasPassword(env))) {
+      return json({ ok: false, error: "رمز عبور هنوز تنظیم نشده — از ورود با کد تلگرام استفاده کن و بعد از پنل رمز بگذار." }, 403);
+    }
+    const token = await auth.passwordLogin(env, Number(b.id), String(b.password || ""));
+    if (!token) return json({ ok: false, error: "آیدی یا رمز عبور اشتباه است" }, 401);
+    const res = json({ ok: true });
+    res.headers.set("set-cookie", `npanel=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=86400`);
+    return res;
+  }
+
   /* ---- everything below requires a valid session ---- */
   const owner = await auth.sessionOwner(env, req.headers.get("cookie") || "");
   if (owner === null) return json({ error: "unauthorized" }, 401);
+
+  // تنظیم/تغییر رمز عبور پنل (نیازمند نشست)
+  if (path === "/panel/api/setpassword" && req.method === "POST") {
+    const b = await readJson(req);
+    const ok = await auth.setPassword(env, owner, String(b.password || ""));
+    if (!ok) return json({ ok: false, error: "رمز عبور باید حداقل ۶ کاراکتر باشد" }, 400);
+    return json({ ok: true });
+  }
 
   if (path === "/panel/api/state" && req.method === "GET") {
     const meta = await fj.botMeta(env);

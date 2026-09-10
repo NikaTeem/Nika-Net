@@ -14,11 +14,23 @@ import * as st from "./state";
 const CODE_KEY = "panel:code:";
 const CD_KEY = "panel:cd:";
 const SESSION_KEY = "panel:sess:";
+const PW_KEY = "panel:password:";
+const PWFAIL_KEY = "panel:pwfail:";
 
 const CODE_TTL = 300;      // ۵ دقیقه
 const SESSION_TTL = 86400; // ۱ روز
 const RESEND_GAP = 12_000; // ۱۲ ثانیه — فاصلهٔ بین دو ارسال واقعی کد
 const SEND_ATTEMPTS = 3;   // تلاش مجدد روی محدودیت نرخ تلگرام
+
+const PW_SALT = "nikapanel:v1:"; // ثابت هش رمز عبور
+const PW_MAX_TRIES = 5;          // بعد از ۵ تلاش ناموفق، قفل موقت
+const PW_LOCK_SECONDS = 600;     // ۱۰ دقیقه
+
+async function sha256Hex(s: string): Promise<string> {
+  const data = new TextEncoder().encode(s);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export function randomCode(): string {
   const b = new Uint8Array(4);
@@ -157,4 +169,41 @@ export async function sessionOwner(env: Env, cookieHeader: string): Promise<numb
 export async function destroySession(env: Env, cookieHeader: string): Promise<void> {
   const token = readCookie(cookieHeader);
   if (token) await env.BOT_KV.delete(SESSION_KEY + token).catch(() => {});
+}
+
+/* ---------- ورود با رمز عبور (جایگزین کد تلگرام) ---------- */
+
+export async function hasPassword(env: Env): Promise<boolean> {
+  return !!(await env.BOT_KV.get(PW_KEY));
+}
+
+// ورود با «آیدی عددی + رمز عبور» → در موفقیت توکن نشست برمی‌گرداند
+export async function passwordLogin(env: Env, id: number, password: string): Promise<string | null> {
+  const owner = await fj.ownerId(env);
+  if (!Number.isInteger(id) || id !== owner) return null;
+  const fails = parseInt((await env.BOT_KV.get(PWFAIL_KEY + id)) || "0", 10) || 0;
+  if (fails >= PW_MAX_TRIES) return null; // قفل موقت
+  const stored = (await env.BOT_KV.get(PW_KEY)) || "";
+  if (!stored) return null;
+  const hash = await sha256Hex(PW_SALT + String(password || ""));
+  if (hash !== stored) {
+    await env.BOT_KV.put(PWFAIL_KEY + id, String(fails + 1), { expirationTtl: PW_LOCK_SECONDS }).catch(() => {});
+    return null;
+  }
+  await env.BOT_KV.delete(PWFAIL_KEY + id).catch(() => {});
+  const token = sessionToken();
+  await env.BOT_KV.put(SESSION_KEY + token, String(id), { expirationTtl: SESSION_TTL });
+  return token;
+}
+
+// تغییر/تنظیم رمز عبور (فقط مالک، حداقل ۶ کاراکتر)
+export async function setPassword(env: Env, id: number, password: string): Promise<boolean> {
+  const owner = await fj.ownerId(env);
+  if (!Number.isInteger(id) || id !== owner) return false;
+  const p = String(password || "").trim();
+  if (p.length < 6) return false;
+  const hash = await sha256Hex(PW_SALT + p);
+  await env.BOT_KV.put(PW_KEY, hash).catch(() => {});
+  await env.BOT_KV.delete(PWFAIL_KEY + id).catch(() => {});
+  return true;
 }

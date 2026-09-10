@@ -235,6 +235,56 @@ check("logout → ok", lr.ok);
 lr = await panelRaw("/panel/api/state", { cookie: "npanel=" + token });
 check("بعد از خروج → 401", lr.status === 401);
 
+// ===== 7) ورود با رمز عبور (Auth v2 — جایگزین کد تلگرام) =====
+lr = await panelRaw("/panel/api/haspassword");
+check("haspassword اولیه → set:false", lr.ok && lr.j.set === false);
+
+lr = await panelRaw("/panel/api/password", { method: "POST", body: { id: 8940829322, password: "whatever1" } });
+check("ورود با رمز وقتی هنوز تنظیم نشده → 403", lr.status === 403);
+
+lr = await panelRaw("/panel/api/setpassword", { method: "POST", body: { password: "nikapass123" } });
+check("setpassword بدون نشست → 401", lr.status === 401);
+
+// دوباره با کد وارد شو تا بتوانیم رمز بگذاریم
+lr = await panelRaw("/panel/api/request", { method: "POST", body: { id: 8940829322 } });
+const code2 = await kv.get("panel:code:8940829322");
+lr = await panelRaw("/panel/api/verify", { method: "POST", body: { id: 8940829322, code: code2 } });
+const token2 = (lr.setCookie.match(/npanel=([a-f0-9-]+)/) || [])[1];
+check("ورود مجدد با کد (برای تنظیم رمز)", lr.ok && !!token2);
+
+lr = await panelRaw("/panel/api/setpassword", { method: "POST", cookie: "npanel=" + token2, body: { password: "123" } });
+check("رمز کوتاه → 400", lr.status === 400);
+
+lr = await panelRaw("/panel/api/setpassword", { method: "POST", cookie: "npanel=" + token2, body: { password: "nikapass123" } });
+check("setpassword درست → ok", lr.ok && lr.j.ok === true);
+
+lr = await panelRaw("/panel/api/haspassword");
+check("haspassword بعد از تنظیم → set:true", lr.ok && lr.j.set === true);
+
+lr = await panelRaw("/panel/api/password", { method: "POST", body: { id: 999999999, password: "nikapass123" } });
+check("رمز با آیدی غیرمالک → 401", lr.status === 401);
+
+lr = await panelRaw("/panel/api/password", { method: "POST", body: { id: 8940829322, password: "wrong-pass" } });
+check("رمز اشتباه → 401", lr.status === 401);
+
+lr = await panelRaw("/panel/api/password", { method: "POST", body: { id: 8940829322, password: "nikapass123" } });
+check("رمز درست → ok + set-cookie", lr.ok && /npanel=[a-f0-9]+/.test(lr.setCookie));
+const token3 = (lr.setCookie.match(/npanel=([a-f0-9-]+)/) || [])[1];
+
+lr = await panelRaw("/panel/api/state", { cookie: "npanel=" + token3 });
+check("نشست رمز → /state ok", lr.ok && lr.j.bot && lr.j.stats);
+
+// قفل موقت: ۵ رمز اشتباه پشت سر هم → 401 حتی با رمز درست
+for (let i = 0; i < 5; i++) {
+  await panelRaw("/panel/api/password", { method: "POST", body: { id: 8940829322, password: "bad-" + i } });
+}
+lr = await panelRaw("/panel/api/password", { method: "POST", body: { id: 8940829322, password: "nikapass123" } });
+check("بعد از ۵ تلاش ناموفق → قفل موقت 401", lr.status === 401);
+
+// پاک‌سازی برای تست‌های بعدی
+await kv.delete("panel:password:");
+await kv.delete("panel:pwfail:8940829322");
+
 console.log("\nconsole errors:", errors.length ? errors.slice(0, 5) : "none");
 console.log("\n===== RESULT =====");
 const failed = PASS.filter((p) => !p[1]);
