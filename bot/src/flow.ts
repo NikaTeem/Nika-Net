@@ -418,13 +418,13 @@ async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: st
   if (owner && owner !== chatId) {
     await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, isNewTicket)).catch(() => {});
   }
-  // تأیید به کاربر: بعد از انتخاب دسته، «تیکت ثبت شد» همان‌جا فرستاده شده — تکرار نمی‌کنیم.
-  if (!fromCategory) {
-    if (r.verdict === "new_ticket") {
-      await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
-    } else if (r.verdict === "reply") {
-      await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
-    }
+  // تأیید بعد از ثبت پیام کاربر:
+  //   تیکتِ جدید (یا بدنهٔ تیکت بعد از انتخاب دسته) → «تیکتت ثبت شد»
+  //   پاسخ به پیام مالک/پشتیبانی → «پیام شما ارسال شد»
+  if (isNewTicket) {
+    await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
+  } else if (r.verdict === "reply") {
+    await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
   }
   // بازگشت به حالت عادی پس از ثبت بدنهٔ تیکت
   const s = await st.getState(env, chatId);
@@ -1086,9 +1086,8 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     s.tmp.supportCat = cat.id;
     await st.saveState(env, chatId, s);
     await tg.answerCallback(env, cq.id, `🏷 ${cat.fa}`).catch(() => {});
-    // ۱) تأیید فوریِ ثبت تیکت — مستقل از تاریخچهٔ قبلی گفتگو
-    await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
-    // ۲) منوی دسته‌ها را درجا به «دسته انتخاب شد — حالا بنویس» تبدیل می‌کنیم
+    // منوی دسته‌ها را درجا به «دسته انتخاب شد — حالا بنویس» تبدیل می‌کنیم.
+    // تأیید «تیکتت ثبت شد» بعد از نوشتن پیام کاربر می‌آید (نه الان).
     const done = ui.supportChosen(s, cat);
     const edited = await tg.editMessage(env, chatId, msgId, done, tg.kb([])).catch(() => null);
     if (!edited || !edited.ok) await tg.sendMessage(env, chatId, done).catch(() => {});

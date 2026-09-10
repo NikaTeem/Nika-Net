@@ -21,7 +21,8 @@ const kv = new FakeKV();
 kv.put("owner", "8940829322");
 
 let msgId = 0;
-const sent = []; // every sendMessage payload
+const sent = [];   // every sendMessage payload
+const edited = []; // every editMessageText payload
 
 globalThis.fetch = async (url, init = {}) => {
   const u = String(url);
@@ -37,7 +38,7 @@ globalThis.fetch = async (url, init = {}) => {
     if (method === "getChat") return json({ ok: true, result: { id: body.chat_id, type: "private", first_name: "T", username: "u" } });
     if (method === "getChatMember") return json({ ok: true, result: { status: "member" } });
     if (method === "getUserProfilePhotos") return json({ ok: true, result: { total_count: 0, photos: [] } });
-    if (method === "editMessageText") return json({ ok: true, result: { message_id: body.message_id } });
+    if (method === "editMessageText") { edited.push(body); return json({ ok: true, result: { message_id: body.message_id } }); }
     return json({ ok: true, result: { message_id: ++msgId } });
   }
   return new Response("not found", { status: 404 });
@@ -103,13 +104,15 @@ check("owner /support → منوی دسته‌ها", lastTo(OWNER).includes("م�
 const menuId = msgId;
 
 await webhook(cb(OWNER, menuId, "sup:cat:idea"));
-check("owner انتخاب دسته → تأیید فوری «تیکتت ثبت شد»", ack(lastTo(OWNER)));
+check("owner انتخاب دسته → بدون تأیید زودهنگام", !textsTo(OWNER).some(ack));
+check("owner انتخاب دسته → پیام «حالا بنویس» (edit)", edited.some((e) => (e.text || "").includes("حالا مشکل")));
 check("owner state = await_support", JSON.parse(await kv.get("u:" + OWNER)).state === "await_support");
 
 await webhook(msg(OWNER, "متن تیکت مالک"));
 const ownerTicket = JSON.parse(await kv.get("sup:" + OWNER));
 check("owner بدنهٔ تیکت ثبت شد", ownerTicket.msgs.some((m) => m.dir === "in" && m.text.includes("متن تیکت")));
-check("owner بدنه → بدون تکرار تأیید", textsTo(OWNER).filter(ack).length === 1);
+check("owner بدنه → تأیید «تیکتت ثبت شد» بعد از نوشتن", ack(lastTo(OWNER)));
+check("owner بدنه → فقط یک تأیید", textsTo(OWNER).filter(ack).length === 1);
 check("owner state برگشت به idle", JSON.parse(await kv.get("u:" + OWNER)).state === "idle");
 check("owner ticket startedBy=user", ownerTicket.startedBy === "user");
 
@@ -126,11 +129,12 @@ sent.length = 0;
 await webhook(msg(TEST, "/support", TEST));
 const menuId2 = msgId;
 await webhook(cb(TEST, menuId2, "sup:cat:buy", TEST));
-check("کاربرِ باسابقه → تأیید فوری بعد از انتخاب دسته", ack(lastTo(TEST)));
+check("کاربرِ باسابقه → انتخاب دسته بدون تأیید زودهنگام", !textsTo(TEST).some(ack));
 await webhook(msg(TEST, "یه مشکل جدید", TEST));
 const t2 = JSON.parse(await kv.get("sup:" + TEST));
 check("کاربرِ باسابقه → بدنه اضافه شد", t2.msgs.some((m) => m.dir === "in" && m.text.includes("یه مشکل جدید")));
-check("کاربرِ باسابقه → بدون تکرار تأیید", textsTo(TEST).filter(ack).length === 1);
+check("کاربرِ باسابقه → تأیید بعد از نوشتن", ack(lastTo(TEST)));
+check("کاربرِ باسابقه → فقط یک تأیید", textsTo(TEST).filter(ack).length === 1);
 check("کاربرِ باسابقه → category=خرید و اشتراک", t2.category === "buy");
 
 // ---- 3) reply to owner → «پیام شما ارسال شد» ----
