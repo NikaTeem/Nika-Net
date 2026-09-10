@@ -113,9 +113,12 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .olink .badge.bot{color:var(--info)}
 .olink .badge.ch{color:var(--ok)}
 .olink .badge.web{color:var(--warn)}
+.olink .badge.gh{color:var(--paper);transition:transform .18s ease}
 .olink .badge.bot .tg{width:21px;height:21px}
 .olink .badge.bot .robot{width:16px;height:16px}
 .olink .badge.ch svg,.olink .badge.web svg{width:22px;height:22px}
+.olink .badge.gh svg{width:24px;height:24px}
+.olink:hover .badge.gh{transform:rotate(-8deg) scale(1.08)}
 .olink .t{flex:1;min-width:0}
 .olink .t b{display:block;font-size:13.5px;font-weight:700;font-family:var(--serif);letter-spacing:.3px;color:var(--paper);line-height:1.55}
 .olink .t i{font-style:normal;font-size:10.5px;color:var(--muted);font-family:var(--mono);direction:ltr;display:block;text-align:right}
@@ -196,7 +199,24 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   content:""; position:absolute; right:0; top:22%; bottom:22%; width:3px; border-radius:99px;
   background:var(--grad-2); opacity:.9;
 }
-.sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px dashed var(--border-strong);font-size:11px;color:var(--muted);font-family:var(--mono)}
+.sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px dashed var(--border-strong)}
+.foot-tag{font-size:11px;color:var(--muted);font-family:var(--mono);text-align:center;margin-top:12px;line-height:1.7}
+.gh-card{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:13px;
+  border:1.5px dashed var(--border-strong);background:var(--grad-soft);
+  text-decoration:none;transition:all .18s ease;position:relative;overflow:hidden}
+.gh-card::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:repeating-linear-gradient(-45deg,var(--accent-2) 0 5px,transparent 5px 11px);opacity:.5}
+.gh-card:hover{transform:translateY(-2px);border-color:var(--accent);border-style:solid;box-shadow:var(--glow)}
+.gh-card .gh-mark{width:30px;height:30px;flex:none;color:var(--paper);transition:transform .18s ease;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+.gh-card:hover .gh-mark{transform:rotate(-10deg) scale(1.08)}
+.gh-card .gh-body{flex:1;min-width:0;text-align:right}
+.gh-card .gh-body b{display:block;font-size:13px;font-weight:800;font-family:var(--serif);letter-spacing:.3px;color:var(--paper);line-height:1.5}
+.gh-card .gh-body i{font-style:normal;font-size:10px;color:var(--muted);font-family:var(--mono);direction:ltr;display:block;text-align:right}
+.gh-star{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:99px;
+  background:rgba(201,163,91,.12);border:1px dashed rgba(201,163,91,.4);color:var(--warn);
+  font-family:var(--mono);font-size:11px;font-weight:700;flex:none;line-height:1}
+.gh-star svg{width:12px;height:12px}
 #main{padding:26px 30px;max-width:1180px;width:100%;margin:0 auto}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap}
 .page-title{font-size:24px;font-weight:800;letter-spacing:.2px;font-family:var(--serif);color:var(--paper);line-height:1.5;
@@ -253,6 +273,34 @@ tr:last-child td{border-bottom:none}
 .badge.off{background:rgba(192,86,74,.12);color:var(--bad)}
 .badge.warn{background:rgba(201,163,91,.14);color:var(--warn)}
 .dot{width:7px;height:7px;border-radius:99px;background:currentColor;box-shadow:0 0 8px currentColor}
+
+/* ---------- راه‌های ارتباطی (داشبورد) ---------- */
+.links-card{margin-top:16px}
+.links-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.links-grid{grid-template-columns:1fr}}
+.link-tile{display:flex;align-items:center;gap:15px;padding:16px;border-radius:15px;
+  border:1.5px dashed var(--border-strong);background:var(--grad-soft);
+  text-decoration:none;color:var(--text);transition:all .2s ease;position:relative;overflow:hidden}
+.link-tile::before{content:"";position:absolute;top:0;right:0;left:0;height:4px;
+  background:repeating-linear-gradient(-45deg,var(--accent-2) 0 5px,transparent 5px 11px);opacity:.5}
+.link-tile:hover{transform:translateY(-3px);box-shadow:var(--glow)}
+.link-tile.bot:hover{border-color:var(--info);border-style:solid}
+.link-tile.ch:hover{border-color:var(--ok);border-style:solid}
+.lt-av{width:62px;height:62px;border-radius:50%;flex:none;position:relative;padding:3px;background:var(--bg-soft);box-shadow:var(--glow)}
+.lt-av::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1.3px dashed var(--accent);transform:rotate(8deg);opacity:.6;transition:transform .25s ease}
+.link-tile:hover .lt-av::after{transform:rotate(16deg);opacity:.9}
+.lt-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.lt-badge{position:absolute;bottom:-5px;left:-5px;width:26px;height:26px;border-radius:9px;
+  display:grid;place-items:center;background:var(--bg-soft);border:1.5px dashed var(--border-strong);box-shadow:var(--glow)}
+.lt-badge svg{width:14px;height:14px}
+.lt-badge.bot{color:var(--info)}
+.lt-badge.ch{color:var(--ok)}
+.lt-body{flex:1;min-width:0}
+.lt-body b{display:block;font-size:15px;font-weight:800;font-family:var(--serif);letter-spacing:.3px;color:var(--paper);line-height:1.5}
+.lt-body i{font-style:normal;font-size:11px;color:var(--muted);font-family:var(--mono);direction:ltr;display:block;text-align:right;margin-top:2px}
+.lt-desc{display:block;font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7;font-family:var(--mono)}
+.lt-go{color:var(--faint);font-size:17px;font-weight:800;transition:transform .18s ease;flex:none}
+.link-tile:hover .lt-go{transform:translate(-3px,3px);color:var(--accent)}
 
 .chart{width:100%;height:190px}
 .chart path.area{fill:url(#areaGrad)}
@@ -424,6 +472,11 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
           <span class="t"><b data-i18n="login.web">وب‌سایت Nika Net</b><i>nikanet.dpdns.org</i></span>
           <span class="go">↗</span>
         </a>
+        <a class="olink" href="https://github.com/NikaTeem/Nika-Net" target="_blank" rel="noopener">
+          <span class="badge gh"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span>
+          <span class="t"><b data-i18n="login.gh">گیت‌هاب Nika Net</b><i>github.com/NikaTeem/Nika-Net</i></span>
+          <span class="go">↗</span>
+        </a>
       </div>
     </div>
   </div>
@@ -462,7 +515,17 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
         <span data-i18n="nav.upd">بروزرسانی</span>
       </button>
     </nav>
-    <div class="sidebar-foot">Nika Net · Pencil Sketch<br/>Cloudflare Workers</div>
+    <div class="sidebar-foot">
+      <a class="gh-card" href="https://github.com/NikaTeem/Nika-Net" target="_blank" rel="noopener" title="GitHub">
+        <svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="gh-body">
+          <b data-i18n="foot.gh">گیت‌هاب پروژه</b>
+          <i>NikaTeem/Nika-Net</i>
+        </span>
+        <span class="gh-star"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"/></svg><span data-gh-count>–</span></span>
+      </a>
+      <div class="foot-tag">Nika Net · Pencil Sketch<br/>Cloudflare Workers</div>
+    </div>
   </aside>
 
   <div id="main">
@@ -523,6 +586,29 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
         <div class="card">
           <div class="card-title"><span>✎ <span data-i18n="dash.activity">فعالیت‌های اخیر</span></span></div>
           <div id="activity"></div>
+        </div>
+      </div>
+      <div class="card links-card">
+        <div class="card-title"><span>✎ <span data-i18n="dash.links">راه‌های ارتباطی رسمی</span></span><span class="mini" data-i18n="dash.linksSub">ربات و کانال تلگرام</span></div>
+        <div class="links-grid">
+          <a class="link-tile bot" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener">
+            <span class="lt-av"><img src="data:image/jpeg;base64,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" alt="Nika Net Launcher" /><span class="lt-badge bot"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="17"/><path d="M13.5 24 L21 29.5 L33 17.5 Z"/><line x1="21" y1="29.5" x2="17.5" y2="34.5"/></svg></span></span>
+            <span class="lt-body">
+              <b data-i18n="dash.linksBot">ربات تلگرام Nika Net</b>
+              <i>@NikaNetLauncher_bot</i>
+              <span class="lt-desc" data-i18n="dash.linksBotD">ساخت و مدیریت پنل — مستقیم از داخل تلگرام</span>
+            </span>
+            <span class="lt-go">↗</span>
+          </a>
+          <a class="link-tile ch" href="https://t.me/NikaSociety" target="_blank" rel="noopener">
+            <span class="lt-av"><img src="data:image/jpeg;base64,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" alt="Nika Net" /><span class="lt-badge ch"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span></span>
+            <span class="lt-body">
+              <b data-i18n="dash.linksCh">کانال تلگرام Nika Net</b>
+              <i>@NikaSociety</i>
+              <span class="lt-desc" data-i18n="dash.linksChD">اخبار، آموزش و آخرین نسخه‌های Nika Net</span>
+            </span>
+            <span class="lt-go">↗</span>
+          </a>
         </div>
       </div>
     </section>
@@ -786,7 +872,8 @@ const I18N = {
     dir: "rtl", lang: "fa",
     "login.title": "Nika Net", "login.sub": "پنل مدیریت پروکسی — روی Cloudflare Workers",
     "login.password": "رمز عبور ادمین", "login.passwordPh": "رمز عبور", "login.enter": "ورود به پنل",
-    "login.official": "لینک‌های رسمی Nika Net", "login.bot": "ربات تلگرام Nika Net", "login.ch": "کانال تلگرام Nika Net", "login.web": "وب‌سایت Nika Net",
+    "login.official": "لینک‌های رسمی Nika Net", "login.bot": "ربات تلگرام Nika Net", "login.ch": "کانال تلگرام Nika Net", "login.web": "وب‌سایت Nika Net", "login.gh": "گیت‌هاب Nika Net",
+    "foot.gh": "گیت‌هاب پروژه",
     "login.hintFirst": "🔓 اولین ورود — رمزی که انتخاب می‌کنی به‌عنوان رمز ادمین ثبت می‌شود (حداقل ۴ کاراکتر)",
     "login.hintPass": "رمز عبور ادمین را وارد کن",
     "login.hintPreview": "این پیش‌نمایش فایل است — برای دادهٔ واقعی، پنل را از آدرس زندهٔ ورکر باز کن",
@@ -795,6 +882,9 @@ const I18N = {
     "stat.users": "کاربران", "stat.active": "فعال", "stat.req": "درخواست امروز", "stat.gig": "گیگابایت مصرف", "stat.proto": "پروتکل فعال",
     "dash.traffic": "ترافیک (۷ روز اخیر)", "dash.gb": "بر حسب گیگابایت", "dash.usage": "مصرف", "dash.activity": "فعالیت‌های اخیر",
     "dash.today": "امروز", "dash.nochart": "هنوز دادهٔ ترافیکی ثبت نشده است", "act.empty": "هنوز فعالیتی ثبت نشده است",
+    "dash.links": "راه‌های ارتباطی رسمی", "dash.linksSub": "ربات و کانال تلگرام",
+    "dash.linksBot": "ربات تلگرام Nika Net", "dash.linksBotD": "ساخت و مدیریت پنل — مستقیم از داخل تلگرام",
+    "dash.linksCh": "کانال تلگرام Nika Net", "dash.linksChD": "اخبار، آموزش و آخرین نسخه‌های Nika Net",
     "users.title": "مدیریت کاربران", "users.add": "+ کاربر جدید", "users.name": "نام", "users.status": "وضعیت", "users.used": "مصرف", "users.expiry": "انقضا",
     "users.empty": "هنوز کاربری نیست — اول یک کاربر بساز",
     "u.active": "فعال", "u.inactive": "غیرفعال", "u.expired": "منقضی", "u.openStatus": "باز کردن صفحه وضعیت کاربر", "u.del": "حذف",
@@ -813,7 +903,8 @@ const I18N = {
     dir: "ltr", lang: "en",
     "login.title": "Nika Net", "login.sub": "Proxy control panel — on Cloudflare Workers",
     "login.password": "Admin password", "login.passwordPh": "Password", "login.enter": "Sign in",
-    "login.official": "Official Nika Net links", "login.bot": "Nika Net Telegram bot", "login.ch": "Nika Net Telegram channel", "login.web": "Nika Net website",
+    "login.official": "Official Nika Net links", "login.bot": "Nika Net Telegram bot", "login.ch": "Nika Net Telegram channel", "login.web": "Nika Net website", "login.gh": "Nika Net on GitHub",
+    "foot.gh": "GitHub repository",
     "login.hintFirst": "🔓 First sign-in — the password you choose becomes the admin password (min 4 chars)",
     "login.hintPass": "Enter the admin password",
     "login.hintPreview": "This is a static preview — open the live panel URL for real data",
@@ -822,6 +913,9 @@ const I18N = {
     "stat.users": "Users", "stat.active": "active", "stat.req": "Requests today", "stat.gig": "GB used", "stat.proto": "Active protocols",
     "dash.traffic": "Traffic (last 7 days)", "dash.gb": "in gigabytes", "dash.usage": "Usage", "dash.activity": "Recent activity",
     "dash.today": "today", "dash.nochart": "No traffic data yet", "act.empty": "No activity yet",
+    "dash.links": "Official channels", "dash.linksSub": "Telegram bot & channel",
+    "dash.linksBot": "Nika Net Telegram bot", "dash.linksBotD": "Build & manage your panel — right from Telegram",
+    "dash.linksCh": "Nika Net Telegram channel", "dash.linksChD": "News, tutorials & latest Nika Net releases",
     "users.title": "User management", "users.add": "+ Add user", "users.name": "Name", "users.status": "Status", "users.used": "Usage", "users.expiry": "Expiry",
     "users.empty": "No users yet — create your first user",
     "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.openStatus": "Open user status page", "u.del": "Delete",
@@ -957,10 +1051,28 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
+/* ---------- github stars (live, graceful fallback) ---------- */
+async function loadGhStars() {
+  const els = document.querySelectorAll("[data-gh-count]");
+  if (!els.length) return;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch("https://api.github.com/repos/NikaTeem/Nika-Net", { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) return;
+    const j = await res.json();
+    const n = typeof j.stargazers_count === "number" ? j.stargazers_count : null;
+    if (n == null) return;
+    els.forEach(el => { el.textContent = n.toLocaleString("fa-IR"); });
+  } catch (e) { /* offline/preview — keep the dash */ }
+}
+
 /* ---------- boot ---------- */
 async function init() {
   applyTheme();
   applyLang();
+  loadGhStars();
   try {
     const res = await api("/api/info");
     const info = await res.json();
