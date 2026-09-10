@@ -393,7 +393,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       return await inFjChat(env, chatId, msg, text);
     case "await_support":
       // پس از انتخاب دسته — پیام کاربر بدنهٔ تیکت می‌شود (حتی اگر مالک باشد)
-      return await supportText(env, chatId, msg, text);
+      return await supportText(env, chatId, msg, text, true);
     default: {
       // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
       if (await isOwner(env, chatId)) {
@@ -401,28 +401,30 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         return void (await tg.sendMessage(env, chatId, m.text, m.kb));
       }
       if (!text) return; // استیکر/عکس/فایل بدون متن → نادیده بگیر
-      return await supportText(env, chatId, msg, text);
+      return await supportText(env, chatId, msg, text, false);
     }
   }
 }
 
 // ثبت پیام کاربر به‌عنوان تیکت/پاسخ + تأیید و اعلان به مالک
-async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: string): Promise<void> {
+async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: string, fromCategory = false): Promise<void> {
   const r = await sup.addUserMessage(env, chatId, text, {
     firstName: msg.from?.first_name,
     lastName: msg.from?.last_name,
     username: msg.from?.username,
   });
   const owner = await st.getOwner(env);
-  const isNew = r.firstUserMessage && !r.isReply;
+  const isNewTicket = fromCategory || (r.firstUserMessage && !r.isReply);
   if (owner && owner !== chatId) {
-    await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, isNew)).catch(() => {});
+    await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, isNewTicket)).catch(() => {});
   }
-  // تأیید به کاربر — پاسخ به پیام مالک/پشتیبانی = «پیام ارسال شد» · تیکت جدید = «تیکت ثبت شد»
-  if (r.isReply) {
-    await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
-  } else if (r.firstUserMessage) {
-    await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
+  // تأیید به کاربر: بعد از انتخاب دسته قبلاً «تیکت ثبت شد» فرستاده شده — تکرار نمی‌کنیم.
+  if (!fromCategory) {
+    if (r.isReply) {
+      await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
+    } else if (r.firstUserMessage) {
+      await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
+    }
   }
   // بازگشت به حالت عادی پس از ثبت بدنهٔ تیکت
   const s = await st.getState(env, chatId);
@@ -1084,7 +1086,9 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     s.tmp.supportCat = cat.id;
     await st.saveState(env, chatId, s);
     await tg.answerCallback(env, cq.id, `🏷 ${cat.fa}`).catch(() => {});
-    // منوی دسته‌ها را درجا به «دسته انتخاب شد» تبدیل می‌کنیم (بدون پیام اضافه)
+    // ۱) تأیید فوریِ ثبت تیکت — مستقل از تاریخچهٔ قبلی گفتگو
+    await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
+    // ۲) منوی دسته‌ها را درجا به «دسته انتخاب شد — حالا بنویس» تبدیل می‌کنیم
     const done = ui.supportChosen(s, cat);
     const edited = await tg.editMessage(env, chatId, msgId, done, tg.kb([])).catch(() => null);
     if (!edited || !edited.ok) await tg.sendMessage(env, chatId, done).catch(() => {});
