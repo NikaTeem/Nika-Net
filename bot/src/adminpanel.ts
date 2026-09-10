@@ -12,6 +12,7 @@ import * as st from "./state";
 import * as fj from "./forcedjoin";
 import * as sup from "./support";
 import * as ui from "./ui";
+import * as auth from "./auth";
 
 const PANEL_HTML = `<!doctype html>
 <html lang="fa" dir="rtl">
@@ -1418,27 +1419,6 @@ async function readJson(req: Request): Promise<Record<string, any>> {
   }
 }
 
-const SESSION_KEY = "panel:sess:";
-const CODE_KEY = "panel:code:";
-const CD_KEY = "panel:cd:";
-
-function randomCode(): string {
-  const b = new Uint8Array(4);
-  crypto.getRandomValues(b);
-  const n = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
-  return String(100000 + (n % 900000));
-}
-
-async function panelOwner(env: Env, req: Request): Promise<number | null> {
-  const cookie = req.headers.get("cookie") || "";
-  const m = cookie.match(/(?:^|;\s*)npanel=([a-f0-9-]+)/);
-  if (!m) return null;
-  const raw = await env.BOT_KV.get(SESSION_KEY + m[1]);
-  if (!raw) return null;
-  const id = parseInt(raw, 10);
-  return Number.isNaN(id) ? null : id;
-}
-
 /* ---------------- profile enrichment ---------------- */
 
 // Build one user row for the panel: full profile (name, username, photo)
@@ -1525,75 +1505,22 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
 
   if (path === "/panel/api/request" && req.method === "POST") {
     const b = await readJson(req);
-    const id = Number(b.id);
-    const owner = await fj.ownerId(env);
-    if (!Number.isInteger(id) || id !== owner) {
-      return json({ ok: false, error: "فقط مالک ربات می‌تواند وارد شود" }, 403);
-    }
-    const meta = await fj.botMeta(env);
-    const om = await st.getMeta(env, id);
-
-    // اگر کد معتبری هنوز وجود دارد، همان کد را دوباره می‌فرستیم (به‌جای خطای «صبر کن»)
-    let code = (await env.BOT_KV.get(CODE_KEY + id)) || "";
-    if (!code) {
-      code = randomCode();
-      await env.BOT_KV.put(CODE_KEY + id, code, { expirationTtl: 300 });
-    }
-
-    // ضد اسپم نرم: اگر همین چند لحظه پیش فرستادیم، دوباره ارسال نمی‌کنیم
-    const lastSend = parseInt((await env.BOT_KV.get(CD_KEY + id)) || "0", 10) || 0;
-    if (lastSend && Date.now() - lastSend < 12_000) {
-      return json({ ok: true, sent: false, bot: meta.username, ownerUsername: om.username || "" });
-    }
-
-    // ارسال کد با تلاش مجدد خودکار — مثلاً وقتی تلگرام موقتاً محدودیت نرخ (429) بدهد
-    let sent = false;
-    let lastErr = "";
-    for (let attempt = 0; attempt < 3 && !sent; attempt++) {
-      try {
-        const r: any = await tg.sendMessage(env, id, `🔐 <b>کد ورود پنل مدیریت</b>\n\n<code>${code}</code>\n\nاین کد تا <b>۵ دقیقه</b> معتبر است. آن را برای کسی نفرست.`);
-        if (r?.ok) { sent = true; break; }
-        lastErr = r?.description || "sendMessage failed";
-        const retryAfter = Number(r?.parameters?.retry_after);
-        if (r?.error_code === 429 && Number.isFinite(retryAfter) && retryAfter > 0) {
-          await new Promise((res) => setTimeout(res, Math.min(6, retryAfter) * 1000));
-        }
-      } catch (e) {
-        lastErr = (e as Error)?.message || String(e);
-      }
-    }
-    if (!sent) {
-      await env.BOT_KV.delete(CODE_KEY + id).catch(() => {});
-      return json({
-        ok: false,
-        error: "ارسال کد به تلگرام ناموفق بود" + (lastErr ? ` (${lastErr})` : "") + ". چند لحظه بعد دوباره تلاش کن.",
-      }, 502);
-    }
-    await env.BOT_KV.put(CD_KEY + id, String(Date.now()), { expirationTtl: 60 }).catch(() => {});
-    return json({ ok: true, sent: true, bot: meta.username, ownerUsername: om.username || "" });
+    const r = await auth.requestCode(env, Number(b.id));
+    if (!r.ok) return json({ ok: false, error: r.error }, 403);
+    return json({ ok: true, sent: r.sent, bot: r.bot, ownerUsername: r.ownerUsername });
   }
 
   if (path === "/panel/api/verify" && req.method === "POST") {
     const b = await readJson(req);
-    const id = Number(b.id);
-    const owner = await fj.ownerId(env);
-    if (!Number.isInteger(id) || id !== owner) return json({ ok: false, error: "نامعتبر" }, 403);
-    const code = (await env.BOT_KV.get(CODE_KEY + id)) || "";
-    if (!code || String(b.code || "").trim() !== code) {
-      return json({ ok: false, error: "کد اشتباه یا منقضی شده — دوباره درخواست بده" }, 401);
-    }
-    await env.BOT_KV.delete(CODE_KEY + id);
-    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
-    await env.BOT_KV.put(SESSION_KEY + token, String(id), { expirationTtl: 86400 });
+    const token = await auth.verifyCode(env, Number(b.id), String(b.code || ""));
+    if (!token) return json({ ok: false, error: "کد اشتباه یا منقضی شده — دوباره درخواست بده" }, 401);
     const res = json({ ok: true });
     res.headers.set("set-cookie", `npanel=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=86400`);
     return res;
   }
 
   if (path === "/panel/api/logout" && req.method === "POST") {
-    const cookie = req.headers.get("cookie") || "";
-    const m = cookie.match(/(?:^|;\s*)npanel=([a-f0-9-]+)/);
-    if (m) await env.BOT_KV.delete(SESSION_KEY + m[1]);
+    await auth.destroySession(env, req.headers.get("cookie") || "");
     const res = json({ ok: true });
     res.headers.set("set-cookie", "npanel=; HttpOnly; Path=/; Max-Age=0");
     return res;
@@ -1601,32 +1528,11 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
 
   // عمومی (بدون نیاز به ورود): نشان می‌دهد کد ورود به کدام اکانت تلگرام می‌رود
   if (path === "/panel/api/logininfo" && req.method === "GET") {
-    const owner = await fj.ownerId(env);
-    if (owner === null) return json({ ok: true, ownerId: null, name: "", username: "" });
-    let meta = await st.getMeta(env, owner);
-    if (!meta.nameAt || Date.now() - meta.nameAt > 24 * 3600_000 || !meta.firstName) {
-      try {
-        const r: any = await tg.getChat(env, owner);
-        const res = r?.result;
-        if (res && res.type === "private") {
-          meta.firstName = res.first_name || meta.firstName || "";
-          meta.lastName = res.last_name || meta.lastName || "";
-          meta.username = res.username || meta.username || "";
-          meta.nameAt = Date.now();
-          await st.saveMeta(env, owner, meta).catch(() => {});
-        }
-      } catch { /* keep cached meta */ }
-    }
-    return json({
-      ok: true,
-      ownerId: owner,
-      name: [meta.firstName, meta.lastName].filter(Boolean).join(" ").trim(),
-      username: meta.username || "",
-    });
+    return json({ ok: true, ...(await auth.loginInfo(env)) });
   }
 
   /* ---- everything below requires a valid session ---- */
-  const owner = await panelOwner(env, req);
+  const owner = await auth.sessionOwner(env, req.headers.get("cookie") || "");
   if (owner === null) return json({ error: "unauthorized" }, 401);
 
   if (path === "/panel/api/state" && req.method === "GET") {

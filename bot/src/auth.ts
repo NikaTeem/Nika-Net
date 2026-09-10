@@ -1,0 +1,160 @@
+// Nika Net Launcher — ورود امن پنل مدیریت (بازسازی تمیز).
+//
+// یک سیستم ورود دو مرحله‌ای بر پایهٔ کد یک‌بارمصرف تلگرام:
+//   ۱) مالک آیدی عددی‌اش را وارد می‌کند → کد ۶ رقمی به چت همان مالک در تلگرام می‌رود.
+//   ۲) مالک کد را وارد می‌کند → نشست (HttpOnly cookie) ساخته می‌شود.
+//
+// همهٔ منطق کد/نشست اینجا متمرکز است؛ adminpanel فقط این توابع را صدا می‌زند.
+
+import { Env } from "./types";
+import * as tg from "./telegram";
+import * as fj from "./forcedjoin";
+import * as st from "./state";
+
+const CODE_KEY = "panel:code:";
+const CD_KEY = "panel:cd:";
+const SESSION_KEY = "panel:sess:";
+
+const CODE_TTL = 300;      // ۵ دقیقه
+const SESSION_TTL = 86400; // ۱ روز
+const RESEND_GAP = 12_000; // ۱۲ ثانیه — فاصلهٔ بین دو ارسال واقعی کد
+const SEND_ATTEMPTS = 3;   // تلاش مجدد روی محدودیت نرخ تلگرام
+
+export function randomCode(): string {
+  const b = new Uint8Array(4);
+  crypto.getRandomValues(b);
+  const n = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
+  return String(100000 + (n % 900000));
+}
+
+function sessionToken(): string {
+  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+}
+
+function readCookie(cookieHeader: string): string {
+  const m = (cookieHeader || "").match(/(?:^|;\s*)npanel=([a-f0-9-]+)/);
+  return m ? m[1] : "";
+}
+
+const codeMessage = (code: string) =>
+  `🔐 <b>کد ورود پنل مدیریت</b>\n\n<code>${code}</code>\n\nاین کد تا <b>۵ دقیقه</b> معتبر است. آن را برای کسی نفرست.`;
+
+// اطلاعات عمومی صفحهٔ ورود — مشخص می‌کند کد به کدام اکانت تلگرام می‌رود
+export async function loginInfo(env: Env): Promise<{ ownerId: number | null; name: string; username: string }> {
+  const owner = await fj.ownerId(env);
+  if (owner === null) return { ownerId: null, name: "", username: "" };
+  let meta = await st.getMeta(env, owner);
+  if (!meta.nameAt || Date.now() - meta.nameAt > 24 * 3600_000 || !meta.firstName) {
+    try {
+      const r: any = await tg.getChat(env, owner);
+      const res = r?.result;
+      if (res && res.type === "private") {
+        meta.firstName = res.first_name || meta.firstName || "";
+        meta.lastName = res.last_name || meta.lastName || "";
+        meta.username = res.username || meta.username || "";
+        meta.nameAt = Date.now();
+        await st.saveMeta(env, owner, meta).catch(() => {});
+      }
+    } catch {
+      /* keep cached meta */
+    }
+  }
+  return {
+    ownerId: owner,
+    name: [meta.firstName, meta.lastName].filter(Boolean).join(" ").trim(),
+    username: meta.username || "",
+  };
+}
+
+export interface RequestResult {
+  ok: boolean;
+  sent: boolean;          // آیا همین الان ارسال واقعی انجام شد؟
+  bot: string;            // یوزرنیم ربات
+  ownerUsername: string;  // یوزرنیم اکانتی که کد به آن می‌رود
+  error?: string;
+}
+
+// درخواست کد ورود برای مالک — idempotent (کد موجود را دوباره می‌فرستد، نه کد جدید)
+export async function requestCode(env: Env, id: number): Promise<RequestResult> {
+  const owner = await fj.ownerId(env);
+  if (!Number.isInteger(id) || id !== owner) {
+    return { ok: false, sent: false, bot: "", ownerUsername: "", error: "فقط مالک ربات می‌تواند وارد شود" };
+  }
+  const meta = await fj.botMeta(env);
+  const om = await st.getMeta(env, id);
+
+  // اگر کد معتبری وجود دارد، همان را می‌فرستیم (بدون ساخت کد جدید)
+  let code = (await env.BOT_KV.get(CODE_KEY + id)) || "";
+  if (!code) {
+    code = randomCode();
+    await env.BOT_KV.put(CODE_KEY + id, code, { expirationTtl: CODE_TTL });
+  }
+
+  // ضد اسپم نرم: اگر همین چند لحظه پیش فرستاده‌ایم، ارسال تکراری نمی‌کنیم
+  const lastSend = parseInt((await env.BOT_KV.get(CD_KEY + id)) || "0", 10) || 0;
+  if (lastSend && Date.now() - lastSend < RESEND_GAP) {
+    return { ok: true, sent: false, bot: meta.username, ownerUsername: om.username || "" };
+  }
+
+  // ارسال با تلاش مجدد خودکار (محدودیت نرخ تلگرام)
+  let delivered = false;
+  let lastErr = "";
+  for (let attempt = 0; attempt < SEND_ATTEMPTS && !delivered; attempt++) {
+    try {
+      const r: any = await tg.sendMessage(env, id, codeMessage(code));
+      if (r?.ok) {
+        delivered = true;
+        break;
+      }
+      lastErr = r?.description || "sendMessage failed";
+      const retryAfter = Number(r?.parameters?.retry_after);
+      if (r?.error_code === 429 && Number.isFinite(retryAfter) && retryAfter > 0) {
+        await new Promise((res) => setTimeout(res, Math.min(6, retryAfter) * 1000));
+      }
+    } catch (e) {
+      lastErr = (e as Error)?.message || String(e);
+    }
+  }
+
+  if (!delivered) {
+    await env.BOT_KV.delete(CODE_KEY + id).catch(() => {});
+    return {
+      ok: false,
+      sent: false,
+      bot: meta.username,
+      ownerUsername: om.username || "",
+      error: "ارسال کد به تلگرام ناموفق بود" + (lastErr ? ` (${lastErr})` : "") + ". چند لحظه بعد دوباره تلاش کن.",
+    };
+  }
+
+  await env.BOT_KV.put(CD_KEY + id, String(Date.now()), { expirationTtl: 60 }).catch(() => {});
+  return { ok: true, sent: true, bot: meta.username, ownerUsername: om.username || "" };
+}
+
+// تأیید کد → ساخت نشست. در صورت موفقیت، توکن نشست برمی‌گرداند (نه کد).
+export async function verifyCode(env: Env, id: number, code: string): Promise<string | null> {
+  const owner = await fj.ownerId(env);
+  if (!Number.isInteger(id) || id !== owner) return null;
+  const saved = (await env.BOT_KV.get(CODE_KEY + id)) || "";
+  if (!saved || String(code || "").trim() !== saved) return null;
+  await env.BOT_KV.delete(CODE_KEY + id).catch(() => {});
+  const token = sessionToken();
+  await env.BOT_KV.put(SESSION_KEY + token, String(id), { expirationTtl: SESSION_TTL });
+  return token;
+}
+
+// خواندن مالکِ نشست از کوکی درخواست
+export async function sessionOwner(env: Env, cookieHeader: string): Promise<number | null> {
+  const token = readCookie(cookieHeader);
+  if (!token) return null;
+  const raw = await env.BOT_KV.get(SESSION_KEY + token);
+  if (!raw) return null;
+  const id = parseInt(raw, 10);
+  return Number.isNaN(id) ? null : id;
+}
+
+// خروج: حذف نشست
+export async function destroySession(env: Env, cookieHeader: string): Promise<void> {
+  const token = readCookie(cookieHeader);
+  if (token) await env.BOT_KV.delete(SESSION_KEY + token).catch(() => {});
+}

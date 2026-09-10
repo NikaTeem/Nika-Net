@@ -83,6 +83,23 @@ async function panel(path, opts = {}) {
   return { status: res.status, ok: res.ok, j };
 }
 
+// درخواست خام پنل با کنترل کامل روی کوکی + خواندن set-cookie
+async function panelRaw(path, opts = {}) {
+  const headers = { "content-type": "application/json" };
+  if (opts.cookie) headers.cookie = opts.cookie;
+  const req = new Request("https://x" + path, {
+    method: opts.method || "GET",
+    headers,
+    ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+  });
+  const res = await worker.fetch(req, env, ctx);
+  await Promise.all(pending);
+  pending = [];
+  let j = {};
+  try { j = await res.json(); } catch {}
+  return { status: res.status, ok: res.ok, j, setCookie: res.headers.get("set-cookie") || "" };
+}
+
 const OWNER = 8940829322;
 const msg = (chatId, text, from) => ({
   message: { chat: { id: chatId }, from: { id: from ?? chatId, first_name: "T", username: "u" }, text },
@@ -183,6 +200,40 @@ check("support/closeall", r.ok && typeof r.j.closed === "number");
 // ---- 5) migration: old `kind` field still reads correctly ----
 r = await panel("/panel/api/support/list");
 check("closeall بسته شد و status ها closed است", r.j.tickets.filter((t) => t.status === "open").length === 0);
+
+// ===== 6) ورود پنل (Auth v1) =====
+let lr = await panelRaw("/panel/api/logininfo");
+check("logininfo عمومی → مالک 8940829322", lr.ok && lr.j.ownerId === 8940829322);
+
+lr = await panelRaw("/panel/api/request", { method: "POST", body: { id: 8940829322 } });
+check("request → ok + sent:true", lr.ok && lr.j.sent === true && lr.j.bot === "TestBot");
+const code1 = await kv.get("panel:code:8940829322");
+check("کد در KV ذخیره شد (۶ رقمی)", /^\d{6}$/.test(code1));
+
+lr = await panelRaw("/panel/api/request", { method: "POST", body: { id: 8940829322 } });
+check("درخواست فوری دوم → sent:false (ضداسپم)", lr.ok && lr.j.sent === false);
+check("کد یکسان ماند (idempotent)", (await kv.get("panel:code:8940829322")) === code1);
+
+lr = await panelRaw("/panel/api/request", { method: "POST", body: { id: 999999999 } });
+check("درخواست با آیدی غیرمالک → 403", lr.status === 403);
+
+lr = await panelRaw("/panel/api/verify", { method: "POST", body: { id: 8940829322, code: "000000" } });
+check("کد اشتباه → 401", lr.status === 401);
+
+lr = await panelRaw("/panel/api/verify", { method: "POST", body: { id: 8940829322, code: code1 } });
+check("کد درست → ok + set-cookie", lr.ok && /npanel=[a-f0-9]+/.test(lr.setCookie));
+const token = (lr.setCookie.match(/npanel=([a-f0-9-]+)/) || [])[1];
+check("کد بعد از ورود پاک شد", !(await kv.get("panel:code:8940829322")));
+
+lr = await panelRaw("/panel/api/state", { cookie: "npanel=" + token });
+check("نشست معتبر → /state ok", lr.ok && lr.j.bot && lr.j.stats);
+lr = await panelRaw("/panel/api/state");
+check("بدون کوکی → /state 401", lr.status === 401);
+
+lr = await panelRaw("/panel/api/logout", { method: "POST", cookie: "npanel=" + token });
+check("logout → ok", lr.ok);
+lr = await panelRaw("/panel/api/state", { cookie: "npanel=" + token });
+check("بعد از خروج → 401", lr.status === 401);
 
 console.log("\nconsole errors:", errors.length ? errors.slice(0, 5) : "none");
 console.log("\n===== RESULT =====");
