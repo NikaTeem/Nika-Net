@@ -1,35 +1,46 @@
-// Nika Net Launcher — پشتیبانی / تیکت‌ها (صندوق واحد برای تیکت کاربران + پیام شخصی مالک).
-// Users send free text to the bot → it becomes a ticket. The owner answers from
-// the web panel (/panel) → the bot relays the reply to the user's private chat.
-// Conversations live in KV under the "sup:" prefix (one key per user chat id).
+// Nika Net Launcher — پشتیبانی v2 (بازسازی تمیز و مینیمال).
+//
+// یک مدل دادهٔ واحد: هر کاربر حداکثر یک «گفتگو» دارد (کلید KV = "sup:<chatId>").
+//   - گفتگویی که کاربر شروع کند  → تیکت پشتیبانی (تب «پشتیبانی» در پنل)
+//   - گفتگویی که مالک شروع کند   → پیام شخصی   (تب «پیام شخصی» در پنل)
+// شروع‌کننده (startedBy) فقط هنگام ساخت گفتگو ثبت می‌شود و هرگز تغییر نمی‌کند —
+// به این ترتیب هیچ فیلدی وجود ندارد که به‌صورت ضمنی جابه‌جا شود و باگ بسازد.
+//
+// هر پیامِ ورودی کاربر دقیقاً یکی از ۳ حالت است (IncomingVerdict) و پیام تأیید
+// فقط از همین حالت تعیین می‌شود — یک‌جا، بدون پرچم‌های تودرتو.
 
 import { Env } from "./types";
 import * as st from "./state";
 
 export type TicketStatus = "open" | "closed";
+export type Dir = "in" | "out";
+export type StartedBy = "user" | "owner";
 
 export interface SupportMsg {
-  dir: "in" | "out"; // in = از کاربر · out = از پشتیبانی (مالک)
+  dir: Dir;
   text: string;
   at: number;
 }
 
 export interface Ticket {
-  id: number; // Telegram user chat id
-  kind: "ticket" | "dm"; // ticket = کاربر شروع کرده · dm = پیام شخصی مالک
+  id: number;
+  startedBy: StartedBy;
   status: TicketStatus;
   unread: number; // پیام‌های کاربر که مالک هنوز نخوانده
   lastAt: number;
   lastText: string;
   name: string;
   username: string;
-  category?: string; // دستهٔ انتخاب‌شده (شناسه)
-  categoryLabel?: string; // برچسب فارسی/انگلیسی دسته
+  category?: string;      // شناسهٔ دسته (مثلاً "connect")
+  categoryLabel?: string; // برچسب نمایشی دسته (مثلاً "🔌 مشکل اتصال")
   msgs: SupportMsg[];
 }
 
+// نوع پیام ورودی کاربر → تعیین‌کنندهٔ پیام تأیید و نوع اعلان مالک
+export type IncomingVerdict = "new_ticket" | "reply" | "followup";
+
 const PREFIX = "sup:";
-const MAX_MSGS = 300; // فقط آخرین ۳۰۰ پیام هر گفتگو نگه داشته می‌شود
+const MAX_MSGS = 300; // فقط آخرین ۳۰۰ پیام هر گفتگو
 
 const clip = (s: string, n: number) => String(s || "").slice(0, n);
 const textOf = (s: string) => clip(s, 4096);
@@ -38,10 +49,29 @@ const textOf = (s: string) => clip(s, 4096);
 export const escTg = (s: string) =>
   String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// مهاجرت گفتگوهای قدیمی: فیلد `kind` (نسخه‌های قبلی) → `startedBy`
+function normalize(raw: any): Ticket {
+  let startedBy: StartedBy = raw.startedBy;
+  if (!startedBy) startedBy = raw.kind === "dm" ? "owner" : "user";
+  return {
+    id: raw.id,
+    startedBy,
+    status: raw.status === "closed" ? "closed" : "open",
+    unread: Number(raw.unread) || 0,
+    lastAt: Number(raw.lastAt) || 0,
+    lastText: String(raw.lastText || ""),
+    name: String(raw.name || ""),
+    username: String(raw.username || ""),
+    category: raw.category || undefined,
+    categoryLabel: raw.categoryLabel || undefined,
+    msgs: Array.isArray(raw.msgs) ? raw.msgs.slice(-MAX_MSGS) : [],
+  };
+}
+
 export async function getTicket(env: Env, id: number): Promise<Ticket | null> {
   try {
     const raw = await env.BOT_KV.get(PREFIX + id);
-    return raw ? (JSON.parse(raw) as Ticket) : null;
+    return raw ? normalize(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -61,38 +91,57 @@ interface Who {
   username?: string;
 }
 
-export async function addUserMessage(
+function emptyTicket(id: number, startedBy: StartedBy, who?: Who): Ticket {
+  return {
+    id,
+    startedBy,
+    status: "open",
+    unread: 0,
+    lastAt: 0,
+    lastText: "",
+    name: [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim(),
+    username: who?.username || "",
+    msgs: [],
+  };
+}
+
+// پیام ورودی کاربر → ثبت + تعیین نوع (برای تأیید و اعلان)
+export async function recordIncoming(
   env: Env,
   id: number,
   text: string,
   who?: Who
-): Promise<{ created: boolean; firstUserMessage: boolean; isReply: boolean; ticket: Ticket }> {
+): Promise<{ verdict: IncomingVerdict; ticket: Ticket }> {
   let t = await getTicket(env, id);
-  const created = !t;
+  let verdict: IncomingVerdict;
   if (!t) {
-    t = { id, kind: "ticket", status: "open", unread: 0, lastAt: 0, lastText: "", name: "", username: "", msgs: [] };
+    t = emptyTicket(id, "user", who);
+    verdict = "new_ticket";
+  } else {
+    const last = t.msgs[t.msgs.length - 1];
+    verdict = last && last.dir === "out" ? "reply" : "followup";
+    if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
+    if (!t.username) t.username = who?.username || "";
   }
-  if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
-  if (!t.username) t.username = who?.username || "";
-  // اولین پیام واقعی کاربر (برای پیام «تیکت ثبت شد»)
-  const firstUserMessage = !t.msgs.some((m) => m.dir === "in");
-  // پاسخ به پیام مالک/پشتیبانی (برای پیام «پیام شما ارسال شد»)
-  const isReply = t.msgs.length > 0 && t.msgs[t.msgs.length - 1].dir === "out";
   t.msgs.push({ dir: "in", text: textOf(text), at: Date.now() });
   if (t.msgs.length > MAX_MSGS) t.msgs = t.msgs.slice(-MAX_MSGS);
   t.lastAt = Date.now();
   t.lastText = clip(text, 120);
   t.unread = (t.unread || 0) + 1;
-  t.status = "open"; // پیام جدید کاربر، تیکت را دوباره باز می‌کند
+  t.status = "open"; // پیام جدید کاربر، گفتگو را دوباره باز می‌کند
   await putTicket(env, t);
-  return { created, firstUserMessage, isReply, ticket: t };
+  return { verdict, ticket: t };
 }
 
-export async function addOwnerMessage(env: Env, id: number, text: string): Promise<Ticket> {
+// پیام خروجی مالک/پشتیبانی → ثبت در گفتگو (startedBy فقط اگر گفتگو تازه ساخته شود)
+export async function recordOutgoing(
+  env: Env,
+  id: number,
+  text: string,
+  startedBy: StartedBy = "owner"
+): Promise<Ticket> {
   let t = await getTicket(env, id);
-  if (!t) {
-    t = { id, kind: "dm", status: "open", unread: 0, lastAt: 0, lastText: "", name: "", username: "", msgs: [] };
-  }
+  if (!t) t = emptyTicket(id, startedBy);
   t.msgs.push({ dir: "out", text: textOf(text), at: Date.now() });
   if (t.msgs.length > MAX_MSGS) t.msgs = t.msgs.slice(-MAX_MSGS);
   t.lastAt = Date.now();
@@ -103,38 +152,7 @@ export async function addOwnerMessage(env: Env, id: number, text: string): Promi
   return t;
 }
 
-// ساخت یک گفتگوی خالی (پیام شخصی مالک) — نام/یوزرنیم کاربر را از متادیتا پر می‌کند
-// تا در پنل به‌جای آیدی عددی، پروفایل کاربر دیده شود.
-export async function ensureThread(env: Env, id: number): Promise<void> {
-  const t = await getTicket(env, id);
-  if (!t) {
-    const meta = await st.getMeta(env, id);
-    await putTicket(env, {
-      id,
-      kind: "dm",
-      status: "open",
-      unread: 0,
-      lastAt: Date.now(),
-      lastText: "",
-      name: [meta?.firstName, meta?.lastName].filter(Boolean).join(" ").trim(),
-      username: meta?.username || "",
-      msgs: [],
-    });
-    return;
-  }
-  // بک‌فیل: گفتگوهای قدیمی که فقط آیدی عددی دارند
-  if (!t.name && !t.username) {
-    const meta = await st.getMeta(env, id);
-    if (meta) {
-      t.name = [meta.firstName, meta.lastName].filter(Boolean).join(" ").trim();
-      t.username = meta.username || "";
-      await putTicket(env, t);
-    }
-  }
-}
-
-// انتخاب دستهٔ تیکت: اگر گفتگوی بازی نباشد می‌سازد و دسته را ثبت می‌کند.
-// (جایگزین Mini App پشتیبانی — تیکت با انتخاب دسته شروع می‌شود.)
+// انتخاب دستهٔ تیکت: گفتگو را می‌سازد (یا باز می‌کند) و دسته را ثبت می‌کند.
 export async function openCategory(
   env: Env,
   id: number,
@@ -143,29 +161,30 @@ export async function openCategory(
   who?: Who
 ): Promise<Ticket> {
   let t = await getTicket(env, id);
-  if (!t || t.status === "closed") {
-    t = {
-      id,
-      kind: "ticket",
-      status: "open",
-      unread: 0,
-      lastAt: Date.now(),
-      lastText: "🏷 " + catLabel,
-      name: [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim(),
-      username: who?.username || "",
-      msgs: [],
-    };
-  } else {
-    t.status = "open";
-  }
+  if (!t) t = emptyTicket(id, "user", who);
   if (!t.name) t.name = [who?.firstName, who?.lastName].filter(Boolean).join(" ").trim();
   if (!t.username) t.username = who?.username || "";
   t.category = catId;
   t.categoryLabel = catLabel;
-  t.kind = "ticket"; // کاربر صریحاً تیکت پشتیبانی باز کرده → در تب «پشتیبانی» پنل دیده شود
+  t.status = "open";
   t.lastAt = Date.now();
   await putTicket(env, t);
   return t;
+}
+
+// شروع «پیام شخصی» از پنل — اگر گفتگویی نبود، با startedBy=owner ساخته می‌شود.
+export async function ensureThread(env: Env, id: number): Promise<void> {
+  const t = await getTicket(env, id);
+  if (!t) {
+    const meta = await st.getMeta(env, id);
+    await putTicket(
+      emptyTicket(id, "owner", {
+        firstName: meta?.firstName,
+        lastName: meta?.lastName,
+        username: meta?.username,
+      })
+    );
+  }
 }
 
 export async function markRead(env: Env, id: number): Promise<void> {
@@ -186,7 +205,7 @@ export async function setStatus(env: Env, id: number, status: TicketStatus): Pro
 
 export interface TicketMeta {
   id: number;
-  kind: "ticket" | "dm";
+  startedBy: StartedBy;
   status: TicketStatus;
   unread: number;
   lastAt: number;
@@ -197,7 +216,11 @@ export interface TicketMeta {
   categoryLabel?: string;
 }
 
-export async function listTickets(env: Env, kind?: "ticket" | "dm"): Promise<{ tickets: TicketMeta[]; open: number; unread: number }> {
+// لیست گفتگوها — با فیلتر دید: "pm" (شروع‌شده توسط مالک) یا "tickets" (شروع‌شده توسط کاربر)
+export async function listTickets(
+  env: Env,
+  view?: "pm" | "tickets"
+): Promise<{ tickets: TicketMeta[]; open: number; unread: number }> {
   const out: TicketMeta[] = [];
   let cursor: string | undefined;
   do {
@@ -208,19 +231,20 @@ export async function listTickets(env: Env, kind?: "ticket" | "dm"): Promise<{ t
       try {
         const raw = await env.BOT_KV.get(k.name);
         if (!raw) continue;
-        const t = JSON.parse(raw) as Ticket;
-        if (kind && (t.kind || "ticket") !== kind) continue;
+        const t = normalize(JSON.parse(raw));
+        if (view === "pm" && t.startedBy !== "owner") continue;
+        if (view === "tickets" && t.startedBy !== "user") continue;
         out.push({
           id: t.id,
-          kind: t.kind || "ticket",
-          status: t.status || "open",
-          unread: t.unread || 0,
-          lastAt: t.lastAt || 0,
-          lastText: t.lastText || "",
-          name: t.name || "",
-          username: t.username || "",
-          category: t.category || "",
-          categoryLabel: t.categoryLabel || "",
+          startedBy: t.startedBy,
+          status: t.status,
+          unread: t.unread,
+          lastAt: t.lastAt,
+          lastText: t.lastText,
+          name: t.name,
+          username: t.username,
+          category: t.category,
+          categoryLabel: t.categoryLabel,
         });
       } catch {
         /* skip corrupt */
@@ -232,4 +256,17 @@ export async function listTickets(env: Env, kind?: "ticket" | "dm"): Promise<{ t
   const open = out.filter((t) => t.status === "open").length;
   const unread = out.reduce((s, t) => s + (t.unread || 0), 0);
   return { tickets: out, open, unread };
+}
+
+// بستن همهٔ تیکت‌های باز (فقط تیکت‌های کاربران، نه پیام‌های شخصی)
+export async function closeAll(env: Env): Promise<number> {
+  const { tickets } = await listTickets(env, "tickets");
+  let n = 0;
+  for (const t of tickets) {
+    if (t.status === "open") {
+      await setStatus(env, t.id, "closed");
+      n++;
+    }
+  }
+  return n;
 }

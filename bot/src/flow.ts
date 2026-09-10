@@ -408,22 +408,22 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
 // ثبت پیام کاربر به‌عنوان تیکت/پاسخ + تأیید و اعلان به مالک
 async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: string, fromCategory = false): Promise<void> {
-  const r = await sup.addUserMessage(env, chatId, text, {
+  const r = await sup.recordIncoming(env, chatId, text, {
     firstName: msg.from?.first_name,
     lastName: msg.from?.last_name,
     username: msg.from?.username,
   });
   const owner = await st.getOwner(env);
-  const isNewTicket = fromCategory || (r.firstUserMessage && !r.isReply);
+  const isNewTicket = fromCategory || r.verdict === "new_ticket";
   if (owner && owner !== chatId) {
     await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, isNewTicket)).catch(() => {});
   }
-  // تأیید به کاربر: بعد از انتخاب دسته قبلاً «تیکت ثبت شد» فرستاده شده — تکرار نمی‌کنیم.
+  // تأیید به کاربر: بعد از انتخاب دسته، «تیکت ثبت شد» همان‌جا فرستاده شده — تکرار نمی‌کنیم.
   if (!fromCategory) {
-    if (r.isReply) {
-      await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
-    } else if (r.firstUserMessage) {
+    if (r.verdict === "new_ticket") {
       await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
+    } else if (r.verdict === "reply") {
+      await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
     }
   }
   // بازگشت به حالت عادی پس از ثبت بدنهٔ تیکت

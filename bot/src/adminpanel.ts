@@ -770,7 +770,7 @@ const PANEL_HTML = `<!doctype html>
     var disp = t.name || (t.username ? "@" + t.username : "کاربر " + t.id);
     $("#pm-head").innerHTML = avatar(disp, t.id, true) +
       '<div class="meta"><div class="n">' + esc(disp) + (t.username ? " <span class='mut' dir='ltr'>@" + esc(t.username) + "</span>" : "") + "</div>" +
-      '<div class="s"><span dir="ltr">' + t.id + "</span> · " + esc(t.kind === "dm" ? "پیام شخصی" : "تیکت") + "</div></div>";
+      '<div class="s"><span dir="ltr">' + t.id + "</span> · " + esc(t.startedBy === "owner" ? "پیام شخصی" : "تیکت") + "</div></div>";
     $("#pm-id").value = t.id;
     $$("#pm-list li").forEach(function (li) { li.classList.toggle("on", Number(li.getAttribute("data-id")) === id); });
     renderThread($("#pm-thread"), t.msgs, "کاربر", "تو");
@@ -1688,11 +1688,11 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
 
-  /* ---------- پیام شخصی + پشتیبانی (Aurora) ---------- */
+  /* ---------- پیام شخصی + پشتیبانی (Support v2) ---------- */
 
   if (path === "/panel/api/pm/list" && req.method === "GET") {
     // فقط گفتگوهای شخصیِ آغازشده توسط مالک
-    const { tickets, unread } = await sup.listTickets(env, "dm");
+    const { tickets, unread } = await sup.listTickets(env, "pm");
     return json({ ok: true, threads: tickets, unread });
   }
 
@@ -1718,8 +1718,8 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const id = parseInt(String(b.id || ""), 10);
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!Number.isInteger(id) || !text) return json({ error: "invalid" }, 400);
-    await sup.addOwnerMessage(env, id, text);
-    // دکمهٔ «پاسخ دادن» → کاربر پاسخش را مستقیم در چت می‌نویسد (بدون Mini App)
+    await sup.recordOutgoing(env, id, text);
+    // دکمهٔ «پاسخ دادن» → کاربر پاسخش را مستقیم در چت می‌نویسد
     const kb = tg.kb([[{ text: "💬 پاسخ دادن", cb: "pm:reply", color: "primary", emoji: false }]]);
     const sent = await tg.sendMessage(env, id, ui.pmEnvelope(sup.escTg(text)), kb).catch(() => null);
     if (!sent || !sent.ok) {
@@ -1730,7 +1730,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
 
   if (path === "/panel/api/support/list" && req.method === "GET") {
     // فقط تیکت‌های آغازشده توسط کاربران
-    const { tickets, open, unread } = await sup.listTickets(env, "ticket");
+    const { tickets, open, unread } = await sup.listTickets(env, "tickets");
     return json({ ok: true, tickets, open, unread });
   }
 
@@ -1748,9 +1748,11 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const id = parseInt(String(b.id || ""), 10);
     const text = String(b.text || "").trim().slice(0, 4096);
     if (!Number.isInteger(id) || !text) return json({ error: "invalid" }, 400);
-    await sup.addOwnerMessage(env, id, text);
+    await sup.recordOutgoing(env, id, text, "user");
     const reply = "🎧 <b>پشتیبانی Nika Net</b>\n\n" + sup.escTg(text);
-    const sent = await tg.sendMessage(env, id, reply).catch(() => null);
+    // دکمهٔ «پاسخ دادن» برای ادامهٔ گفتگو از سمت کاربر
+    const kb = tg.kb([[{ text: "💬 پاسخ دادن", cb: "pm:reply", color: "primary", emoji: false }]]);
+    const sent = await tg.sendMessage(env, id, reply, kb).catch(() => null);
     if (!sent || !sent.ok) {
       return json({ ok: false, error: "تلگرام پیام را نپذیرفت (کاربر شاید ربات را بلاک کرده باشد)." });
     }
@@ -1769,15 +1771,8 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/support/closeall" && req.method === "POST") {
-    const { tickets } = await sup.listTickets(env, "ticket");
-    let n = 0;
-    for (const t of tickets) {
-      if (t.status === "open") {
-        await sup.setStatus(env, t.id, "closed");
-        n++;
-      }
-    }
-    return json({ ok: true, closed: n });
+    const closed = await sup.closeAll(env);
+    return json({ ok: true, closed });
   }
 
   return json({ error: "not found" }, 404);

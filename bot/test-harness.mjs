@@ -1,5 +1,5 @@
-// End-to-end harness: runs the REAL bundled worker against a mocked Telegram
-// API + in-memory KV, and replays the exact support-ticket flow.
+// End-to-end harness for Support v2: runs the REAL bundled worker against a
+// mocked Telegram API + in-memory KV, and verifies every support flow.
 import worker from "./dist/bot.js";
 
 const json = (o, status = 200) =>
@@ -52,9 +52,7 @@ const env = {
 };
 
 const errors = [];
-const origErr = console.error;
 console.error = (...a) => { errors.push(a.map(String).join(" ")); };
-
 let pending = [];
 const ctx = { waitUntil: (p) => pending.push(p) };
 
@@ -70,85 +68,120 @@ async function webhook(update) {
   return res;
 }
 
+async function panel(path, opts = {}) {
+  const req = new Request("https://x" + path, {
+    method: opts.method || "GET",
+    headers: { cookie: "npanel=aaaabbbbccccddddeeee", "content-type": "application/json" },
+    ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+  });
+  const res = await worker.fetch(req, env, ctx);
+  await Promise.all(pending);
+  pending = [];
+  let j = {};
+  try { j = await res.json(); } catch {}
+  return { status: res.status, ok: res.ok, j };
+}
+
 const OWNER = 8940829322;
 const msg = (chatId, text, from) => ({
-  message: { chat: { id: chatId }, from: { id: from ?? chatId, first_name: "Owner" }, text },
+  message: { chat: { id: chatId }, from: { id: from ?? chatId, first_name: "T", username: "u" }, text },
 });
 const cb = (chatId, messageId, data, from) => ({
-  callback_query: { id: "cq" + Math.random(), from: { id: from ?? chatId, first_name: "Owner" }, message: { chat: { id: chatId }, message_id: messageId }, data },
+  callback_query: { id: "cq" + Math.random(), from: { id: from ?? chatId, first_name: "T" }, message: { chat: { id: chatId }, message_id: messageId }, data },
 });
 
 const textsTo = (chatId) => sent.filter((s) => s.chat_id === chatId).map((s) => s.text);
 const lastTo = (chatId) => { const t = textsTo(chatId); return t[t.length - 1]; };
+const ack = (t) => (t || "").includes("تیکتت ثبت شد");
+const replyAck = (t) => (t || "").includes("پیام شما ارسال شد");
+const PASS = [];
+const check = (name, cond) => { PASS.push([name, !!cond]); console.log((cond ? "✅" : "❌") + " " + name); };
 
-// ===== run =====
-await webhook(msg(OWNER, "/support"));            // 1) open support menu
-console.log("after /support, owner got:", JSON.stringify(lastTo(OWNER)));
-const menuId = msgId;                              // the supportMenu message id
+// ---- 1) owner: /support → menu → category → body ----
+await webhook(msg(OWNER, "/support"));
+check("owner /support → منوی دسته‌ها", lastTo(OWNER).includes("موضوع تیکتت رو انتخاب کن"));
+const menuId = msgId;
 
-await webhook(cb(OWNER, menuId, "sup:cat:idea"));  // 2) pick category
-console.log("after category pick, owner got:", JSON.stringify(lastTo(OWNER)));
-console.log("owner state:", await kv.get("u:" + OWNER));
+await webhook(cb(OWNER, menuId, "sup:cat:idea"));
+check("owner انتخاب دسته → تأیید فوری «تیکتت ثبت شد»", ack(lastTo(OWNER)));
+check("owner state = await_support", JSON.parse(await kv.get("u:" + OWNER)).state === "await_support");
 
-const before = sent.length;
-await webhook(msg(OWNER, "تست پشتیبانی"));          // 3) type ticket body
-console.log("after body, owner got:", JSON.stringify(lastTo(OWNER)));
-console.log("owner state:", await kv.get("u:" + OWNER));
-const ticket = JSON.parse(await kv.get("sup:" + OWNER));
-console.log("owner ticket msgs:", JSON.stringify(ticket.msgs));
+await webhook(msg(OWNER, "متن تیکت مالک"));
+const ownerTicket = JSON.parse(await kv.get("sup:" + OWNER));
+check("owner بدنهٔ تیکت ثبت شد", ownerTicket.msgs.some((m) => m.dir === "in" && m.text.includes("متن تیکت")));
+check("owner بدنه → بدون تکرار تأیید", textsTo(OWNER).filter(ack).length === 1);
+check("owner state برگشت به idle", JSON.parse(await kv.get("u:" + OWNER)).state === "idle");
+check("owner ticket startedBy=user", ownerTicket.startedBy === "user");
 
-// ===== assert scenario 1 (owner, fresh) =====
-let allTexts = textsTo(OWNER);
-console.log("ACK present after body:", allTexts.some((t) => t.includes("تیکتت ثبت شد")));
-console.log("ticket has body msg:", ticket.msgs.some((m) => m.dir === "in" && m.text.includes("تست پشتیبانی")));
-console.log("console errors:", errors.length ? errors.slice(0, 5) : "none");
-
-// ===== scenario 2: test user with EXISTING history (the live failing case) =====
+// ---- 2) user with EXISTING history: category → ack still fires ----
 const TEST = 7385498647;
-// prefill an old ticket with prior "in" messages — exactly like the live data
-kv.put(
-  "sup:" + TEST,
-  JSON.stringify({
-    id: TEST, kind: "ticket", status: "open", unread: 0,
-    lastAt: Date.now() - 3600_000, lastText: "تست قدیمی", name: "ツ", username: "zakpir",
-    msgs: [
-      { dir: "out", text: "تست 1", at: Date.now() - 5000_000 },
-      { dir: "in", text: "تست 2", at: Date.now() - 4000_000 },
-    ],
-  })
-);
+kv.put("sup:" + TEST, JSON.stringify({
+  id: TEST, kind: "ticket", status: "open", unread: 0, lastAt: Date.now() - 3600_000,
+  lastText: "قدیمی", name: "ツ", username: "zakpir",
+  msgs: [{ dir: "out", text: "تست 1", at: 1 }, { dir: "in", text: "تست 2", at: 2 }],
+}));
 kv.put("u:" + TEST, JSON.stringify({ state: "idle", lang: "fa", tokens: {}, panels: [], panelAuth: {}, lastBuild: 0, builds: 0, tmp: {} }));
-
 sent.length = 0;
-await webhook(msg(TEST, "/support", TEST));            // open support menu
+
+await webhook(msg(TEST, "/support", TEST));
 const menuId2 = msgId;
-const before2 = sent.length;
-await webhook(cb(TEST, menuId2, "sup:cat:buy", TEST)); // pick category
-const afterCategoryPick = textsTo(TEST);
-console.log("\n[user with history] after category pick got:", JSON.stringify(afterCategoryPick));
-console.log("[user with history] ACK at category pick:", afterCategoryPick.some((t) => t.includes("تیکتت ثبت شد")));
-
-await webhook(msg(TEST, "یه مشکل جدید", TEST));        // type body
-console.log("[user with history] after body got:", JSON.stringify(lastTo(TEST)));
+await webhook(cb(TEST, menuId2, "sup:cat:buy", TEST));
+check("کاربرِ باسابقه → تأیید فوری بعد از انتخاب دسته", ack(lastTo(TEST)));
+await webhook(msg(TEST, "یه مشکل جدید", TEST));
 const t2 = JSON.parse(await kv.get("sup:" + TEST));
-console.log("[user with history] ticket msgs now:", JSON.stringify(t2.msgs.map((m) => [m.dir, m.text])));
-console.log("[user with history] duplicate ACK after body:", textsTo(TEST).filter((t) => t.includes("تیکتت ثبت شد")).length > 1);
-console.log("console errors:", errors.length ? errors.slice(0, 5) : "none");
+check("کاربرِ باسابقه → بدنه اضافه شد", t2.msgs.some((m) => m.dir === "in" && m.text.includes("یه مشکل جدید")));
+check("کاربرِ باسابقه → بدون تکرار تأیید", textsTo(TEST).filter(ack).length === 1);
+check("کاربرِ باسابقه → category=خرید و اشتراک", t2.category === "buy");
 
-// ===== scenario 3: user replies to an owner message → should get «پیام شما ارسال شد» =====
+// ---- 3) reply to owner → «پیام شما ارسال شد» ----
 const R = 6629683311;
-kv.put(
-  "sup:" + R,
-  JSON.stringify({
-    id: R, kind: "dm", status: "open", unread: 0,
-    lastAt: Date.now() - 1000, lastText: "سلام", name: "Reza", username: "reza",
-    msgs: [{ dir: "out", text: "سلام چطوری؟", at: Date.now() - 60000 }],
-  })
-);
+kv.put("sup:" + R, JSON.stringify({
+  id: R, kind: "dm", status: "open", unread: 0, lastAt: 1, lastText: "سلام",
+  name: "Reza", username: "reza", msgs: [{ dir: "out", text: "سلام چطوری؟", at: 1 }],
+}));
 kv.put("u:" + R, JSON.stringify({ state: "idle", lang: "fa", tokens: {}, panels: [], panelAuth: {}, lastBuild: 0, builds: 0, tmp: {} }));
 sent.length = 0;
 await webhook(msg(R, "خوبم ممنون", R));
-console.log("\n[reply to owner] user got:", JSON.stringify(lastTo(R)));
-console.log("[reply to owner] pmReplyAck present:", textsTo(R).some((t) => t.includes("پیام شما ارسال شد")));
-console.log("console errors:", errors.length ? errors.slice(0, 5) : "none");
+check("پاسخ به مالک → «پیام شما ارسال شد»", replyAck(lastTo(R)));
 
+// ---- 4) panel APIs (with session cookie) ----
+kv.put("panel:sess:aaaabbbbccccddddeeee", String(OWNER));
+
+let r = await panel("/panel/api/support/list");
+check("support/list فقط تیکت‌ها (startedBy=user)", r.ok && r.j.tickets.every((t) => t.startedBy === "user"));
+check("support/list شامل کاربر باسابقه", r.j.tickets.some((t) => t.id === TEST));
+
+r = await panel("/panel/api/pm/list");
+check("pm/list فقط پیام‌های شخصی (startedBy=owner)", r.ok && r.j.threads.every((t) => t.startedBy === "owner"));
+check("pm/list شامل گفتگوی Reza (dm مهاجرت‌شده)", r.j.threads.some((t) => t.id === R));
+
+sent.length = 0;
+r = await panel("/panel/api/pm/send", { method: "POST", body: { id: R, text: "خواهش می‌کنم" } });
+const pmSent = sent.find((s) => s.chat_id === R);
+check("pm/send → ارسال به کاربر", r.ok && !!pmSent);
+check("pm/send → دکمهٔ «پاسخ دادن»", pmSent && JSON.stringify(pmSent.reply_markup).includes("پاسخ دادن"));
+check("pm/send → پاکت حریم خصوصی", pmSent && pmSent.text.includes("پیام خصوصی از Nika Net"));
+
+sent.length = 0;
+r = await panel("/panel/api/support/reply", { method: "POST", body: { id: TEST, text: "حل شد؟" } });
+const supSent = sent.find((s) => s.chat_id === TEST);
+check("support/reply → ارسال به کاربر", r.ok && !!supSent);
+check("support/reply → دکمهٔ «پاسخ دادن»", supSent && JSON.stringify(supSent.reply_markup).includes("پاسخ دادن"));
+const t3 = JSON.parse(await kv.get("sup:" + TEST));
+check("support/reply → ثبت out در تیکت", t3.msgs[t3.msgs.length - 1].dir === "out");
+
+r = await panel("/panel/api/support/toggle", { method: "POST", body: { id: TEST } });
+check("support/toggle → بستن", r.ok && r.j.status === "closed");
+
+r = await panel("/panel/api/support/closeall", { method: "POST" });
+check("support/closeall", r.ok && typeof r.j.closed === "number");
+
+// ---- 5) migration: old `kind` field still reads correctly ----
+r = await panel("/panel/api/support/list");
+check("closeall بسته شد و status ها closed است", r.j.tickets.filter((t) => t.status === "open").length === 0);
+
+console.log("\nconsole errors:", errors.length ? errors.slice(0, 5) : "none");
+console.log("\n===== RESULT =====");
+const failed = PASS.filter((p) => !p[1]);
+console.log(failed.length ? `FAILED: ${failed.length}` : "ALL PASSED ✅");
+process.exit(failed.length ? 1 : 0);
