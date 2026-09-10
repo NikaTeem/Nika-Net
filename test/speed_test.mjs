@@ -1,6 +1,8 @@
-// Nika Net — Speed Engine tests (v0.12).
-// Compiles the real src modules (colo.ts + generators.ts) with a small colo
-// fixture, then asserts the low-ping ranking + multi-entry generation.
+// Nika Net — config generator tests (v0.12.1 BPB-parity).
+// Compiles the real src/generators.ts and asserts:
+//   * Domain + IPv4 + IPv6 variants per protocol (BPB-style)
+//   * datacenter/reverse-proxy IPs are NEVER emitted (regression guard)
+//   * fixed/pool/clean priority + url-test/urltest groups
 import { build } from "esbuild";
 import { mkdirSync, writeFileSync, rmSync } from "fs";
 import { join, dirname } from "path";
@@ -11,30 +13,8 @@ const ROOT = join(__dirname, "..");
 const OUT = join(__dirname, ".tmp-speed");
 mkdirSync(OUT, { recursive: true });
 
-// Fixture colo pool: Frankfurt, San Jose, Dubai (and one far colo, Sydney)
-const FIXTURE = {
-  g: "test",
-  colos: {
-    FRA: { lat: 50.11, lon: 8.68, c: "Frankfurt" },
-    SJC: { lat: 37.36, lon: -121.93, c: "San Jose" },
-    DXB: { lat: 25.25, lon: 55.36, c: "Dubai" },
-    SYD: { lat: -33.87, lon: 151.21, c: "Sydney" },
-  },
-  byColo: {
-    FRA: "141.1.1.1:443\n141.1.1.2:8443\n141.1.1.3:2053",
-    SJC: "129.1.1.1:443\n129.1.1.2:443",
-    DXB: "185.1.1.1:443",
-    SYD: "203.1.1.1:443",
-  },
-  set: "141.1.1.1\n141.1.1.2\n141.1.1.3\n129.1.1.1\n129.1.1.2\n185.1.1.1\n203.1.1.1",
-};
-
 const ENTRY = join(OUT, "entry.ts");
-writeFileSync(
-  ENTRY,
-  `export * from "../../src/colo";\nexport * from "../../src/generators";\nexport { isCloudflareIp } from "../../src/cfips";\n`
-);
-
+writeFileSync(ENTRY, `export * from "../../src/generators";\n`);
 const bundlePath = join(OUT, "bundle.mjs");
 await build({
   entryPoints: [ENTRY],
@@ -44,9 +24,7 @@ await build({
   mainFields: ["module", "main"],
   write: true,
   outfile: bundlePath,
-  define: { COLO_POOL: JSON.stringify(JSON.stringify(FIXTURE)) },
 });
-
 const mod = await import(pathToFileURL(bundlePath).href + "?t=" + Date.now());
 
 let failed = 0;
@@ -55,74 +33,67 @@ const check = (name, cond) => {
   if (!cond) failed++;
 };
 
-/* ---- colo module ---- */
-check("colo: isBundledAnycast (verified IP)", mod.isBundledAnycast("141.1.1.1") === true);
-check("colo: unknown IP not verified", mod.isBundledAnycast("9.9.9.9") === false);
-check("colo: coloOf maps IP→colo", mod.coloOf("129.1.1.2")?.iata === "SJC");
-check("colo: coloOf city label", mod.coloOf("141.1.1.1")?.city === "Frankfurt");
-
-// user near Frankfurt (50.1, 8.6)
-const ranked = mod.rankByDistance({ lat: 50.1, lon: 8.6 }, 3);
-check("colo: rank 3 candidates", ranked.length === 3);
-check("colo: nearest colo = FRA", ranked[0].colo === "FRA");
-check("colo: rank diversifies colos", new Set(ranked.map((r) => r.colo)).size === 3);
-check("colo: nearest km < farther km", ranked[0].km <= ranked[1].km && ranked[1].km <= ranked[2].km);
-
-/* ---- generators: geo-aware multi-entry ---- */
 const s = {
   title: "t", host: "nika.example.workers.dev", sni: "www.speedtest.net", wsPath: "/nika-ws",
-  cleanIps: ["104.17.147.22"], fixedIp: "", relayDomain: "",
+  cleanIps: ["104.17.147.22", "188.114.96.9", "162.159.192.1"],
+  cleanIpv6: ["2606:4700::6810:7c60", "2606:4700::6812:1c07"],
+  fixedIp: "", relayDomain: "",
   poolIps: [], poolCountry: "", poolFlag: "🇩🇪",
   protocols: { vless: true, trojan: true, warp: false },
   adminPassHash: null, secretPath: "nika-admin", sessionSecret: "x",
 };
 const u = { id: "1", name: "a", uuid: "12345678-1234-1234-1234-123456789012", password: "pass123", quota: 1, used: 0, days: 30, active: true, createdAt: 0 };
 
-const geo = { lat: 50.1, lon: 8.6 };
-const addrs = mod.pickAddrs(s, geo, 3);
-check("gen: pickAddrs uses colo ranking when geo known", addrs.length === 3 && addrs[0].colo === "FRA");
-check("gen: colo-ranked addr is 443", addrs[0].port === 443 && addrs[0].host === "141.1.1.1");
+/* ---- pickers ---- */
+const v4 = mod.pickIpv4Addrs(s, 3);
+check("pickIpv4Addrs: returns clean CF edges", v4.length === 3 && v4.every((a) => a.port === 443));
 
-// poolIps override geo (explicit admin choice) — use a verified anycast IP
-const s2 = { ...s, poolIps: ["185.1.1.1:443"] };
-check("gen: admin poolIps override geo ranking", mod.pickAddrs(s2, geo, 3)[0].host === "185.1.1.1");
+// THE regression guard: datacenter/reverse-proxy IPs must never be emitted
+const sBad = { ...s, cleanIps: ["141.148.140.81", "129.146.31.14", "1.2.3.4"], poolIps: ["45.80.110.140:443"] };
+check("datacenter IPs are filtered out of pickIpv4Addrs", mod.pickIpv4Addrs(sBad, 3).length === 0);
+check("poolIps: datacenter IP filtered", mod.pickIpv4Addrs({ ...sBad, cleanIps: [] }, 3).length === 0);
 
-// no geo → fallback to cleanIps (official CF)
-const s3 = { ...s, cleanIps: ["104.16.0.1", "172.64.0.1"] };
-const noGeo = mod.pickAddrs(s3, null, 2);
-check("gen: no geo → cleanIps fallback", noGeo.length === 2 && noGeo.every((a) => a.port === 443));
+const v6 = mod.pickIpv6Addrs(s, 3);
+check("pickIpv6Addrs: returns IPv6 edges", v6.length === 2 && v6[0].host.includes(":"));
 
-const b64 = mod.buildBase64Bundle(u, s, geo);
+/* ---- variants (BPB-parity) ---- */
+const links = mod.buildNamedLinks(u, s);
+const labels = links.map((l) => l.label);
+check("variants: Domain + IPv4 + IPv6 per protocol (6 links)", links.length === 6);
+check("variants: has Domain", labels.includes("Domain"));
+check("variants: has IPv4", labels.includes("IPv4"));
+check("variants: has IPv6", labels.includes("IPv6"));
+const domainLink = links.find((l) => l.label === "Domain" && l.kind === "vless");
+check("variants: Domain uses front host", domainLink && domainLink.addr.host === "nika.example.workers.dev");
+const ipv4Link = links.find((l) => l.label === "IPv4" && l.kind === "vless");
+check("variants: IPv4 uses a clean CF edge", ipv4Link && /^\d{1,3}(\.\d{1,3}){3}$/.test(ipv4Link.addr.host));
+const ipv6Link = links.find((l) => l.label === "IPv6" && l.kind === "vless");
+check("variants: IPv6 uses an IPv6 edge", ipv6Link && ipv6Link.addr.host.includes(":"));
+
+/* ---- fixed IP lock (applies to the IPv4 variant) ---- */
+const sFix = { ...s, fixedIp: "104.17.147.22:8443" };
+const fixLink = mod.buildNamedLinks(u, sFix).find((l) => l.label === "IPv4" && l.kind === "vless");
+check("fixed IP lock honoured (IPv4 variant)", fixLink && fixLink.addr.host === "104.17.147.22" && fixLink.addr.port === 8443);
+
+/* ---- base64 bundle ---- */
+const b64 = mod.buildBase64Bundle(u, s);
 const decoded = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
-const links = decoded.split("\n").filter(Boolean);
-check("gen: base64 bundle has MULTI entries per protocol (6)", links.length === 6);
-check("gen: links are vless/trojan", links.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
-check("gen: top link uses nearest colo IP", links[0].includes("141.1.1.1"));
+const bundleLinks = decoded.split("\n").filter(Boolean);
+check("base64 bundle: 6 links", bundleLinks.length === 6);
+check("base64: vless/trojan", bundleLinks.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
+check("base64: first link is Domain variant (reliable default)", bundleLinks[0].includes("Domain"));
+check("base64: fp=random", bundleLinks.every((l) => l.includes("fp=random")));
 
-const yaml = mod.buildClashYaml(u, s, geo);
-check("gen: clash has url-test auto group", yaml.includes("url-test") && yaml.includes("Auto"));
-check("gen: clash url points to gstatic generate_204", yaml.includes("generate_204"));
-check("gen: clash has 3+ proxies", (yaml.match(/type: vless/g) || []).length === 3);
+/* ---- clash / singbox ---- */
+const yaml = mod.buildClashYaml(u, s);
+check("clash: url-test auto group", yaml.includes("url-test") && yaml.includes("Auto"));
+check("clash: 6 proxies", (yaml.match(/type: vless/g) || []).length + (yaml.match(/type: trojan/g) || []).length === 6);
+check("clash: domain variant present", yaml.includes("Domain"));
 
-const sb = mod.buildSingboxJson(u, s, geo);
+const sb = mod.buildSingboxJson(u, s);
 const sbj = JSON.parse(sb);
-check("gen: singbox has urltest outbound", sbj.outbounds.some((o) => o.type === "urltest"));
-check("gen: singbox selector lists auto first", sbj.outbounds.find((o) => o.type === "selector").outbounds[0].includes("Auto"));
-
-// verified allowlist: clean IPs now accept bundled anycast (not just official CIDR)
-const s4 = { ...s, cleanIps: ["141.1.1.1"], poolIps: [], fixedIp: "" };
-const a4 = mod.pickAddrs(s4, null, 1)[0];
-check("gen: bundled anycast clean IP accepted", a4.host === "141.1.1.1");
-
-// fixed IP lock: verified anycast allowed
-const s5 = { ...s, fixedIp: "141.1.1.2:8443" };
-const a5 = mod.pickAddrs(s5, geo, 1)[0];
-check("gen: fixed verified anycast lock honoured", a5.host === "141.1.1.2" && a5.port === 8443);
-
-// host fallback when everything empty
-const s6 = { ...s, cleanIps: [], poolIps: [], fixedIp: "" };
-const a6 = mod.pickAddrs(s6, null, 1)[0];
-check("gen: host fallback", a6.host === "nika.example.workers.dev");
+check("singbox: urltest outbound", sbj.outbounds.some((o) => o.type === "urltest"));
+check("singbox: 9 outbounds (6 nodes + urltest + selector + direct)", sbj.outbounds.length === 9);
 
 rmSync(OUT, { recursive: true, force: true });
 console.log(failed ? `\n${failed} FAILED ❌` : "\nALL PASSED ✅");

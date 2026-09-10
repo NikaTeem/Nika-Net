@@ -65,30 +65,26 @@ r = await req("/api/users", { method: "POST", body: { name: "تست", quota: 10,
 const user = await r.json();
 check("create user ok", r.ok && !!user.uuid);
 
-// 4) /api/gen with geo (a user near Frankfurt)
-const geo = { latitude: "50.1", longitude: "8.6", country: "DE", colo: "FRA", asn: 1 };
-r = await req("/api/gen?id=" + user.id, { headers: { cookie } }, geo);
+// 4) /api/gen → multi-variant bundle (Domain + IPv4 + IPv6 per protocol)
+r = await req("/api/gen?id=" + user.id, { headers: { cookie } });
 const gen = await r.json();
 const links = atob(gen.base64.replace(/-/g, "+").replace(/_/g, "/")).split("\n").filter(Boolean);
-check("/api/gen: base64 has 6 links (multi-IP)", links.length === 6);
+check("/api/gen: base64 has 6 links (Domain+IPv4+IPv6 × 2 protocols)", links.length === 6);
+check("/api/gen: links are vless/trojan", links.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
+check("/api/gen: first link is Domain (reliable default)", links[0].includes("Domain"));
 check("/api/gen: clash has url-test", gen.clash.includes("url-test"));
 check("/api/gen: singbox has urltest", gen.singbox.includes("urltest"));
 
-// 5) /api/gen without geo → falls back (host or cleanIP), still works
-r = await req("/api/gen?id=" + user.id, { headers: { cookie } });
-const gen2 = await r.json();
-check("/api/gen: no geo still yields config", typeof gen2.base64 === "string" && gen2.base64.length > 20);
-
-// 6) subscription endpoint (by password token) → base64 bundle
+// 5) subscription endpoint (by password token) → base64 bundle
 const token = user.password;
-r = await req("/sub/" + token, { headers: { accept: "application/json" } }, geo);
+r = await req("/sub/" + token, { headers: { accept: "application/json" } });
 const subBody = await r.text();
 const subLinks = atob(subBody.replace(/-/g, "+").replace(/_/g, "/")).split("\n").filter(Boolean);
 check("/sub/<token>: returns multi-link bundle", subLinks.length === 6);
 check("/sub/<token>: links are vless/trojan", subLinks.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
 
-// 7) client config fetch by uuid
-r = await req("/" + user.uuid, {}, geo);
+// 6) client config fetch by uuid
+r = await req("/" + user.uuid);
 check("/<uuid>: config 200", r.status === 200);
 
 // 8) speedtest endpoint
@@ -97,12 +93,13 @@ const sp = await r.arrayBuffer();
 check("/api/speedtest: streams N bytes", sp.byteLength === 65536);
 check("/api/speedtest: no-store", (r.headers.get("cache-control") || "").includes("no-store"));
 
-// 9) pooltest with colo/verified annotation (authed)
+// 9) pooltest with verified annotation (authed)
 r = await req("/api/pooltest", { method: "POST", body: { list: ["104.17.147.22", "1.2.3.4"] }, headers: { cookie } });
 const pt = await r.json();
 const a0 = (pt.results || []).find((x) => x.addr === "104.17.147.22");
-check("/api/pooltest: returns annotated results", !!a0 && "verified" in a0 && "colo" in a0);
+check("/api/pooltest: returns verified flag", !!a0 && "verified" in a0);
 check("/api/pooltest: official CF IP is verified", a0 && a0.verified === true);
+check("/api/pooltest: non-CF IP is NOT verified", (pt.results || []).find((x) => x.addr === "1.2.3.4")?.verified === false);
 
 // 10) /api/ips online pool (may fail if offline — don't fail the suite)
 r = await req("/api/ips");

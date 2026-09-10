@@ -87,6 +87,24 @@ function sanitizeFixedIp(s: Settings): boolean {
   return false;
 }
 
+// cleanIpv6 — verified Cloudflare anycast IPv6 edges, valid "ipv6[:port]" only.
+function sanitizeCleanIpv6(s: Settings): boolean {
+  if (!Array.isArray(s.cleanIpv6)) { s.cleanIpv6 = [...DEFAULTS.cleanIpv6]; return true; }
+  const kept: string[] = [];
+  for (const raw of s.cleanIpv6.slice(0, 8)) {
+    const t = String(raw || "").trim();
+    if (!t) continue;
+    const m = t.match(/^\[?([0-9a-fA-F:]+)\]?(?::(\d{1,5}))?$/);
+    if (!m || !m[1].includes(":")) continue;
+    const port = m[2] ? parseInt(m[2], 10) : 443;
+    if (port < 1 || port > 65535) continue;
+    kept.push(m[2] ? `[${m[1]}]:${port}` : m[1]);
+  }
+  const changed = kept.length !== s.cleanIpv6.length || kept.some((v, i) => v !== s.cleanIpv6[i]);
+  s.cleanIpv6 = kept.length ? kept : [...DEFAULTS.cleanIpv6];
+  return changed;
+}
+
 // poolIps (Proxy IP Pool "best IPs") — valid "ip[:port]" only, capped at 16.
 function sanitizePoolIps(s: Settings): boolean {
   if (!Array.isArray(s.poolIps)) { s.poolIps = []; return true; }
@@ -122,7 +140,8 @@ export function sanitizeSettings(s: Settings): boolean {
   const b = sanitizeFixedIp(s);
   const c = sanitizePoolIps(s);
   const d = sanitizePoolMeta(s);
-  return a || b || c || d;
+  const e = sanitizeCleanIpv6(s);
+  return a || b || c || d || e;
 }
 
 export async function getSettings(env: Env): Promise<Settings> {

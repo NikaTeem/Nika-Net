@@ -2270,13 +2270,12 @@ window.POOL = (() => {
       const w = Math.max(4, Math.round((r.min / max) * 100));
       const cls = r.min < 120 ? "ok" : r.min < 300 ? "warn" : "bad";
       const cf = r.verified;
-      const coloTag = r.city ? `<span class="cf-badge cf">✈ ${r.city}${r.colo ? " (" + r.colo + ")" : ""}</span>` : "";
       const top3 = i < 3 ? ' style="border-color:var(--accent);border-style:solid"' : '';
       const addr = addrOf(r);
       return `<div class="scan-row"${top3} onclick="POOL.copy('${addr}')" title="${t("scan.copy")}">
         <span class="scan-rank">${i + 1}</span>
         <code class="scan-ip">${r.ip}</code><span class="scan-port">:${r.port}</span>
-        ${coloTag}<span class="cf-badge ${cf ? "cf" : "nocf"}">${cf ? "☁️ " + t("pool.cf") : "⚠ " + t("pool.nocf")}</span>
+        <span class="cf-badge ${cf ? "cf" : "nocf"}">${cf ? "☁️ " + t("pool.cf") : "⚠ " + t("pool.nocf")}</span>
         <div class="scan-latbar"><div class="scan-latfill" style="width:${w}%"></div></div>
         <code class="scan-ms ${cls}">${r.min}ms</code>
       </div>`;
@@ -2290,8 +2289,7 @@ window.POOL = (() => {
     el.innerHTML = list.map((r, i) => {
       const cf = r.verified;
       const addr = addrOf(r);
-      const coloTag = r.city ? `<span class="cf-badge cf">✈ ${r.city}</span>` : "";
-      return `<div class="top-chip" onclick="POOL.copy('${addr}')" title="${t("scan.copy")}"><span class="top-rank">${i + 1}</span><code>${addr}</code>${coloTag}${cf ? `<span class="cf-badge cf">☁️</span>` : ""}<b>${r.min}ms</b></div>`;
+      return `<div class="top-chip" onclick="POOL.copy('${addr}')" title="${t("scan.copy")}"><span class="top-rank">${i + 1}</span><code>${addr}</code>${cf ? `<span class="cf-badge cf">☁️</span>` : ""}<b>${r.min}ms</b></div>`;
     }).join("");
   }
 

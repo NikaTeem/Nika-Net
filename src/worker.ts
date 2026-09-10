@@ -18,7 +18,6 @@ import { handleVless } from "./protocols/vless";
 import { handleTrojan } from "./protocols/trojan";
 import { jsonResp } from "./protocols/common";
 import * as cf from "./cloudflare";
-import * as colo from "./colo";
 import { isCloudflareIp as isCfIp } from "./cfips";
 import { renderSubPage } from "./subpage";
 
@@ -33,7 +32,6 @@ const CUR_VERSION = NIKA_VERSION || "0.4.0";
 const IP_SOURCES = [
   "https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt",
   "https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt",
-  "https://zip.cm.edu.kg/all.txt",
 ];
 const IP_RE = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g;
 let ipPoolCache: { ips: string[]; at: number } | null = null;
@@ -52,7 +50,7 @@ async function fetchIpPool(): Promise<string[]> {
       const text = await res.text();
       let m: RegExpExecArray | null;
       let n = 0;
-      while ((m = IP_RE.exec(text)) && n < 40000) {
+      while ((m = IP_RE.exec(text)) && n < 4000) {
         const ip = m[1];
         const o = ip.split(".").map(Number);
         if (o.every((x) => x >= 0 && x <= 255) && !ip.startsWith("0.")) { set.add(ip); n++; }
@@ -64,20 +62,7 @@ async function fetchIpPool(): Promise<string[]> {
   return ips;
 }
 
-/** Approximate requester location from Cloudflare's edge metadata. */
-function requestGeo(req: Request): gen.Geo | null {
-  const cf = (req as unknown as { cf?: Record<string, unknown> }).cf;
-  if (!cf) return null;
-  const lat = typeof cf.latitude === "string" ? parseFloat(cf.latitude) : cf.latitude;
-  const lon = typeof cf.longitude === "string" ? parseFloat(cf.longitude) : cf.longitude;
-  if (typeof lat !== "number" || typeof lon !== "number" || isNaN(lat) || isNaN(lon)) return null;
-  return {
-    lat,
-    lon,
-    country: typeof cf.country === "string" ? cf.country : "",
-    colo: typeof cf.colo === "string" ? cf.colo : "",
-  };
-}
+
 
 const html = (body: string, status = 200) =>
   new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
@@ -328,6 +313,7 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (typeof b.sni === "string") next.sni = b.sni;
         if (typeof b.wsPath === "string") next.wsPath = b.wsPath;
         if (Array.isArray(b.cleanIps)) next.cleanIps = b.cleanIps;
+        if (Array.isArray(b.cleanIpv6)) next.cleanIpv6 = b.cleanIpv6;
         if (typeof b.fixedIp === "string") next.fixedIp = b.fixedIp.trim();
         if (typeof b.relayDomain === "string") next.relayDomain = b.relayDomain.trim();
         if (Array.isArray(b.poolIps)) next.poolIps = b.poolIps;
@@ -349,17 +335,12 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
       if (!list.length) return jsonResp({ results: [], elapsed: 0 });
       const t0 = Date.now();
       const results = await poolprobe.probePool(list);
-      // annotate each probed address with its colo (datacenter) + city +
-      // whether it is a verified Cloudflare-fronting edge (safe connect addr)
+      // annotate each probed address: `verified` = a real Cloudflare edge
+      // (official anycast range) that can front the worker. Community
+      // "reverse-proxy/datacenter" IPs are alive but NOT verified edges.
       const annotated = results.map((r) => {
         const ip = (r.addr || "").split(":")[0];
-        const c = colo.coloOf(ip);
-        return {
-          ...r,
-          colo: c ? c.iata : "",
-          city: c ? c.city : "",
-          verified: isCfIp(ip) || colo.isBundledAnycast(ip),
-        };
+        return { ...r, verified: isCfIp(ip) };
       });
       return jsonResp({ results: annotated, elapsed: Date.now() - t0 });
     }
@@ -370,12 +351,11 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
       const u = users.find((x) => x.id === id);
       if (!u) return jsonResp({ error: "user not found" }, 404);
       const eff = { ...settings, host: resolveHost(req, settings) };
-      const geo = requestGeo(req);
       return jsonResp({
         user: { id: u.id, name: u.name, quota: u.quota, used: Math.round((u.used || 0) * 100) / 100, days: u.days, active: u.active },
-        base64: gen.buildBase64Bundle(u, eff, geo),
-        clash: gen.buildClashYaml(u, eff, geo),
-        singbox: gen.buildSingboxJson(u, eff, geo),
+        base64: gen.buildBase64Bundle(u, eff),
+        clash: gen.buildClashYaml(u, eff),
+        singbox: gen.buildSingboxJson(u, eff),
         warp: settings.protocols.warp ? gen.buildWarpConfig(u) : null,
       });
     }
@@ -435,12 +415,11 @@ async function handleSub(req: Request, env: Env, settings: Settings, path: strin
   const isClash = fmt === "yaml" || fmt === "yml";
   const isSingbox = fmt === "json";
   const eff = { ...settings, host: resolveHost(req, settings) };
-  const geo = requestGeo(req);
   const body = isClash
-    ? gen.buildClashYaml(user, eff, geo)
+    ? gen.buildClashYaml(user, eff)
     : isSingbox
-      ? gen.buildSingboxJson(user, eff, geo)
-      : gen.buildBase64Bundle(user, eff, geo);
+      ? gen.buildSingboxJson(user, eff)
+      : gen.buildBase64Bundle(user, eff);
 
   return new Response(body, {
     headers: { "content-type": isClash ? "text/yaml" : isSingbox ? "application/json" : "text/plain" },
@@ -452,7 +431,7 @@ async function handleClientConfig(req: Request, env: Env, settings: Settings, uu
   const user = users.find((u) => u.uuid.toLowerCase() === uuid.toLowerCase());
   if (!user) return jsonResp({ error: "unknown uuid" }, 404);
   const eff = { ...settings, host: resolveHost(req, settings) };
-  const body = gen.buildBase64Bundle(user, eff, requestGeo(req));
+  const body = gen.buildBase64Bundle(user, eff);
   return new Response(body, { headers: { "content-type": "text/plain" } });
 }
 
