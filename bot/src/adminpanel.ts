@@ -661,7 +661,16 @@ const PANEL_HTML = `<!doctype html>
     var id = $("#lgId").value.trim();
     if (!/^\\d{5,}$/.test(id)) { toast("آیدی عددی معتبر وارد کن"); return; }
     var r = await api("/panel/api/request", { method: "POST", body: { id: Number(id) } });
-    if (r.ok && r.j.ok) { $("#lgMsg").innerHTML = "✅ کد به تلگرامت فرستاده شد — اینجا واردش کن."; toast("کد فرستاده شد ✓"); }
+    if (r.ok && r.j.ok) {
+      var bot = r.j.bot ? "@" + r.j.bot : "ربات";
+      if (r.j.sent === false) {
+        $("#lgMsg").innerHTML = "✅ کد چند لحظه پیش به چت <b>" + bot + "</b> فرستاده شده — همان کد را وارد کن.";
+        toast("کد قبلاً فرستاده شده ✓");
+      } else {
+        $("#lgMsg").innerHTML = "✅ کد به چت <b>" + bot + "</b> در تلگرام فرستاده شد.<br>تلگرام را باز کن، چت همین ربات را ببین و کد را اینجا وارد کن.";
+        toast("کد فرستاده شد ✓");
+      }
+    }
     else { $("#lgMsg").innerHTML = "<b>⛔ " + (r.j.error || "خطا") + "</b>"; toast(r.j.error || "خطا"); }
   };
   $("#lgGo").onclick = async function () {
@@ -1508,12 +1517,21 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     if (!Number.isInteger(id) || id !== owner) {
       return json({ ok: false, error: "فقط مالک ربات می‌تواند وارد شود" }, 403);
     }
-    const cd = await env.BOT_KV.get(CD_KEY + id);
-    if (cd && Date.now() - parseInt(cd, 10) < 30_000) {
-      return json({ ok: false, error: "لطفاً چند لحظه صبر کن — کد قبلی به تلگرامت فرستاده شده و هنوز معتبر است" }, 429);
+    const meta = await fj.botMeta(env);
+
+    // اگر کد معتبری هنوز وجود دارد، همان کد را دوباره می‌فرستیم (به‌جای خطای «صبر کن»)
+    let code = (await env.BOT_KV.get(CODE_KEY + id)) || "";
+    if (!code) {
+      code = randomCode();
+      await env.BOT_KV.put(CODE_KEY + id, code, { expirationTtl: 300 });
     }
-    const code = randomCode();
-    await env.BOT_KV.put(CODE_KEY + id, code, { expirationTtl: 300 });
+
+    // ضد اسپم نرم: اگر همین چند لحظه پیش فرستادیم، دوباره ارسال نمی‌کنیم
+    const lastSend = parseInt((await env.BOT_KV.get(CD_KEY + id)) || "0", 10) || 0;
+    if (lastSend && Date.now() - lastSend < 12_000) {
+      return json({ ok: true, sent: false, bot: meta.username });
+    }
+
     // ارسال کد با تلاش مجدد خودکار — مثلاً وقتی تلگرام موقتاً محدودیت نرخ (429) بدهد
     let sent = false;
     let lastErr = "";
@@ -1524,7 +1542,6 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
         lastErr = r?.description || "sendMessage failed";
         const retryAfter = Number(r?.parameters?.retry_after);
         if (r?.error_code === 429 && Number.isFinite(retryAfter) && retryAfter > 0) {
-          // صبر کوتاه (حداکثر ۶ ثانیه) و تلاش دوباره — CPU آزاد می‌ماند
           await new Promise((res) => setTimeout(res, Math.min(6, retryAfter) * 1000));
         }
       } catch (e) {
@@ -1538,9 +1555,8 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
         error: "ارسال کد به تلگرام ناموفق بود" + (lastErr ? ` (${lastErr})` : "") + ". چند لحظه بعد دوباره تلاش کن.",
       }, 502);
     }
-    // فقط بعد از ارسال موفق، محدودیت ضد اسپم فعال می‌شود
     await env.BOT_KV.put(CD_KEY + id, String(Date.now()), { expirationTtl: 60 }).catch(() => {});
-    return json({ ok: true, sent: true });
+    return json({ ok: true, sent: true, bot: meta.username });
   }
 
   if (path === "/panel/api/verify" && req.method === "POST") {
