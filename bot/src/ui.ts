@@ -246,16 +246,59 @@ function pageRow(lang: Lang, page: number, total: number, prefix: string): Btn[]
 export function replyMenu(s: UserState): ReplyKb {
   const lang = L(s);
   if (lang === "fa") {
-    return replyKb([[{ text: "🚀 ساخت پنل" }], [{ text: "🗂 پنل‌ها" }, { text: "🏠 منو" }]]);
+    return replyKb([[{ text: "🚀 ساخت پنل" }], [{ text: "🗂 پنل‌ها" }, { text: "🏠 منو" }], [{ text: "🎧 پشتیبانی" }]]);
   }
-  return replyKb([[{ text: "🚀 New panel" }], [{ text: "🗂 Panels" }, { text: "🏠 Menu" }]]);
+  return replyKb([[{ text: "🚀 New panel" }], [{ text: "🗂 Panels" }, { text: "🏠 Menu" }], [{ text: "🎧 Support" }]]);
 }
 
-export const REPLY_LABELS: Record<string, "menu" | "panels" | "new"> = {
+export const REPLY_LABELS: Record<string, "menu" | "panels" | "new" | "support"> = {
   "🏠 منو": "menu", "🏠 Menu": "menu",
   "🗂 پنل‌ها": "panels", "🗂 Panels": "panels",
   "🚀 ساخت پنل": "new", "🚀 New panel": "new",
+  "🎧 پشتیبانی": "support", "🎧 Support": "support",
 };
+
+/* ============================ پشتیبانی 🎧 ============================ */
+
+export function supportIntro(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const title = lang === "fa" ? "پشتیبانی Nika Net" : "Nika Net Support";
+  const body =
+    lang === "fa"
+      ? [
+          "سلام! 👋 به پشتیبانی Nika Net خوش اومدی.",
+          "",
+          "مشکل یا سؤالت رو همین‌جا تایپ کن و بفرست — مثل یک چت معمولی. پیامت مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا (پی‌وی خودت) دریافت می‌کنی. 📬",
+          "",
+          "برای شروع، فقط پیامت رو بنویس.",
+        ].join("\n")
+      : [
+          "Hi! 👋 Welcome to Nika Net support.",
+          "",
+          "Type your question or issue right here and send it — just like a normal chat. It goes straight to our support team and you'll get the answer right here in your own private chat. 📬",
+          "",
+          "To start, simply write your message.",
+        ].join("\n");
+  return {
+    text: makeText(title, body, lang === "fa" ? "پیامت رو بنویس…" : "Type your message…", lang === "fa" ? "پشتیبانی" : "Support", "help"),
+    kb: kb([[{ text: lang === "fa" ? "🏠 بازگشت به منو" : "🏠 Back to menu", cb: "menu:main", color: "gray", emoji: false }]]),
+  };
+}
+
+// تأیید ثبت تیکت (فقط برای اولین پیام هر تیکت)
+export function supportAck(s: UserState): string {
+  return L(s) === "fa"
+    ? "🎫 <b>تیکت تو ثبت شد!</b>\n\nتیم پشتیبانی Nika Net به‌زودی همین‌جا جوابت رو می‌ده. اگه جزئیات بیشتری داری، همین‌جا ادامه بده. 📬"
+    : "🎫 <b>Your ticket has been submitted!</b>\n\nThe Nika Net support team will reply to you right here soon. Feel free to add more details. 📬";
+}
+
+// اعلان به مالک هنگام ثبت تیکت جدید
+export function supportNotify(ticket: { name?: string; username?: string }, text: string): string {
+  const who = ticket.name ? `<b>${esc(ticket.name)}</b>` : "کاربر ناشناس";
+  const un = ticket.username ? ` (@${esc(ticket.username)})` : "";
+  const snippet = esc(text.slice(0, 140));
+  return `🎫 <b>تیکت جدید پشتیبانی</b>\n\n👤 ${who}${un}\n💬 ${snippet}\n\nبرای پاسخ، پنل مدیریت → بخش «پشتیبانی» را باز کن.`;
+}
 
 /* ============================ main menu ⚡ ============================ */
 

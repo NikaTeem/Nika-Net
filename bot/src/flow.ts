@@ -7,6 +7,7 @@ import * as cf from "./cloudflare";
 import * as ui from "./ui";
 import * as panel from "./panel";
 import * as fj from "./forcedjoin";
+import * as sup from "./support";
 import { t, Lang } from "./i18n";
 import { encryptText, decryptText } from "./crypto";
 import { UserState, TokenRecord } from "./state";
@@ -307,6 +308,10 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
     if (rl === "new") return await buildEntry(env, chatId, msg.message_id);
+    if (rl === "support") {
+      const m = ui.supportIntro(s);
+      return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+    }
   }
 
   const s = await st.getState(env, chatId);
@@ -328,8 +333,25 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     case "await_fj_chat":
       return await inFjChat(env, chatId, msg, text);
     default: {
-      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
-      return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+      // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
+      if (await isOwner(env, chatId)) {
+        const m = ui.mainMenu(s, msg.from?.first_name, true);
+        return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+      }
+      const r = await sup.addUserMessage(env, chatId, text, {
+        firstName: msg.from?.first_name,
+        lastName: msg.from?.last_name,
+        username: msg.from?.username,
+      });
+      if (r.created) {
+        const s2 = await st.getState(env, chatId);
+        await tg.sendMessage(env, chatId, ui.supportAck(s2));
+        const owner = await st.getOwner(env);
+        if (owner && owner !== chatId) {
+          await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text)).catch(() => {});
+        }
+      }
+      return;
     }
   }
 }
