@@ -336,6 +336,11 @@ const PANEL_HTML = `<!doctype html>
   .spill.ok{background:rgba(49,208,170,.14);color:var(--green)}
   .spill.mut{background:rgba(255,255,255,.08);color:var(--muted)}
   .cat{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;background:rgba(124,77,255,.14);color:#b39dff;border:1px solid rgba(124,77,255,.3);margin-inline-start:2px}
+  .sel{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 10px;font-family:var(--f-body);font-size:12.5px;cursor:pointer}
+  .fchip{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);user-select:none}
+  .fchip.on{background:rgba(79,140,255,.16);border-color:rgba(79,140,255,.5);color:var(--text)}
+  .supstat{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted)}
+  .supstat b{color:var(--text)}
   .empty{padding:40px 20px;text-align:center;color:var(--muted)}
   .empty .e{font-size:38px;margin-bottom:8px}
   .card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)}
@@ -509,7 +514,10 @@ const PANEL_HTML = `<!doctype html>
     <!-- users -->
     <div class="card">
       <h2>👥 کاربران <span class="mini" id="usrCount">—</span></h2>
-      <div class="search" style="margin-bottom:14px"><input id="usrSearch" placeholder="جستجو: نام، آیدی یا یوزرنیم…" /></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="search" style="flex:1;min-width:200px"><input id="usrSearch" placeholder="جستجو: نام، آیدی یا یوزرنیم…" /></div>
+        <button class="btn btn-ghost" id="usrCsv">⬇ خروجی CSV</button>
+      </div>
       <div style="max-height:440px;overflow:auto">
         <table class="utable">
           <thead><tr><th>کاربر</th><th>آیدی</th><th>وضعیت</th><th>آخرین بازدید</th><th></th></tr></thead>
@@ -537,6 +545,7 @@ const PANEL_HTML = `<!doctype html>
           <div style="display:flex;justify-content:space-between"><span>ربات</span><b id="botUname" style="font-family:ui-monospace,monospace;direction:ltr">—</b></div>
           <div style="display:flex;justify-content:space-between"><span>آدرس پنل</span><b id="panelUrl" style="font-family:ui-monospace,monospace;direction:ltr;max-width:200px;overflow:hidden;text-overflow:ellipsis">—</b></div>
         </div>
+        <button class="btn btn-ghost btn-sm" id="copyPanel" style="margin-top:12px">📋 کپی آدرس پنل</button>
         <div class="hint">برای بررسی عضویت، ربات باید در کانال هدف <b>ادمین</b> باشد. با دکمهٔ بالا کانال را انتخاب کن تا خودکار اضافه شود.</div>
       </div>
     </div>
@@ -545,6 +554,10 @@ const PANEL_HTML = `<!doctype html>
     <div id="view-pm" class="hidden">
       <div class="card" style="padding:0;overflow:hidden">
         <div class="card-h"><div class="ic">💬</div><h2>پیام شخصی <span class="mini">چت خصوصی با کاربران — مثل پی‌وی تلگرام</span></h2></div>
+        <div class="toolbar" style="display:flex;gap:8px;padding:12px 14px 0">
+          <div class="search" style="flex:1"><input id="pmSearch" placeholder="جستجوی گفتگو…" /></div>
+          <button class="btn btn-ghost btn-sm" id="pmRefresh">🔄 بروزرسانی</button>
+        </div>
         <div class="chatwrap" style="padding:14px">
           <div class="userside">
             <ul class="ulist" id="pm-list"></ul>
@@ -568,6 +581,14 @@ const PANEL_HTML = `<!doctype html>
     <div id="view-support" class="hidden">
       <div class="card" style="padding:0;overflow:hidden">
         <div class="card-h"><div class="ic">🎧</div><h2>پشتیبانی Nika Net <span class="mini">صندوق تیکت کاربران</span></h2></div>
+        <div class="supstats" id="supStats" style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px 0"></div>
+        <div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 0">
+          <div class="search" style="flex:1;min-width:180px"><input id="tkSearch" placeholder="جستجوی تیکت: نام، آیدی یا متن…" /></div>
+          <select id="tkCat" class="sel"><option value="">همهٔ دسته‌ها</option></select>
+          <button class="btn btn-ghost btn-sm" id="tkRefresh">🔄 بروزرسانی</button>
+          <button class="btn btn-danger btn-sm" id="tkCloseAll">🔒 بستن همهٔ بازها</button>
+        </div>
+        <div id="tkStatusChips" style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 0"></div>
         <div class="chatwrap" style="padding:14px">
           <div class="userside">
             <ul class="ulist" id="ticket-list"></ul>
@@ -657,7 +678,7 @@ const PANEL_HTML = `<!doctype html>
   // ====== Aurora Nika: ناوبری + پیام شخصی + پشتیبانی ======
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
-  var ns = { userList: [], pmThreads: [], activePm: null, tickets: [], activeTicket: null };
+  var ns = { userList: [], pmThreads: [], activePm: null, tickets: [], activeTicket: null, tkStatus: "all" };
 
   var faTime = function (ts) {
     var d = new Date(ts);
@@ -699,19 +720,23 @@ const PANEL_HTML = `<!doctype html>
   };
 
   // ===== پیام شخصی =====
-  async function loadPmThreads() {
-    var r = await api("/panel/api/pm/list");
-    if (!r.ok) return;
-    ns.pmThreads = r.j.threads || [];
+  function renderPmList() {
+    var q = ($("#pmSearch").value || "").trim().toLowerCase();
+    var list = ns.pmThreads.filter(function (t) {
+      if (!q) return true;
+      return (String(t.id).indexOf(q) >= 0) ||
+             ((t.name || "").toLowerCase().indexOf(q) >= 0) ||
+             ((t.username || "").toLowerCase().indexOf(q) >= 0) ||
+             ((t.lastText || "").toLowerCase().indexOf(q) >= 0);
+    });
     var ul = $("#pm-list");
     ul.innerHTML = "";
-    var badge = $("#pmBadge");
-    var unread = 0;
-    if (!ns.pmThreads.length) {
-      ul.innerHTML = '<div class="empty"><div class="e">💬</div>هنوز پیامی نیست.<br>از بخش کاربران دکمهٔ «پیام» را بزن و گفتگو را شروع کن.</div>';
+    if (!list.length) {
+      ul.innerHTML = ns.pmThreads.length
+        ? '<div class="empty"><div class="e">🔍</div>چیزی با این جستجو پیدا نشد.</div>'
+        : '<div class="empty"><div class="e">💬</div>هنوز پیامی نیست.<br>از بخش کاربران دکمهٔ «پیام» را بزن و گفتگو را شروع کن.</div>';
     }
-    ns.pmThreads.forEach(function (t) {
-      unread += t.unread || 0;
+    list.forEach(function (t) {
       var li = document.createElement("li");
       li.setAttribute("data-id", t.id);
       if (ns.activePm === t.id) li.classList.add("on");
@@ -724,7 +749,17 @@ const PANEL_HTML = `<!doctype html>
       li.onclick = function () { openPm(t.id); };
       ul.appendChild(li);
     });
+  }
+
+  async function loadPmThreads() {
+    var r = await api("/panel/api/pm/list");
+    if (!r.ok) return;
+    ns.pmThreads = r.j.threads || [];
+    var badge = $("#pmBadge");
+    var unread = 0;
+    ns.pmThreads.forEach(function (t) { unread += t.unread || 0; });
     if (badge) { badge.textContent = unread; badge.classList.toggle("hide", unread === 0); }
+    renderPmList();
   }
 
   async function openPm(id) {
@@ -778,19 +813,49 @@ const PANEL_HTML = `<!doctype html>
   }
 
   // ===== پشتیبانی (تیکت‌ها) =====
-  async function loadTickets() {
-    var r = await api("/panel/api/support/list");
-    if (!r.ok) return;
-    ns.tickets = r.j.tickets || [];
+  function ticketCategories() {
+    var set = {};
+    ns.tickets.forEach(function (t) { if (t.categoryLabel) set[t.category || t.categoryLabel] = t.categoryLabel; });
+    return Object.keys(set).map(function (k) { return { id: k, label: set[k] }; });
+  }
+
+  function renderSupStats() {
+    var open = 0, closed = 0, unread = 0;
+    ns.tickets.forEach(function (t) {
+      if (t.status === "open") open++; else closed++;
+      unread += t.unread || 0;
+    });
+    var el = $("#supStats");
+    if (!el) return;
+    el.innerHTML =
+      '<span class="supstat">🎫 کل: <b>' + faNum(ns.tickets.length) + '</b></span>' +
+      '<span class="supstat">✅ باز: <b>' + faNum(open) + '</b></span>' +
+      '<span class="supstat">🔒 بسته: <b>' + faNum(closed) + '</b></span>' +
+      '<span class="supstat">🔔 خوانده‌نشده: <b>' + faNum(unread) + '</b></span>';
+  }
+
+  function renderTickets() {
+    var q = ($("#tkSearch").value || "").trim().toLowerCase();
+    var cat = $("#tkCat").value || "";
+    var status = ns.tkStatus || "all";
+    var list = ns.tickets.filter(function (t) {
+      if (status === "open" && t.status !== "open") return false;
+      if (status === "closed" && t.status !== "closed") return false;
+      if (cat && t.category !== cat) return false;
+      if (q) {
+        var hay = (String(t.id) + " " + (t.name || "") + " " + (t.username || "") + " " + (t.lastText || "")).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
     var ul = $("#ticket-list");
     ul.innerHTML = "";
-    var badge = $("#supBadge");
-    var unread = 0;
-    if (!ns.tickets.length) {
-      ul.innerHTML = '<div class="empty"><div class="e">🎫</div>هنوز تیکتی ثبت نشده.</div>';
+    if (!list.length) {
+      ul.innerHTML = ns.tickets.length
+        ? '<div class="empty"><div class="e">🔍</div>چیزی با این فیلتر پیدا نشد.</div>'
+        : '<div class="empty"><div class="e">🎫</div>هنوز تیکتی ثبت نشده.</div>';
     }
-    ns.tickets.forEach(function (t) {
-      unread += t.unread || 0;
+    list.forEach(function (t) {
       var li = document.createElement("li");
       li.setAttribute("data-id", t.id);
       if (ns.activeTicket === t.id) li.classList.add("on");
@@ -804,7 +869,38 @@ const PANEL_HTML = `<!doctype html>
       li.onclick = function () { openTicket(t.id); };
       ul.appendChild(li);
     });
+  }
+
+  function renderStatusChips() {
+    var el = $("#tkStatusChips");
+    if (!el) return;
+    var opts = [["all", "همه"], ["open", "باز"], ["closed", "بسته"]];
+    el.innerHTML = "";
+    opts.forEach(function (o) {
+      var b = document.createElement("span");
+      b.className = "fchip" + (ns.tkStatus === o[0] ? " on" : "");
+      b.textContent = o[1];
+      b.onclick = function () { ns.tkStatus = o[0]; renderStatusChips(); renderTickets(); };
+      el.appendChild(b);
+    });
+  }
+
+  async function loadTickets() {
+    var r = await api("/panel/api/support/list");
+    if (!r.ok) return;
+    ns.tickets = r.j.tickets || [];
+    // دسته‌ها در باکس فیلتر
+    var sel = $("#tkCat");
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">همهٔ دسته‌ها</option>' +
+      ticketCategories().map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.label) + "</option>"; }).join("");
+    sel.value = cur;
+    var badge = $("#supBadge");
+    var unread = 0;
+    ns.tickets.forEach(function (t) { unread += t.unread || 0; });
     if (badge) { badge.textContent = unread; badge.classList.toggle("hide", unread === 0); }
+    renderSupStats();
+    renderTickets();
   }
 
   async function openTicket(id) {
@@ -861,7 +957,54 @@ const PANEL_HTML = `<!doctype html>
     if (ta) ta.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendTicket(); } });
   }
 
-  function bootSupport() { wireNav(); wirePm(); wireTk(); loadPmThreads(); loadTickets(); }
+  function copyText(v, msg) {
+    var ta = document.createElement("textarea");
+    ta.value = String(v);
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast(msg || "کپی شد ✓"); } catch (e) { toast("کپی نشد"); }
+    ta.remove();
+  }
+
+  function exportCsv() {
+    var rows = [["id", "name", "username", "status", "lastSeen"]];
+    users.forEach(function (u) {
+      var full = ((u.name || "") + " " + (u.lastName || "")).trim();
+      var st = u.owner ? "owner" : (u.exempt ? "exempt" : (u.joined ? "member" : "blocked"));
+      rows.push([u.id, full, u.username || "", st, u.lastSeen ? new Date(u.lastSeen).toISOString() : ""]);
+    });
+    var csv = rows.map(function (r) {
+      return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(",");
+    }).join("\n");
+    var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "nika-users.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("فایل CSV دانلود شد ✓");
+  }
+
+  async function closeAllTickets() {
+    var openCount = ns.tickets.filter(function (t) { return t.status === "open"; }).length;
+    if (!openCount) { toast("تیکت بازی وجود ندارد"); return; }
+    if (!confirm("همهٔ " + faNum(openCount) + " تیکت باز بسته شوند؟")) return;
+    var r = await api("/panel/api/support/closeall", { method: "POST" });
+    if (r.ok && r.j.ok) { toast("بسته شد ✓"); loadTickets(); }
+    else toast(r.j.error || "خطا");
+  }
+
+  function wireExtras() {
+    var s1 = $("#pmSearch"); if (s1) s1.addEventListener("input", renderPmList);
+    var r1 = $("#pmRefresh"); if (r1) r1.onclick = function () { loadPmThreads(); };
+    var s2 = $("#tkSearch"); if (s2) s2.addEventListener("input", renderTickets);
+    var c2 = $("#tkCat"); if (c2) c2.addEventListener("change", renderTickets);
+    var r2 = $("#tkRefresh"); if (r2) r2.onclick = function () { loadTickets(); };
+    var ca = $("#tkCloseAll"); if (ca) ca.onclick = closeAllTickets;
+    var csv = $("#usrCsv"); if (csv) csv.onclick = exportCsv;
+    var cp = $("#copyPanel"); if (cp) cp.onclick = function () { copyText(state.bot.origin + "/panel", "آدرس پنل کپی شد ✓"); };
+    renderStatusChips();
+  }
+
+  function bootSupport() { wireNav(); wirePm(); wireTk(); wireExtras(); loadPmThreads(); loadTickets(); }
 
 
   /* ---------- state ---------- */
@@ -1161,14 +1304,14 @@ const PANEL_HTML = `<!doctype html>
 
   async function toggleExempt(u) {
     var r = await api("/panel/api/exempt", { method: "POST", body: { id: u.id, exempt: !u.exempt } });
-    if (r.ok) { state = r.j.state; await loadUsers(); render(); toast(u.exempt ? "از معافیت خارج شد" : "معاف شد ✓"); }
+    if (r.ok) { state.fj = r.j.state.fj; await loadUsers(); render(); toast(u.exempt ? "از معافیت خارج شد" : "معاف شد ✓"); }
     else toast(r.j.error || "خطا");
   }
 
   /* ---------- forced join actions ---------- */
   $("#heroFj").onclick = async function () {
     var r = await api("/panel/api/fj", { method: "POST", body: { enabled: state.fj.enabled ? false : true } });
-    if (r.ok) { state = r.j.state; render(); toast(state.fj.enabled ? "عضویت اجباری روشن شد ✓" : "عضویت اجباری خاموش شد"); }
+    if (r.ok) { state.fj = r.j.state.fj; render(); toast(state.fj.enabled ? "عضویت اجباری روشن شد ✓" : "عضویت اجباری خاموش شد"); }
   };
   $("#fjEnabled").onclick = function () { $("#heroFj").onclick(); };
 
@@ -1176,12 +1319,12 @@ const PANEL_HTML = `<!doctype html>
     var v = $("#fjAdd").value.trim();
     if (!v) return;
     var r = await api("/panel/api/fj", { method: "POST", body: { addChat: v } });
-    if (r.ok) { state = r.j.state; $("#fjAdd").value = ""; render(); await loadStats(); toast("کانال اضافه شد ✓"); }
+    if (r.ok) { state.fj = r.j.state.fj; $("#fjAdd").value = ""; render(); await loadStats(); toast("کانال اضافه شد ✓"); }
     else toast(r.j.error || "خطا — کانال را چک کن");
   };
   function removeChat(c) {
     api("/panel/api/fj", { method: "POST", body: { removeChat: c } }).then(function (r) {
-      if (r.ok) { state = r.j.state; render(); toast("حذف شد"); }
+      if (r.ok) { state.fj = r.j.state.fj; render(); toast("حذف شد"); }
     });
   }
   $("#fjSave").onclick = async function () {
@@ -1198,7 +1341,7 @@ const PANEL_HTML = `<!doctype html>
         exempt: $("#fjExempt").value.split("\\n").map(function (x) { return x.trim(); }).filter(Boolean).map(Number).filter(function (n) { return !isNaN(n); }),
       },
     });
-    if (r.ok) { state = r.j.state; render(); toast("ذخیره شد ✓"); }
+    if (r.ok) { state.fj = r.j.state.fj; render(); toast("ذخیره شد ✓"); }
     else toast("خطا در ذخیره");
   };
   $("#fjTest").onclick = async function () {
@@ -1623,6 +1766,18 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const next = t.status === "open" ? "closed" : "open";
     await sup.setStatus(env, id, next);
     return json({ ok: true, status: next });
+  }
+
+  if (path === "/panel/api/support/closeall" && req.method === "POST") {
+    const { tickets } = await sup.listTickets(env, "ticket");
+    let n = 0;
+    for (const t of tickets) {
+      if (t.status === "open") {
+        await sup.setStatus(env, t.id, "closed");
+        n++;
+      }
+    }
+    return json({ ok: true, closed: n });
   }
 
   return json({ error: "not found" }, 404);

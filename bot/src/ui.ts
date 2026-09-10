@@ -304,11 +304,9 @@ export function supportChosen(s: UserState, cat: SupportCat): string {
     : `🎫 <b>Category “${esc(cat.en)}” selected.</b>\n\nNow describe your issue — it goes straight to our team and you'll get the answer right here. 📬`;
 }
 
-// تأیید ثبت تیکت (برای اولین پیام هر تیکت)
-export function supportAck(s: UserState): string {
-  return L(s) === "fa"
-    ? "🎫 <b>تیکت شما ثبت شد!</b>\n\nتیم پشتیبانی Nika Net به‌زودی همین‌جا جوابت رو می‌ده. اگه جزئیات بیشتری داری، همین‌جا ادامه بده. 📬"
-    : "🎫 <b>Your ticket has been registered!</b>\n\nThe Nika Net support team will reply to you right here soon. Feel free to add more details. 📬";
+// تأیید ثبت تیکت — متن دقیق درخواستی مالک
+export function supportAck(): string {
+  return "🎫 تیکتت ثبت شد دوست من در سریع ترین زمان تیکتت جواب داده میشه";
 }
 
 // تأیید پاسخ کاربر به پیام شخصی/پشتیبانی (بعد از ارسال پیامش)

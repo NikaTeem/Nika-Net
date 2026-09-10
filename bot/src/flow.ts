@@ -308,12 +308,14 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
   if (text === "/menu") {
     const s = await st.getState(env, chatId);
+    if (s.state === "await_support") { s.state = "idle"; await st.saveState(env, chatId, s); }
     const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
 
   if (text === "/support" || text.toLowerCase() === "support") {
     const s = await st.getState(env, chatId);
+    if (s.state === "await_support") { s.state = "idle"; await st.saveState(env, chatId, s); }
     const m = ui.supportMenu(s);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
@@ -389,6 +391,9 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       return await inUexp(env, chatId, text);
     case "await_fj_chat":
       return await inFjChat(env, chatId, msg, text);
+    case "await_support":
+      // پس از انتخاب دسته — پیام کاربر بدنهٔ تیکت می‌شود (حتی اگر مالک باشد)
+      return await supportText(env, chatId, msg, text);
     default: {
       // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
       if (await isOwner(env, chatId)) {
@@ -396,24 +401,34 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         return void (await tg.sendMessage(env, chatId, m.text, m.kb));
       }
       if (!text) return; // استیکر/عکس/فایل بدون متن → نادیده بگیر
-      const r = await sup.addUserMessage(env, chatId, text, {
-        firstName: msg.from?.first_name,
-        lastName: msg.from?.last_name,
-        username: msg.from?.username,
-      });
-      const owner = await st.getOwner(env);
-      if (owner && owner !== chatId) {
-        await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, r.firstUserMessage)).catch(() => {});
-      }
-      // تأیید به کاربر — اولین پیام = «تیکت ثبت شد» · پاسخ به مالک = «پیام ارسال شد»
-      if (r.firstUserMessage) {
-        const s2 = await st.getState(env, chatId);
-        await tg.sendMessage(env, chatId, ui.supportAck(s2)).catch(() => {});
-      } else if (r.isReply) {
-        await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
-      }
-      return;
+      return await supportText(env, chatId, msg, text);
     }
+  }
+}
+
+// ثبت پیام کاربر به‌عنوان تیکت/پاسخ + تأیید و اعلان به مالک
+async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: string): Promise<void> {
+  const r = await sup.addUserMessage(env, chatId, text, {
+    firstName: msg.from?.first_name,
+    lastName: msg.from?.last_name,
+    username: msg.from?.username,
+  });
+  const owner = await st.getOwner(env);
+  const isNew = r.firstUserMessage && !r.isReply;
+  if (owner && owner !== chatId) {
+    await tg.sendMessage(env, owner, ui.supportNotify(r.ticket, text, isNew)).catch(() => {});
+  }
+  // تأیید به کاربر — پاسخ به پیام مالک/پشتیبانی = «پیام ارسال شد» · تیکت جدید = «تیکت ثبت شد»
+  if (r.isReply) {
+    await tg.sendMessage(env, chatId, ui.pmReplyAck()).catch(() => {});
+  } else if (r.firstUserMessage) {
+    await tg.sendMessage(env, chatId, ui.supportAck()).catch(() => {});
+  }
+  // بازگشت به حالت عادی پس از ثبت بدنهٔ تیکت
+  const s = await st.getState(env, chatId);
+  if (s.state === "await_support") {
+    s.state = "idle";
+    await st.saveState(env, chatId, s).catch(() => {});
   }
 }
 
@@ -1000,6 +1015,8 @@ async function udetail(env: Env, chatId: number, msgId: number, userId: string):
 
 async function navMenu(env: Env, chatId: number, msgId: number, name: string, firstName?: string): Promise<void> {
   const s = await st.getState(env, chatId);
+  // هر جابه‌جایی بین منوها، حالت انتظارِ نوشتن تیکت را لغو می‌کند
+  if (s.state === "await_support") { s.state = "idle"; await st.saveState(env, chatId, s).catch(() => {}); }
   let m: { text: string; kb: tg.Kb };
   switch (name) {
     case "tokens": m = ui.tokensMenu(s); break;
@@ -1062,6 +1079,10 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
       lastName: cq.from?.last_name,
       username: cq.from?.username,
     });
+    // حالت انتظار: پیام بعدی (حتی از مالک) بدنهٔ تیکت می‌شود
+    s.state = "await_support";
+    s.tmp.supportCat = cat.id;
+    await st.saveState(env, chatId, s);
     await tg.answerCallback(env, cq.id, `🏷 ${cat.fa}`).catch(() => {});
     // منوی دسته‌ها را درجا به «دسته انتخاب شد» تبدیل می‌کنیم (بدون پیام اضافه)
     const done = ui.supportChosen(s, cat);

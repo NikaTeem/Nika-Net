@@ -162,6 +162,7 @@ export async function openCategory(
   if (!t.username) t.username = who?.username || "";
   t.category = catId;
   t.categoryLabel = catLabel;
+  t.kind = "ticket"; // کاربر صریحاً تیکت پشتیبانی باز کرده → در تب «پشتیبانی» پنل دیده شود
   t.lastAt = Date.now();
   await putTicket(env, t);
   return t;

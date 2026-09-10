@@ -36,7 +36,8 @@ export type StateName =
   | "await_uname"
   | "await_uquota"
   | "await_uexp"
-  | "await_fj_chat";
+  | "await_fj_chat"
+  | "await_support";
 
 export type SkinId = "graphite" | "neon" | "paper";
 
