@@ -27,10 +27,11 @@ const now = Date.now();
 kv.put("sup:111111", JSON.stringify({ id: 111111, startedBy: "owner", status: "open", unread: 1, lastAt: now, lastText: "سلام مشترک عزیز", name: "Reza", username: "rezza1", msgs: [{ dir: "out", text: "سلام مشترک عزیز", at: now }] }));
 kv.put("sup:222222", JSON.stringify({ id: 222222, startedBy: "user", status: "open", unread: 2, lastAt: now - 1000, lastText: "سلام مشکل اتصال دارم", name: "Sara", username: "sara2", category: "connect", categoryLabel: "🔌 مشکل اتصال", msgs: [{ dir: "in", text: "سلام مشکل اتصال دارم", at: now - 1000 }] }));
 // seed users + meta (for users table + broadcast)
-for (const [id, name, username] of [[111111, "Reza", "rezza1"], [222222, "Sara", "sara2"]]) {
+for (const [id, name, username] of [[111111, "Reza", "rezza1"], [222222, "Sara", "sara2"], [333333, "Ali", "ali3"]]) {
   kv.put("u:" + id, JSON.stringify({ chatId: id }));
   kv.put("u:meta:" + id, JSON.stringify({ firstName: name, username, nameAt: now, at: now }));
 }
+// 333333 عمداً هیچ sup: نداریـد → مسیر «شروع چت جدید» را تست می‌کند
 // seed a panel password (salted SHA-256, matching auth.ts)
 kv.put("panel:password:", createHash("sha256").update("nikapanel:v1:nikapass123").digest("hex"));
 
@@ -88,6 +89,7 @@ function bootDom() {
   window.confirm = () => true;
   window.alert = () => {};
   window.open = () => null;
+  window.prompt = () => "https://t.me/NikaNetLauncher_bot";
   window.URL.createObjectURL = () => "blob:fake";
   window.document.execCommand = () => true;
   window.HTMLAnchorElement.prototype.click = function () {};
@@ -174,6 +176,20 @@ $("#pm-send").click();
 await until(() => $("#pm-text").value === "", 3000, "pm send");
 check("PM: ارسال پیام", $("#pm-text").value === "");
 
+// شروع گفتگوی جدید برای کاربری که هنوز تیکت ندارد (رگرسیون ensureThread)
+$('.nav button[data-v="overview"]').click();
+await until(() => $$("#usrBody tr").length > 0, 4000, "users table");
+const aliasRow = Array.from($$("#usrBody tr")).find((tr) => tr.textContent.includes("333333"));
+check("PM: ردیف کاربر بدون گفتگو پیدا شد", !!aliasRow);
+if (aliasRow) {
+  const aliasPm = Array.from(aliasRow.querySelectorAll("button")).find((b) => b.textContent.includes("پیام"));
+  aliasPm.click();
+  await until(() => $("#pm-box") && !$("#pm-box").classList.contains("hidden"), 4000, "pm starts for new user");
+  check("PM: چت جدید برای کاربر بدون گفتگو باز شد", !$("#pm-box").classList.contains("hidden"));
+  await until(() => $("#pm-head").textContent.includes("Ali"), 3000, "pm head ali");
+  check("PM: هدر چت جدید نام را نشان می‌دهد", $("#pm-head").textContent.includes("Ali"));
+}
+
 /* ---- پشتیبانی ---- */
 $('.nav button[data-v="support"]').click();
 await until(() => $$("#ticket-list li").length > 0, 4000, "ticket list");
@@ -199,6 +215,8 @@ check("TK: ارسال پاسخ", $("#tk-text").value === "");
 $("#tk-toggle").click();
 await until(() => $("#tk-toggle").textContent.includes("بازکردن"), 3000, "tk toggle");
 check("TK: بستن تیکت → «بازکردن»", $("#tk-toggle").textContent.includes("بازکردن"));
+await until(() => $$("#ticket-list li").length > 0 && $$("#ticket-list li")[0].textContent.includes("بسته"), 2000, "tk list updated");
+check("TK: لیست بلافاصله «بسته» نشان می‌دهد", $$("#ticket-list li")[0].textContent.includes("بسته"));
 const chip = $$("#tkStatusChips .fchip").find((c) => c.textContent === "باز");
 if (chip) { chip.click(); await until(() => $$("#ticket-list li").length === 0, 2000, "open filter"); check("TK: فیلتر وضعیت «باز»", $$("#ticket-list li").length === 0); $$("#tkStatusChips .fchip")[0].click(); await until(() => $$("#ticket-list li").length > 0, 2000, "all filter"); }
 $("#tkCloseAll").click();
@@ -257,11 +275,34 @@ $("#heroFj").click();
 await until(() => $("#heroFjLabel").textContent.includes("غیرفعال") || $("#heroFjLabel").textContent.includes("فعال"), 3000, "hero fj");
 check("FJ: کلید روشن/خاموش (hero)", true);
 
-/* ---- پیام همگانی ---- */
-$("#bcText").value = "سلام به همه";
+/* ---- پیام همگانی (کمپوزر v2) ---- */
+$("#bcText").value = "سلام <b>به همه</b>";
+$("#bcText").dispatchEvent(new window.Event("input", { bubbles: true }));
+check("BC: پیش‌نمایش متن را نشان می‌دهد", $("#bcPreviewBody").textContent.includes("سلام"));
+check("BC: پیش‌نمایش هدر برند را دارد", $("#bcPreview").textContent.includes("پیام همگانی Nika Net"));
+check("BC: قالب‌بندی فعال شناسایی شد", $("#bcHtml").textContent.includes("قالب‌بندی"));
+const bcBold = Array.from(doc.querySelectorAll(".bc-toolbar button")).find((b) => b.getAttribute("data-bc") === "b");
+if (bcBold) { bcBold.click(); check("BC: دکمهٔ ضخیم → <b> اضافه شد", $("#bcText").value.includes("<b>")); }
+const bcLink = Array.from(doc.querySelectorAll(".bc-toolbar button")).find((b) => b.getAttribute("data-bc") === "link");
+if (bcLink) { bcLink.click(); check("BC: دکمهٔ لینک → <a href> اضافه شد", $("#bcText").value.includes("<a href=")); }
+$("#bcBtnText").value = "کانال Nika Net";
+$("#bcBtnUrl").value = "https://t.me/NikaSociety";
+$("#bcBtnUrl").dispatchEvent(new window.Event("input", { bubbles: true }));
+check("BC: پیش‌نمایش دکمه نمایش دارد", $("#bcPreviewBtn").style.display !== "none" && $("#bcPreviewBtn").textContent.includes("کانال Nika Net"));
+$("#bcTest").click();
+await until(() => $("#toast").textContent.includes("تست"), 4000, "bc test");
+check("BC: ارسال تست به خودم", $("#toast").textContent.includes("تست"));
 $("#bcSend").click();
-await until(() => $("#bcOut").style.display === "block" && $("#bcOut").textContent.length > 2, 4000, "broadcast");
+await until(() => $("#bcOut").style.display === "block" && $("#bcOut").textContent.includes("ارسال"), 5000, "broadcast");
 check("BC: پیام همگانی ارسال شد", $("#bcOut").textContent.includes("ارسال"));
+await until(() => $("#bcHistory").textContent.includes("رسید"), 4000, "bc history");
+check("BC: تاریخچه رندر شد", $("#bcHistory").textContent.includes("رسید"));
+// مرتب‌سازی کاربران
+const thName = Array.from(doc.querySelectorAll(".utable th.sortable")).find((t) => t.getAttribute("data-sort") === "name");
+if (thName) { thName.click(); check("USR: مرتب‌سازی ستونی (نام) بدون خطا", true); }
+const thId = Array.from(doc.querySelectorAll(".utable th.sortable")).find((t) => t.getAttribute("data-sort") === "id");
+if (thId) { thId.click(); check("USR: مرتب‌سازی ستونی (آیدی) بدون خطا", true); }
+check("USR: نوار آمار کاربران رندر شد", $("#usrStats").textContent.includes("کل"));
 
 /* ---- رمز عبور + کپی آدرس ---- */
 $("#pwNew").value = "newpass123";

@@ -178,6 +178,7 @@ export async function ensureThread(env: Env, id: number): Promise<void> {
   if (!t) {
     const meta = await st.getMeta(env, id);
     await putTicket(
+      env,
       emptyTicket(id, "owner", {
         firstName: meta?.firstName,
         lastName: meta?.lastName,

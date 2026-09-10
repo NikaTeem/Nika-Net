@@ -8,6 +8,7 @@ import * as ui from "./ui";
 import * as panel from "./panel";
 import * as fj from "./forcedjoin";
 import * as sup from "./support";
+import * as bc from "./broadcast";
 import { t, Lang } from "./i18n";
 import { encryptText, decryptText } from "./crypto";
 import { UserState, TokenRecord } from "./state";
@@ -124,17 +125,8 @@ export async function handleUpdate(env: Env, update: tg.TgUpdate): Promise<void>
 
 /* ---------------- broadcast (owner-only) ---------------- */
 export async function broadcastAll(env: Env, text: string): Promise<{ sent: number; total: number }> {
-  const ids = await tg.listUserChatIds(env);
-  let sent = 0;
-  for (const id of ids) {
-    try {
-      await tg.sendMessage(env, id, text);
-      sent++;
-    } catch {
-      /* skip blocked/unreachable */
-    }
-  }
-  return { sent, total: ids.length };
+  const r = await bc.broadcastAll(env, text);
+  return { sent: r.sent, total: r.total };
 }
 
 // دکمهٔ منوی ربات (کنار کادر نوشتن) → لیست دستورها + ثبت دستور /support — idempotent.

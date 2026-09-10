@@ -213,7 +213,7 @@ check("closeall بسته شد و status ها closed است", r.j.tickets.filter(
   if (pm) { try { new vm.Script(pm[1]); syntaxOk = true; } catch (e) { errors.push("panel script syntax: " + e.message); } }
   check("اسکریپت صفحهٔ پنل بدون خطای نحوی", syntaxOk);
   check("پنل: هدر cache-control ضد کش", (pres.headers.get("cache-control") || "").includes("no-store"));
-  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.10.3"));
+  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.10.4"));
 }
 
 let lr = await panelRaw("/panel/api/logininfo");
@@ -298,6 +298,33 @@ check("بعد از ۵ تلاش ناموفق → قفل موقت 401", lr.status 
 // پاک‌سازی برای تست‌های بعدی
 await kv.delete("panel:password:");
 await kv.delete("panel:pwfail:8940829322");
+
+// ===== 8) پیام همگانی v2 (قالب برندشده + دکمه + تاریخچه) =====
+await kv.put("u:555111", JSON.stringify({ chatId: 555111 }));
+await kv.put("u:555222", JSON.stringify({ chatId: 555222 }));
+sent.length = 0;
+
+lr = await panelRaw("/panel/api/broadcast", { method: "POST", cookie: "npanel=" + token3, body: { text: "سلام", buttonText: "بزن", buttonUrl: "ftp://x" } });
+check("برادکست: لینک دکمهٔ نامعتبر → 400", lr.status === 400);
+
+lr = await panelRaw("/panel/api/broadcast", { method: "POST", cookie: "npanel=" + token3, body: { text: "سلام", buttonText: "بزن" } });
+check("برادکست: دکمه بدون لینک → 400", lr.status === 400);
+
+lr = await panelRaw("/panel/api/broadcast", { method: "POST", cookie: "npanel=" + token3, body: { text: "سلام <b>دنیا</b>", buttonText: "کانال", buttonUrl: "https://t.me/NikaSociety" } });
+check("برادکست: ارسال → ok", lr.ok && lr.j.sent >= 0 && lr.j.total >= 1);
+const lastMsg = sent[sent.length - 1];
+check("برادکست: پاکت برندشده دارد", !!lastMsg && lastMsg.text.includes("پیام همگانی Nika Net"));
+check("برادکست: متن مالک با HTML حفظ شد", !!lastMsg && lastMsg.text.includes("<b>دنیا</b>"));
+check("برادکست: فوتر ربات دارد", !!lastMsg && lastMsg.text.endsWith("@TestBot"));
+check("برادکست: دکمهٔ inline دارد", !!lastMsg && JSON.stringify(lastMsg.reply_markup).includes("NikaSociety"));
+
+lr = await panelRaw("/panel/api/broadcast/test", { method: "POST", cookie: "npanel=" + token3, body: { text: "<b>ناقص" } });
+check("برادکست: ارسال تست → ok", lr.ok && lr.j.ok);
+const testMsg = sent[sent.length - 1];
+check("برادکست: HTML نامتعادل → تگ حذف شد", !!testMsg && !testMsg.text.includes("<b>ناقص") && testMsg.text.includes("&lt;b&gt;ناقص"));
+
+lr = await panelRaw("/panel/api/broadcast/history", { cookie: "npanel=" + token3 });
+check("برادکست: تاریخچه ثبت و خوانده شد", lr.ok && Array.isArray(lr.j.history) && lr.j.history.length >= 1);
 
 console.log("\nconsole errors:", errors.length ? errors.slice(0, 5) : "none");
 console.log("\n===== RESULT =====");

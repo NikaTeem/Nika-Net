@@ -13,6 +13,7 @@ import * as fj from "./forcedjoin";
 import * as sup from "./support";
 import * as ui from "./ui";
 import * as auth from "./auth";
+import * as bc from "./broadcast";
 
 const PANEL_HTML = `<!doctype html>
 <html lang="fa" dir="rtl">
@@ -225,6 +226,15 @@ const PANEL_HTML = `<!doctype html>
   .search::before{content:"🔍";position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.45}
   .utable{width:100%;border-collapse:collapse;font-size:13.5px}
   .utable th{color:var(--faint);font-weight:700;text-align:right;padding:10px 12px;border-bottom:1px dashed var(--border);font-size:11px;letter-spacing:.3px}
+  .utable th.sortable{cursor:pointer;user-select:none;transition:.15s}
+  .utable th.sortable:hover{color:var(--amber)}
+  .utable th .sarr{color:var(--amber);font-size:10px}
+  .usr-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .usr-stat{background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;padding:7px 13px;font-size:12px;color:var(--muted)}
+  .usr-stat b{color:var(--paper);font-size:13px}
+  .usr-stat.ok b{color:var(--green)}
+  .usr-stat.off b{color:var(--rose)}
+  .usr-stat.warn b{color:var(--amber)}
   .utable td{padding:11px 12px;border-bottom:1px dashed rgba(185,180,166,.09);vertical-align:middle}
   .utable tbody tr{transition:.15s}
   .utable tbody tr:hover{background:rgba(255,255,255,.03)}
@@ -275,6 +285,33 @@ const PANEL_HTML = `<!doctype html>
   .olink-divider::before,.olink-divider::after{content:"";flex:1;height:1px;
     background:repeating-linear-gradient(90deg, var(--border-strong) 0 5px, transparent 5px 10px)}
   .ver{text-align:center;color:var(--faint);font-size:10.5px;margin-top:14px;letter-spacing:.5px;direction:ltr}
+
+  /* ---------- broadcast composer ---------- */
+  .bc-preview{background:linear-gradient(165deg,#10131a,#0b0d12);border:1px dashed var(--border-strong);border-radius:14px;padding:18px 16px 14px;margin:16px 0 10px;position:relative;direction:rtl}
+  .bc-preview::before{content:"پیش‌نمایش زنده";position:absolute;top:-10px;right:14px;background:#181a20;color:var(--amber);font-size:10px;padding:2px 10px;border-radius:99px;border:1px dashed var(--border-strong)}
+  .bc-ph{font-family:var(--f-display);font-size:16px;color:var(--paper)}
+  .bc-ps{color:var(--muted);font-size:12px;margin-top:6px}
+  .bc-sep{color:var(--border-strong);font-size:11px;letter-spacing:2px;margin:9px 0;user-select:none}
+  .bc-pb{color:var(--text);font-size:13.5px;line-height:2;white-space:pre-wrap;word-break:break-word}
+  .bc-pb b{color:#e8b64c}
+  .bc-ph-placeholder{color:var(--faint)}
+  .bc-pf{color:var(--faint);font-size:11px}
+  .bc-pbtn{margin-top:12px;display:inline-block;background:rgba(79,140,255,.15);border:1px solid rgba(79,140,255,.4);border-radius:10px;padding:8px 16px;font-size:12.5px}
+  .bc-pbtn-b{color:#aac7ff;font-weight:700}
+  .bc-pbtn-u{color:var(--faint);font-size:10.5px;margin-inline-start:8px;direction:ltr;font-family:var(--f-mono)}
+  .bc-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+  .bc-toolbar button{min-width:36px;height:36px;padding:0 10px;background:rgba(255,255,255,.04);border:1px dashed var(--border);border-radius:9px;color:var(--muted);cursor:pointer;font-family:var(--f-body);font-size:13px;transition:.15s}
+  .bc-toolbar button:hover{border-color:var(--amber);color:var(--paper);background:rgba(201,163,91,.08)}
+  .bc-meta{display:flex;justify-content:space-between;color:var(--faint);font-size:11px;margin:5px 2px 8px}
+  .bc-btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
+  @media(max-width:640px){.bc-btnrow{grid-template-columns:1fr}}
+  .bc-history{margin-top:16px;border-top:1px dashed var(--border);padding-top:14px}
+  .bc-history-h{color:var(--muted);font-size:12px;font-weight:700;margin-bottom:8px}
+  .bc-history-empty{color:var(--faint);font-size:12px;padding:8px 2px}
+  .bc-h-item{display:flex;flex-direction:column;gap:4px;padding:9px 12px;border:1px dashed var(--border);border-radius:11px;margin-bottom:8px;background:rgba(255,255,255,.02)}
+  .bc-h-when{color:var(--faint);font-size:10.5px}
+  .bc-h-text{color:var(--muted);font-size:12.5px;line-height:1.9}
+  .bc-h-stats{color:var(--green);font-size:11px}
 
   /* wave animation for the bot's hand */
   .wave-arm{transform-box:fill-box;transform-origin:0% 100%;animation:wavearm 1.7s ease-in-out infinite}
@@ -390,7 +427,7 @@ const PANEL_HTML = `<!doctype html>
       </div>
       <div class="hint" id="lgMsg">فقط <b>مالک ربات</b> می‌تواند وارد شود.</div>
       <div class="olink-divider"><span>لینک‌های رسمی Nika Net</span></div><div class="olinks col"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
-      <div class="ver">Nika Net Panel · v0.10.3</div>
+      <div class="ver">Nika Net Panel · v0.10.4</div>
     </div>
   </div>
 </div>
@@ -544,31 +581,69 @@ const PANEL_HTML = `<!doctype html>
     <!-- users -->
     <div class="card">
       <h2>👥 کاربران <span class="mini" id="usrCount">—</span></h2>
+      <div class="usr-stats" id="usrStats"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
         <div class="search" style="flex:1;min-width:200px"><input id="usrSearch" placeholder="جستجو: نام، آیدی یا یوزرنیم…" /></div>
         <button class="btn btn-ghost" id="usrCsv">⬇ خروجی CSV</button>
       </div>
       <div style="max-height:440px;overflow:auto">
         <table class="utable">
-          <thead><tr><th>کاربر</th><th>آیدی</th><th>وضعیت</th><th>آخرین بازدید</th><th></th></tr></thead>
+          <thead><tr>
+            <th class="sortable" data-sort="name">کاربر <span class="sarr"></span></th>
+            <th class="sortable" data-sort="id">آیدی <span class="sarr"></span></th>
+            <th class="sortable" data-sort="status">وضعیت <span class="sarr"></span></th>
+            <th class="sortable" data-sort="lastSeen">آخرین بازدید <span class="sarr"></span></th>
+            <th></th>
+          </tr></thead>
           <tbody id="usrBody"></tbody>
         </table>
       </div>
       <div class="empty-state hidden" id="usrEmpty">کاربری یافت نشد</div>
     </div>
 
-    <!-- broadcast + info -->
-    <div class="grid-main">
-      <div class="card">
-        <h2>📣 پیام همگانی <span class="mini">برای همهٔ کاربران ربات</span></h2>
-        <textarea id="bcText" placeholder="متن پیام (با HTML تلگرام: <b>ضخیم</b>، <code>کد</code>…)"></textarea>
-        <div class="row" style="display:flex;gap:10px;margin-top:14px">
-          <button class="btn btn-p" id="bcSend" style="flex:1">🚀 ارسال به همه</button>
-        </div>
-        <div class="hint" id="bcOut" style="display:none"></div>
+    <!-- broadcast composer v2 -->
+    <div class="card">
+      <h2>📣 پیام همگانی <span class="mini">قالب برندشدهٔ Nika Net</span></h2>
+      <div class="bc-preview" id="bcPreview">
+        <div class="bc-ph">📣 <b>پیام همگانی Nika Net</b></div>
+        <div class="bc-ps">این پیام از طرف <b>Nika Net</b> برای همهٔ کاربران ارسال شده است.</div>
+        <div class="bc-sep">──────────────</div>
+        <div class="bc-pb" id="bcPreviewBody"><span class="bc-ph-placeholder">متن پیام اینجا نمایش داده می‌شود…</span></div>
+        <div class="bc-sep">──────────────</div>
+        <div class="bc-pf"><b>Nika Net</b> · @<span id="bcPreviewBot">…</span></div>
+        <div class="bc-pbtn" id="bcPreviewBtn" style="display:none"></div>
       </div>
-      <div class="card">
-        <h2>⚙️ اطلاعات و دسترسی</h2>
+      <div class="bc-toolbar">
+        <button type="button" data-bc="b" title="ضخیم"><b>B</b></button>
+        <button type="button" data-bc="i" title="مورب"><i>I</i></button>
+        <button type="button" data-bc="u" title="زیرخط"><u>U</u></button>
+        <button type="button" data-bc="s" title="خط‌خورده"><s>S</s></button>
+        <button type="button" data-bc="tg-spoiler" title="اسپویلر (تار)">🙈</button>
+        <button type="button" data-bc="code" title="کد">{ }</button>
+        <button type="button" data-bc="blockquote" title="نقل‌قول">❝</button>
+        <button type="button" data-bc="link" title="لینک">🔗</button>
+        <button type="button" data-bc="clear" title="پاک کردن">🧹</button>
+      </div>
+      <textarea id="bcText" placeholder="متن پیامت را بنویس… (متن را انتخاب کن و با دکمه‌های بالا قالب بده)"></textarea>
+      <div class="bc-meta"><span id="bcCount">۰ حرف</span><span id="bcHtml">متن ساده</span></div>
+      <div class="bc-btnrow">
+        <input id="bcBtnText" placeholder="متن دکمه (اختیاری)" dir="rtl" />
+        <input id="bcBtnUrl" placeholder="لینک دکمه: https://… (اختیاری)" dir="ltr" />
+      </div>
+      <div class="row" style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn-ghost" id="bcTest">🧪 ارسال تست به خودم</button>
+        <button class="btn btn-p" id="bcSend" style="flex:1">🚀 ارسال به همه</button>
+      </div>
+      <div class="hint" id="bcOut" style="display:none"></div>
+      <div class="bc-history">
+        <div class="bc-history-h">🕘 تاریخچهٔ پیام‌های همگانی</div>
+        <div id="bcHistory"><div class="bc-history-empty">در حال بارگذاری…</div></div>
+      </div>
+    </div>
+
+    <!-- info -->
+    <div class="card">
+      <h2>⚙️ اطلاعات و دسترسی</h2>
         <a class="link" id="adminLink" href="#" target="_blank" rel="noopener">🔗 افزودن بات به‌عنوان ادمین کانال</a>
         <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px;font-size:12.5px;color:var(--muted)">
           <div style="display:flex;justify-content:space-between"><span>آیدی مالک</span><b id="ownerId" style="font-family:ui-monospace,monospace;direction:ltr">—</b></div>
@@ -578,7 +653,6 @@ const PANEL_HTML = `<!doctype html>
         <button class="btn btn-ghost btn-sm" id="copyPanel" style="margin-top:12px">📋 کپی آدرس پنل</button>
         <div class="hint">برای بررسی عضویت، ربات باید در کانال هدف <b>ادمین</b> باشد. با دکمهٔ بالا کانال را انتخاب کن تا خودکار اضافه شود.</div>
       </div>
-    </div>
     </div><!-- /view-overview -->
 
     <div id="view-pm" class="hidden">
@@ -1032,7 +1106,12 @@ const PANEL_HTML = `<!doctype html>
     var id = Number($("#tk-id").value);
     if (!id) return;
     var r = await api("/panel/api/support/toggle", { method: "POST", body: { id: id } });
-    if (r.ok && r.j.ok) openTicket(id);
+    if (r.ok && r.j.ok) {
+      var nt = ns.tickets.find(function (t) { return t.id === id; });
+      if (nt) nt.status = r.j.status;
+      openTicket(id);
+      renderTickets();
+    }
   }
 
   function wirePm() {
@@ -1102,6 +1181,7 @@ const PANEL_HTML = `<!doctype html>
 
   /* ---------- state ---------- */
   var state = null, users = [], stats = null;
+  var usrSort = { key: "lastSeen", dir: -1 };
 
   async function load() {
     var r = await api("/panel/api/state");
@@ -1116,6 +1196,8 @@ const PANEL_HTML = `<!doctype html>
     render();
     await Promise.all([loadStats(), loadUsers()]);
     bootSupport();
+    loadBcHistory();
+    updateBcPreview();
   }
 
   function render() {
@@ -1295,6 +1377,8 @@ const PANEL_HTML = `<!doctype html>
     users = r.j.users || [];
     $("#usrCount").textContent = faNum(users.length) + " نفر";
     renderUsers();
+    renderUsrStats();
+    wireUsrSort();
   }
 
   function statusBadge(u) {
@@ -1321,6 +1405,21 @@ const PANEL_HTML = `<!doctype html>
              ((u.name || "").toLowerCase().indexOf(q) >= 0) ||
              ((u.lastName || "").toLowerCase().indexOf(q) >= 0) ||
              ((u.username || "").toLowerCase().indexOf(q) >= 0);
+    });
+    // مرتب‌سازی ستونی
+    var sk = usrSort.key, sd = usrSort.dir;
+    list.sort(function (a, b) {
+      var va, vb;
+      if (sk === "id") { va = a.id; vb = b.id; }
+      else if (sk === "status") { va = usrRank(a); vb = usrRank(b); }
+      else if (sk === "lastSeen") { va = a.lastSeen || 0; vb = b.lastSeen || 0; }
+      else {
+        va = (((a.name || "") + " " + (a.lastName || "")).trim() || "بدون نام");
+        vb = (((b.name || "") + " " + (b.lastName || "")).trim() || "بدون نام");
+      }
+      if (va < vb) return -1 * sd;
+      if (va > vb) return 1 * sd;
+      return (a.id || 0) - (b.id || 0);
     });
     var body = $("#usrBody");
     body.innerHTML = "";
@@ -1395,6 +1494,43 @@ const PANEL_HTML = `<!doctype html>
   }
   $("#usrSearch").addEventListener("input", renderUsers);
 
+  function usrRank(u) {
+    if (u.owner) return 0;
+    if (u.exempt) return 1;
+    if (!u.fjEnabled) return 4;
+    return u.joined ? 2 : 3;
+  }
+
+  function renderUsrStats() {
+    var el = $("#usrStats");
+    if (!el) return;
+    var blocked = 0, joined = 0, exempt = 0;
+    users.forEach(function (u) {
+      if (u.owner) return;
+      if (u.exempt) { exempt++; return; }
+      if (!u.fjEnabled) return;
+      if (u.joined) joined++; else blocked++;
+    });
+    el.innerHTML =
+      '<span class="usr-stat">👥 کل: <b>' + faNum(users.length) + '</b></span>' +
+      '<span class="usr-stat ok">✅ عضو: <b>' + faNum(joined) + '</b></span>' +
+      '<span class="usr-stat off">⛔ مسدود: <b>' + faNum(blocked) + '</b></span>' +
+      '<span class="usr-stat warn">🛡 معاف: <b>' + faNum(exempt) + '</b></span>';
+  }
+
+  function wireUsrSort() {
+    $$(".utable th.sortable").forEach(function (th) {
+      th.onclick = function () {
+        var k = th.getAttribute("data-sort");
+        if (usrSort.key === k) usrSort.dir = -usrSort.dir;
+        else { usrSort.key = k; usrSort.dir = 1; }
+        $$(".utable th.sortable").forEach(function (t) { t.querySelector(".sarr").textContent = ""; });
+        th.querySelector(".sarr").textContent = usrSort.dir === 1 ? "▲" : "▼";
+        renderUsers();
+      };
+    });
+  }
+
   async function toggleExempt(u) {
     var r = await api("/panel/api/exempt", { method: "POST", body: { id: u.id, exempt: !u.exempt } });
     if (r.ok) { state.fj = r.j.state.fj; await loadUsers(); render(); toast(u.exempt ? "از معافیت خارج شد" : "معاف شد ✓"); }
@@ -1451,16 +1587,125 @@ const PANEL_HTML = `<!doctype html>
     out.innerHTML = html || '<div style="color:var(--muted);font-size:12.5px">کانالی تنظیم نشده</div>';
   };
 
-  /* ---------- broadcast ---------- */
+  /* ---------- broadcast composer v2 ---------- */
+  var BC_ALLOWED = ["b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "code", "pre", "tg-spoiler", "blockquote"];
+  function bcSanitize(text) {
+    var OPEN = {}, CLOSE = {};
+    BC_ALLOWED.forEach(function (t) { OPEN["<" + t + ">"] = 1; CLOSE["</" + t + ">"] = 1; });
+    var escaped = String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    var s = escaped;
+    BC_ALLOWED.forEach(function (t) {
+      s = s.split("&lt;" + t + "&gt;").join("<" + t + ">").split("&lt;/" + t + "&gt;").join("</" + t + ">");
+    });
+    s = s.replace(/&lt;a href="([^"]*)"&gt;/g, '<a href="$1">').replace(/&lt;\\/a&gt;/g, "</a>");
+    var stack = [];
+    var re = /<\\/?[a-zA-Z][a-zA-Z0-9-]*(\\s[^>]*)?>/g;
+    var m, ok = true;
+    while ((m = re.exec(s))) {
+      var tag = m[0];
+      if (/^<a[\\s>]/.test(tag) || tag === "</a>") continue;
+      if (OPEN[tag]) { stack.push(tag); continue; }
+      if (CLOSE[tag]) { if (!stack.length) { ok = false; break; } stack.pop(); }
+    }
+    if (stack.length) ok = false;
+    var aOpen = (s.match(/<a[\\s>]/g) || []).length;
+    var aClose = (s.match(/<\\/a>/g) || []).length;
+    if (aOpen !== aClose) ok = false;
+    return ok ? s : escaped;
+  }
+
+  function updateBcPreview() {
+    var ta = $("#bcText");
+    var body = ta.value.trim() ? bcSanitize(ta.value) : "";
+    $("#bcPreviewBody").innerHTML = body || '<span class="bc-ph-placeholder">متن پیام اینجا نمایش داده می‌شود…</span>';
+    var bt = $("#bcBtnText").value.trim(), bu = $("#bcBtnUrl").value.trim();
+    var pb = $("#bcPreviewBtn");
+    if (bt && bu) {
+      pb.style.display = "inline-block";
+      pb.innerHTML = '<span class="bc-pbtn-b">' + esc(bt) + '</span><span class="bc-pbtn-u">' + esc(bu) + "</span>";
+    } else pb.style.display = "none";
+    if (state && state.bot) $("#bcPreviewBot").textContent = state.bot.username;
+    $("#bcCount").textContent = faNum(ta.value.length) + " حرف";
+    var fmt = /<(b|i|u|s|code|pre|a|tg-spoiler|blockquote)[\\s>]/.test(bcSanitize(ta.value));
+    $("#bcHtml").innerHTML = fmt ? '<span style="color:var(--green)">✨ قالب‌بندی فعال</span>' : '<span>متن ساده</span>';
+  }
+
+  function bcWrap(tag) {
+    var ta = $("#bcText");
+    var st = ta.selectionStart, en = ta.selectionEnd, v = ta.value;
+    var sel = v.slice(st, en) || "متن";
+    ta.value = v.slice(0, st) + "<" + tag + ">" + sel + "</" + tag + ">" + v.slice(en);
+    ta.focus();
+    updateBcPreview();
+  }
+
+  function bcLink() {
+    var ta = $("#bcText");
+    var url = window.prompt("آدرس لینک (مثلاً https://t.me/NikaNetLauncher_bot):", "https://");
+    if (!url) return;
+    var st = ta.selectionStart, en = ta.selectionEnd, v = ta.value;
+    var sel = v.slice(st, en) || "لینک";
+    ta.value = v.slice(0, st) + '<a href="' + url + '">' + sel + "</a>" + v.slice(en);
+    ta.focus();
+    updateBcPreview();
+  }
+
+  async function loadBcHistory() {
+    var el = $("#bcHistory");
+    if (!el) return;
+    var r = await api("/panel/api/broadcast/history");
+    if (!r.ok || !r.j || !Array.isArray(r.j.history) || !r.j.history.length) {
+      el.innerHTML = '<div class="bc-history-empty">هنوز پیام همگانی‌ای ارسال نشده.</div>';
+      return;
+    }
+    el.innerHTML = r.j.history.map(function (h) {
+      return '<div class="bc-h-item"><div class="bc-h-when">' + fmtTime(h.at) + "</div>" +
+        '<div class="bc-h-text">' + esc(h.text) + "</div>" +
+        '<div class="bc-h-stats">✅ ' + faNum(h.sent || 0) + " رسید · ⛔ " + faNum(h.failed || 0) + " ناموفق · 👥 " + faNum(h.total || 0) + " کل</div></div>";
+    }).join("");
+  }
+
+  $$(".bc-toolbar button").forEach(function (b) {
+    b.onclick = function () {
+      var a = b.getAttribute("data-bc");
+      if (a === "link") bcLink();
+      else if (a === "clear") { $("#bcText").value = ""; updateBcPreview(); }
+      else bcWrap(a);
+    };
+  });
+  $("#bcText").addEventListener("input", updateBcPreview);
+  $("#bcBtnText").addEventListener("input", updateBcPreview);
+  $("#bcBtnUrl").addEventListener("input", updateBcPreview);
+
+  $("#bcTest").onclick = async function () {
+    var text = $("#bcText").value.trim();
+    if (!text) { toast("متن پیام را بنویس"); return; }
+    var bt = $("#bcBtnText").value.trim(), bu = $("#bcBtnUrl").value.trim();
+    if ((bt && !bu) || (!bt && bu)) { toast("برای دکمه، هم متن و هم لینک را وارد کن"); return; }
+    var btn = $("#bcTest"); btn.disabled = true;
+    var r = await api("/panel/api/broadcast/test", { method: "POST", body: { text: text, buttonText: bt, buttonUrl: bu } });
+    btn.disabled = false;
+    if (r.ok && r.j.ok) toast("پیام تست به چت خودت ارسال شد ✓");
+    else toast((r.j && r.j.error) || "ارسال تست ناموفق");
+  };
+
   $("#bcSend").onclick = async function () {
     var text = $("#bcText").value.trim();
     if (!text) { toast("متن پیام را بنویس"); return; }
-    $("#bcSend").disabled = true; $("#bcSend").textContent = "در حال ارسال…";
-    var r = await api("/panel/api/broadcast", { method: "POST", body: { text: text } });
-    $("#bcSend").disabled = false; $("#bcSend").textContent = "🚀 ارسال به همه";
+    var bt = $("#bcBtnText").value.trim(), bu = $("#bcBtnUrl").value.trim();
+    if ((bt && !bu) || (!bt && bu)) { toast("برای دکمه، هم متن و هم لینک را وارد کن"); return; }
+    var total = (users && users.length) ? faNum(users.length) : "";
+    var ask = total ? "این پیام با قالب Nika Net به " + total + " کاربر ارسال می‌شود. مطمئنی؟" : "پیام با قالب Nika Net برای همه ارسال می‌شود. مطمئنی؟";
+    if (!confirm(ask)) return;
+    var btn = $("#bcSend"); btn.disabled = true; btn.textContent = "در حال ارسال…";
+    var r = await api("/panel/api/broadcast", { method: "POST", body: { text: text, buttonText: bt, buttonUrl: bu } });
+    btn.disabled = false; btn.textContent = "🚀 ارسال به همه";
     var o = $("#bcOut"); o.style.display = "block";
-    if (r.ok) { o.innerHTML = "✅ پیام به <b>" + faNum(r.j.sent) + "</b> از " + faNum(r.j.total) + " کاربر ارسال شد."; toast("پیام همگانی ارسال شد ✓"); }
-    else { o.innerHTML = "<b>⛔ " + (r.j.error || "خطا") + "</b>"; }
+    if (r.ok && r.j.ok) {
+      o.innerHTML = "✅ پیام همگانی به <b>" + faNum(r.j.sent) + "</b> از " + faNum(r.j.total) + " کاربر ارسال شد" + (r.j.failed ? " · <span style='color:var(--rose)'>" + faNum(r.j.failed) + " ناموفق</span>" : "") + ".";
+      toast("پیام همگانی ارسال شد ✓");
+      loadBcHistory();
+    } else { o.innerHTML = "<b>⛔ " + ((r.j && r.j.error) || "خطا") + "</b>"; }
   };
 
   load();
@@ -1706,17 +1951,37 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const b = await readJson(req);
     const text = String(b.text || "").trim();
     if (!text) return json({ ok: false, error: "متن خالی است" }, 400);
-    const ids = await tg.listUserChatIds(env);
-    let sent = 0;
-    for (const id of ids) {
-      try {
-        await tg.sendMessage(env, id, text);
-        sent++;
-      } catch {
-        /* skip blocked/unreachable */
+    const opts: bc.BcOptions = {};
+    if (b.buttonText || b.buttonUrl) {
+      const bt = String(b.buttonText || "").trim();
+      const bu = String(b.buttonUrl || "").trim();
+      if (!bt || !bu) return json({ ok: false, error: "برای دکمه، هم «متن دکمه» و هم «لینک دکمه» لازم است" }, 400);
+      if (!/^https?:\/\//i.test(bu) && !/^t\.me\//i.test(bu)) {
+        return json({ ok: false, error: "لینک دکمه باید با http(s):// یا t.me/ شروع شود" }, 400);
       }
+      opts.buttonText = bt;
+      opts.buttonUrl = bu;
     }
-    return json({ ok: true, sent, total: ids.length });
+    const r = await bc.broadcastAll(env, text, opts);
+    return json({ ok: true, sent: r.sent, failed: r.failed, total: r.total });
+  }
+
+  if (path === "/panel/api/broadcast/test" && req.method === "POST") {
+    const b = await readJson(req);
+    const text = String(b.text || "").trim();
+    if (!text) return json({ ok: false, error: "متن خالی است" }, 400);
+    const opts: bc.BcOptions = {};
+    if (b.buttonText && b.buttonUrl) {
+      opts.buttonText = String(b.buttonText).trim();
+      opts.buttonUrl = String(b.buttonUrl).trim();
+    }
+    const ok = await bc.testBroadcast(env, owner, text, opts);
+    if (!ok) return json({ ok: false, error: "ارسال تست ناموفق بود" }, 500);
+    return json({ ok: true });
+  }
+
+  if (path === "/panel/api/broadcast/history" && req.method === "GET") {
+    return json({ ok: true, history: await bc.history(env) });
   }
 
   if (path === "/panel/api/fj" && req.method === "POST") {
