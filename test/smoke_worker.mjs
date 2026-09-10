@@ -54,6 +54,10 @@ check("panel HTML 200", htmlRes.status === 200);
 check("panel HTML: no __SCAN_IPS__ placeholder left", !html.includes("__SCAN_IPS__"));
 check("panel HTML: speed test card present", html.includes("speedStart"));
 check("panel HTML: no __POOL_DATA__ placeholder", !html.includes("__POOL_DATA__"));
+check("panel HTML: full-range scanner density control", html.includes('id="scanDensity"'));
+check("panel HTML: IP version control (IPv4/IPv6)", html.includes('id="scanVer"'));
+check("panel HTML: whole-CF enumerator present", html.includes("per24Ips") && html.includes("V4_TOTAL"));
+check("panel HTML: saved-results loader present", html.includes('id="scanLoadLast"'));
 
 // 2) first-run login
 let r = await req("/api/login", { method: "POST", body: { password: "test1234" } });

@@ -1076,7 +1076,22 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
               </select>
             </div>
             <div class="field"><label data-i18n="scan.conc">\u0647\u0645\u0632\u0645\u0627\u0646\u06CC</label>
-              <select class="input" id="scanConc"><option>8</option><option>16</option><option selected>24</option><option>40</option></select>
+              <select class="input" id="scanConc"><option>8</option><option>16</option><option selected>24</option><option>40</option><option>64</option><option>100</option></select>
+            </div>
+          </div>
+          <div class="field hidden" id="scanDensityWrap" style="margin-top:14px">
+            <label data-i18n="scan.density">\u062A\u0631\u0627\u06A9\u0645 \u0627\u0633\u06A9\u0646</label>
+            <select class="input" id="scanDensity">
+              <option value="per24" selected data-i18n="scan.densityPer24">\u06F1 \u0627\u0632 \u0647\u0631 /\u06F2\u06F4 \u2014 \u06A9\u0644 \u0634\u0628\u06A9\u0647\u0654 \u06A9\u0644\u0627\u062F\u0641\u0644\u0631 (~\u06F6\u066C\u06F0\u06F0\u06F0 IP)</option>
+              <option value="random" data-i18n="scan.densityRandom">\u0646\u0645\u0648\u0646\u0647\u0654 \u062A\u0635\u0627\u062F\u0641\u06CC (\u062A\u0639\u062F\u0627\u062F \u0647\u062F\u0641)</option>
+              <option value="all" data-i18n="scan.densityAll">\u0647\u0645\u0647\u0654 IP\u0647\u0627\u06CC \u06A9\u0644\u0627\u062F\u0641\u0644\u0631 (~\u06F1\u066B\u06F5 \u0645\u06CC\u0644\u06CC\u0648\u0646 IP)</option>
+            </select>
+          </div>
+          <div class="field hidden" id="scanVerWrap" style="margin-top:14px"><label data-i18n="scan.ver">\u0646\u0633\u062E\u0647\u0654 IP</label>
+            <div class="chips" id="scanVer">
+              <button class="pchip on" data-v="4">IPv4</button>
+              <button class="pchip" data-v="6">IPv6</button>
+              <button class="pchip" data-v="46" data-i18n="scan.verBoth">\u0647\u0631 \u062F\u0648</button>
             </div>
           </div>
           <div class="field" style="margin-top:14px"><label data-i18n="scan.ports">\u067E\u0648\u0631\u062A \u0647\u0627</label>
@@ -1135,6 +1150,7 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
       <div class="card" style="margin-top:16px">
         <div class="card-title"><span>\u270E <span data-i18n="scan.results">\u0646\u062A\u0627\u06CC\u062C \u0632\u0646\u062F\u0647</span></span>
           <span style="display:flex;gap:8px">
+            <button class="btn btn-ghost hidden" id="scanLoadLast" style="padding:8px 14px;font-size:12px">\u{1F4BE} <span data-i18n="scan.loadlast">\u0646\u062A\u0627\u06CC\u062C \u0642\u0628\u0644\u06CC</span></button>
             <button class="btn btn-ghost" id="scanCopy" style="padding:8px 14px;font-size:12px">\u{1F4CB} <span data-i18n="scan.copy">\u06A9\u067E\u06CC</span></button>
             <button class="btn btn-ghost" id="scanExport" style="padding:8px 14px;font-size:12px">\u2B07 <span data-i18n="scan.export">\u062E\u0631\u0648\u062C\u06CC</span></button>
             <button class="btn btn-ghost" id="scanLock" style="padding:8px 14px;font-size:12px" title="" data-i18n="scan.lock">\u{1F512} IP \u062B\u0627\u0628\u062A</button>
@@ -1676,6 +1692,17 @@ I18N.fa["scan.top5"] = "\u06F5 \u0628\u0631\u062A\u0631";
 I18N.fa["scan.online"] = "\u0645\u062E\u0632\u0646 \u0622\u0646\u0644\u0627\u06CC\u0646";
 I18N.fa["scan.ranges"] = "\u0631\u0646\u062C \u06A9\u0644\u0648\u062F\u0641\u0644\u0631";
 I18N.fa["scan.fetching"] = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0645\u062E\u0632\u0646 \u0622\u0646\u0644\u0627\u06CC\u0646 IP \u0647\u0627\u2026";
+I18N.fa["scan.density"] = "\u062A\u0631\u0627\u06A9\u0645 \u0627\u0633\u06A9\u0646";
+I18N.fa["scan.densityPer24"] = "\u06F1 \u0627\u0632 \u0647\u0631 /\u06F2\u06F4 \u2014 \u06A9\u0644 \u0634\u0628\u06A9\u0647\u0654 \u06A9\u0644\u0627\u062F\u0641\u0644\u0631 (~\u06F6\u066C\u06F0\u06F0\u06F0 IP)";
+I18N.fa["scan.densityRandom"] = "\u0646\u0645\u0648\u0646\u0647\u0654 \u062A\u0635\u0627\u062F\u0641\u06CC (\u062A\u0639\u062F\u0627\u062F \u0647\u062F\u0641)";
+I18N.fa["scan.densityAll"] = "\u0647\u0645\u0647\u0654 IP\u0647\u0627\u06CC \u06A9\u0644\u0627\u062F\u0641\u0644\u0631 (~\u06F1\u066B\u06F5 \u0645\u06CC\u0644\u06CC\u0648\u0646 IP)";
+I18N.fa["scan.ver"] = "\u0646\u0633\u062E\u0647\u0654 IP";
+I18N.fa["scan.verBoth"] = "\u0647\u0631 \u062F\u0648";
+I18N.fa["scan.loadlast"] = "\u0646\u062A\u0627\u06CC\u062C \u0642\u0628\u0644\u06CC";
+I18N.fa["scan.loaded"] = "\u0646\u062A\u0627\u06CC\u062C \u0642\u0628\u0644\u06CC \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC \u0634\u062F \u2713";
+I18N.fa["scan.nolast"] = "\u0646\u062A\u06CC\u062C\u0647\u0654 \u0630\u062E\u06CC\u0631\u0647\u200C\u0634\u062F\u0647\u200C\u0627\u06CC \u0646\u06CC\u0633\u062A \u2014 \u0627\u0648\u0644 \u06CC\u06A9 \u0627\u0633\u06A9\u0646 \u0627\u062C\u0631\u0627 \u06A9\u0646";
+I18N.fa["scan.eta"] = "\u0628\u0627\u0642\u06CC\u0645\u0627\u0646\u062F\u0647";
+I18N.fa["scan.allwarn"] = "\u0627\u0633\u06A9\u0646 \u0641\u0648\u0642\u200C\u062F\u0642\u06CC\u0642 (~\u06F1\u066B\u06F5 \u0645\u06CC\u0644\u06CC\u0648\u0646 IP) \u0634\u0631\u0648\u0639 \u0634\u062F \u2014 \u0627\u06CC\u0646 \u06A9\u0627\u0631 \u0637\u0648\u0644\u0627\u0646\u06CC \u0627\u0633\u062A\u061B \u0647\u0631 \u0644\u062D\u0638\u0647 \u0645\u06CC\u200C\u062A\u0648\u0627\u0646\u06CC \u062A\u0648\u0642\u0641 \u06A9\u0646\u06CC \u0648 \u0646\u062A\u06CC\u062C\u0647 \u0630\u062E\u06CC\u0631\u0647 \u0645\u06CC\u200C\u0645\u0627\u0646\u062F";
 I18N.fa["relay.title"] = "\u062A\u0633\u062A \u0631\u0644\u0647";
 I18N.fa["relay.desc"] = "\u067E\u06CC\u062F\u0627 \u06A9\u0631\u062F\u0646 \u0628\u0647\u062A\u0631\u06CC\u0646 \u062F\u0627\u0645\u0646\u0647\u0654 \u0631\u0644\u0647 \u062A\u0627 \u06A9\u0627\u0646\u0641\u06CC\u06AF \u0647\u0627 \u0648\u0635\u0644 \u0634\u0648\u0646\u062F";
 I18N.fa["relay.help"] = "\u0647\u0645\u0647\u0654 \u062F\u0627\u0645\u0646\u0647\u200C\u0647\u0627 \u062E\u0648\u062F\u06A9\u0627\u0631 \u062C\u0645\u0639 \u0648 \u062A\u0633\u062A \u0645\u06CC\u200C\u0634\u0648\u0646\u062F: \u062F\u0627\u0645\u0646\u0647\u0654 \u0648\u0631\u06A9\u0631\u060C \u062F\u0627\u0645\u0646\u0647\u0654 \u0631\u0644\u0647\u0654 \u0641\u0639\u0644\u06CC\u060C \u0632\u06CC\u0631\u062F\u0627\u0645\u0646\u0647\u200C\u0647\u0627\u06CC \u0627\u062D\u062A\u0645\u0627\u0644\u06CC\u060C \u0641\u0647\u0631\u0633\u062A \u0639\u0645\u0648\u0645\u06CC \u0648 \u0647\u0631 \u062F\u0627\u0645\u0646\u0647\u200C\u0627\u06CC \u06A9\u0647 \u0627\u06CC\u0646\u062C\u0627 \u0628\u0646\u0648\u06CC\u0633\u06CC. \u0628\u0647\u062A\u0631\u06CC\u0646 (\u0633\u0627\u0644\u0645 + \u0633\u0631\u06CC\u0639 + \u0645\u062A\u0635\u0644 \u0628\u0647 \u0648\u0631\u06A9\u0631) \u062E\u0648\u062F\u06A9\u0627\u0631 \u0627\u0646\u062A\u062E\u0627\u0628 \u0648 \u0627\u0639\u0645\u0627\u0644 \u0645\u06CC\u200C\u0634\u0648\u062F.";
@@ -1743,6 +1770,17 @@ I18N.en["scan.top5"] = "Top 5";
 I18N.en["scan.online"] = "Online pool";
 I18N.en["scan.ranges"] = "CF ranges";
 I18N.en["scan.fetching"] = "Fetching online IP pool\u2026";
+I18N.en["scan.density"] = "Scan density";
+I18N.en["scan.densityPer24"] = "1 per /24 \u2014 whole Cloudflare network (~6,000 IPs)";
+I18N.en["scan.densityRandom"] = "Random sample (target count)";
+I18N.en["scan.densityAll"] = "Every Cloudflare IP (~1.5M IPs)";
+I18N.en["scan.ver"] = "IP version";
+I18N.en["scan.verBoth"] = "Both";
+I18N.en["scan.loadlast"] = "Saved results";
+I18N.en["scan.loaded"] = "Saved results loaded \u2713";
+I18N.en["scan.nolast"] = "No saved results \u2014 run a scan first";
+I18N.en["scan.eta"] = "left";
+I18N.en["scan.allwarn"] = "Deep scan (~1.5M IPs) started \u2014 it takes a while; you can stop any time and the result is kept";
 I18N.en["relay.title"] = "Relay Test";
 I18N.en["relay.desc"] = "Find the best relay domain so configs connect";
 I18N.en["relay.help"] = "All domains are collected & tested automatically: your worker domain, current relay domain, likely subdomains, a public pool, plus anything you type here. The best (healthy + fast + reaching your worker) is picked & applied automatically.";
@@ -1780,30 +1818,100 @@ const SCANNER = (() => {
 
   const PORTS_ALL = [443, 2053, 2083, 2087, 2096, 8443];
 
-  /* Cloudflare published IPv4 ranges (weighted random sampling like SenPaiScanner) */
-  const CF_RANGES = [
+  /* ---- Cloudflare IP space (official ranges \u2014 mirrors the server's cfips.ts) ----
+   * The "ranges" source can now enumerate the ENTIRE Cloudflare network:
+   *   per24  \u2192 one IP per /24 across every range (~6,000 IPs \u2014 full colo coverage)
+   *   random \u2192 weighted random sample (quick)
+   *   all    \u2192 every single IPv4 (~1.5M IPs \u2014 the deep scan)
+   * Anycast means every address in a /24 lands on the same edge, so per24
+   * already covers every colo; "all" digs out the cleanest individual IPs. */
+  const CF_RANGES_V4 = [
     "173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18",
     "108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17",
-    "162.158.0.0/15","104.16.0.0/12","172.64.0.0/17","172.64.128.0/18","172.64.192.0/19",
-    "172.64.224.0/22","172.64.229.0/24","172.64.230.0/23","172.64.232.0/22","172.64.236.0/23",
-    "172.64.238.0/23","172.64.240.0/22","172.64.244.0/22","172.64.248.0/22","131.0.72.0/22",
+    "162.158.0.0/15","104.16.0.0/13","104.24.0.0/14","172.64.0.0/13","131.0.72.0/22",
   ];
+  const CF_IPV6_SEEDS = ["2606:4700::6810:7c60", "2606:4700::6810:7b60", "2606:4700::6812:1c07", "2606:4700:7::da"];
 
-  function randIp(cidr) {
-    const [ip, bits] = cidr.split("/");
-    const b = ip.split(".").map(Number);
-    const base = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
-    const hostBits = 32 - (+bits);
-    const rnd = Math.floor(Math.random() * Math.pow(2, hostBits));
-    const out = (base + rnd) >>> 0;
-    return [(out >>> 24) & 255, (out >>> 16) & 255, (out >>> 8) & 255, out & 255].join(".");
+  function intToIp(v) {
+    v = v >>> 0;
+    return [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255].join(".");
+  }
+  function ipToInt(ip) {
+    const p = ip.split(".").map(Number);
+    return (((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) >>> 0);
   }
 
-  function randomRangeIps(n) {
+  const V4 = CF_RANGES_V4.map((cidr) => {
+    const [ip, bits] = cidr.split("/");
+    return { base: ipToInt(ip), size: Math.pow(2, 32 - (+bits)) };
+  });
+  const V4_TOTAL = V4.reduce((a, r) => a + r.size, 0);           // ~1.52M IPs
+  const V4_BLOCKCOUNT = V4.reduce((a, r) => a + r.size / 256, 0); // ~5,956 /24 blocks
+
+  function v4AtGlobal(index) {
+    let i = index;
+    for (const r of V4) {
+      if (i < r.size) return intToIp((r.base + i) >>> 0);
+      i -= r.size;
+    }
+    return intToIp(V4[0].base);
+  }
+  function per24Ips() {
     const out = [];
-    for (let i = 0; i < n; i++) out.push(randIp(CF_RANGES[Math.floor(Math.random() * CF_RANGES.length)]));
+    for (const r of V4) for (let off = 0; off < r.size; off += 256) out.push(intToIp((r.base + off) >>> 0));
     return out;
   }
+  function randomRangeIps(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(v4AtGlobal(Math.floor(Math.random() * V4_TOTAL)));
+    return out;
+  }
+  // random address inside Cloudflare's 2606:4700::/32 anycast block
+  function randV6() {
+    const g = ["2606", "4700"];
+    for (let i = 0; i < 6; i++) g.push(Math.floor(Math.random() * 0x10000).toString(16));
+    return g.join(":");
+  }
+  function v6List(n) {
+    const out = CF_IPV6_SEEDS.slice();
+    while (out.length < n) out.push(randV6());
+    return out.slice(0, n);
+  }
+
+  // custom-list CIDR expansion: whole /24 (or smaller) fully, larger ranges 1-per-/24, bounded
+  function expandCidr(cidr) {
+    const [ip, bitsStr] = cidr.split("/");
+    const bits = +bitsStr;
+    const p = ip.split(".").map(Number);
+    if (p.length !== 4 || p.some((x) => isNaN(x) || x < 0 || x > 255)) return [];
+    const base = ipToInt(ip);
+    const size = Math.pow(2, 32 - bits);
+    const stride = size <= 256 ? 1 : 256;
+    const cap = Math.min(size, 65536);
+    const out = [];
+    for (let i = 0; i < cap; i += stride) out.push(intToIp((base + i) >>> 0));
+    return out;
+  }
+  let customCache = { text: "", list: [] };
+  function customIps() {
+    const ta = $("#scanCustom");
+    const text = ta ? ta.value : "";
+    if (customCache.text === text) return customCache.list;
+    const out = [];
+    for (let line of (text || "").split("\\n")) {
+      line = line.trim();
+      if (!line || line.startsWith("#")) continue;
+      if (line.includes("/")) out.push(...expandCidr(line));
+      else if (line.includes(":")) out.push(line); // IPv6 literal
+      else {
+        const m = line.match(/\\b(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\b/);
+        if (m) out.push(m[1]);
+      }
+    }
+    customCache = { text, list: out };
+    return out;
+  }
+
   const S = {
     running: false,
     controller: null,
@@ -1813,12 +1921,16 @@ const SCANNER = (() => {
     ports: [443],
     target: 200,
     source: "bundled",
-    results: [],      // {ip, port, min, avg, ok, dead}
-    byIp: new Map(),
+    density: "per24",   // "per24" | "random" | "all" (Cloudflare-range source)
+    ver: "4",           // "4" | "6" | "46"
+    results: [],        // ALIVE results only \u2014 {ip, port, min, avg, alive}
     tested: 0,
     alive: 0,
     dead: 0,
-    online: [],       // online clean-IP pool (fetched via /api/ips)
+    online: [],         // online clean-IP pool (fetched via /api/ips)
+    startedAt: 0,
+    lastCounters: 0,
+    lastList: 0,
   };
   const R = { running: false, results: [], best: null }; // relay-test state
   let raf = null;
@@ -1831,7 +1943,8 @@ const SCANNER = (() => {
       const ctl = new AbortController();
       const t0 = setTimeout(() => ctl.abort(), timeout);
       const start = performance.now();
-      fetch(\`https://\${ip}:\${port}/\`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
+      const host = ip.includes(":") ? \`[\${ip}]\` : ip;
+      fetch(\`https://\${host}:\${port}/\`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
         .then(() => { clearTimeout(t0); resolve({ ok: true, ms: Math.max(1, performance.now() - start) }); })
         .catch(() => {
           clearTimeout(t0);
@@ -1844,39 +1957,106 @@ const SCANNER = (() => {
     });
   }
 
-  function parseList(text) {
-    const ips = new Set();
-    for (let line of (text || "").split("\\n")) {
-      line = line.trim();
-      if (!line || line.startsWith("#")) continue;
-      // CIDR \u2192 expand? just take the base IP for a /32-ish probe
-      if (line.includes("/")) line = line.split("/")[0];
-      const m = line.match(/\\b(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\b/);
-      if (m && /^\\d{1,3}(\\.\\d{1,3}){3}$/.test(m[1])) ips.add(m[1]);
+  /* Virtual queue: { total, at(i) => {ip, port} }. Lazy so the ~1.5M-IP deep scan
+     needs no materialized array in memory. */
+  function buildQueue() {
+    let ips = null;
+    let virtual = null;
+    let v6 = [];
+    const ports = S.ports.length ? S.ports : [443];
+    const want4 = S.ver !== "6";
+    const want6 = S.ver !== "4";
+
+    if (S.source === "custom") {
+      ips = customIps().filter((x) => (x.includes(":") ? want6 : want4));
+    } else if (S.source === "ranges") {
+      if (want4) {
+        if (S.density === "per24") ips = per24Ips();
+        else if (S.density === "random") ips = randomRangeIps(S.target);
+        else virtual = { at: (i) => v4AtGlobal(i), total: V4_TOTAL };
+      }
+      if (want6) v6 = v6List(S.density === "random" ? Math.max(8, Math.round(S.target / 3)) : 160);
+    } else if (S.source === "online") {
+      ips = (S.online.length ? S.online : SEED).slice(0, Math.min(S.target, S.online.length || SEED.length));
+    } else {
+      ips = SEED.slice(0, Math.min(S.target, SEED.length));
     }
-    return [...ips];
+
+    const ports4 = virtual ? [443] : ports; // the "all" mega-scan sticks to 443
+    const v4total = (virtual ? virtual.total : (ips ? ips.length : 0)) * ports4.length;
+    const v6total = v6.length * ports.length;
+    const total = v4total + v6total;
+
+    const at = (i) => {
+      if (i < v4total) {
+        const k = Math.floor(i / ports4.length);
+        return { ip: virtual ? virtual.at(k) : ips[k], port: ports4[i % ports4.length] };
+      }
+      const j = i - v4total;
+      const k = Math.floor(j / ports.length);
+      return { ip: v6[k], port: ports[j % ports.length] };
+    };
+    return { total, at };
   }
 
-  function buildQueue() {
-    let list;
-    if (S.source === "custom") list = parseList($("#scanCustom").value);
-    else if (S.source === "ranges") list = randomRangeIps(S.target);
-    else if (S.source === "online") list = (S.online.length ? S.online : SEED).slice(0, Math.min(S.target, S.online.length || SEED.length));
-    else list = SEED.slice(0, Math.min(S.target, SEED.length));
-    const queue = [];
-    for (const ip of list) for (const port of S.ports) queue.push({ ip, port });
-    return queue;
+  const MAX_KEEP = 3000;               // cap on stored alive results (deep scans)
+  const SCAN_SAVE_KEY = "nn_scan_v1";
+
+  function maybeTrim() {
+    if (S.results.length > MAX_KEEP + 1500) {
+      S.results.sort((a, b) => a.min - b.min);
+      S.results.length = MAX_KEEP;
+    }
+  }
+  function fmtDur(sec) {
+    sec = Math.max(0, Math.round(sec));
+    if (sec < 60) return sec + "s";
+    if (sec < 3600) return Math.floor(sec / 60) + "m " + (sec % 60) + "s";
+    return Math.floor(sec / 3600) + "h " + Math.floor((sec % 3600) / 60) + "m";
+  }
+  function persistResults() {
+    try {
+      localStorage.setItem(SCAN_SAVE_KEY, JSON.stringify({
+        at: Date.now(), source: S.source, density: S.density, ver: S.ver,
+        tested: S.tested, alive: S.alive, dead: S.dead,
+        results: aliveResults().slice(0, 500).map((r) => ({ ip: r.ip, port: r.port, min: r.min, avg: r.avg })),
+      }));
+    } catch (e) { /* ignore */ }
+  }
+  function loadSavedResults() {
+    try {
+      const j = JSON.parse(localStorage.getItem(SCAN_SAVE_KEY) || "null");
+      if (j && Array.isArray(j.results) && j.results.length) return j;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+  function restoreSavedResults() {
+    const j = loadSavedResults();
+    if (!j) { toast(t("scan.nolast")); return; }
+    S.results = j.results.map((r) => ({ ip: r.ip, port: r.port || 443, min: r.min, avg: r.avg, alive: true }));
+    S.tested = j.tested || S.results.length;
+    S.alive = j.alive || S.results.length;
+    S.dead = j.dead || 0;
+    if (j.source) S.source = j.source;
+    if (j.density) S.density = j.density;
+    if (j.ver) S.ver = j.ver;
+    setSource(S.source); setDensity(S.density); setVer(S.ver);
+    renderCounters(); renderResults(false); renderTop();
+    toast(t("scan.loaded"));
   }
 
   async function runScan() {
     await ensureOnline();
-    const queue = buildQueue();
-    if (!queue.length) { toast(t("scan.none")); return; }
+    const Q = buildQueue();
+    if (!Q.total) { toast(t("scan.none")); return; }
+    if (S.source === "ranges" && S.density === "all") toast(t("scan.allwarn"));
+    S.qtotal = Q.total;
     S.running = true;
     S.controller = new AbortController();
     S.results = [];
-    S.byIp = new Map();
     S.tested = S.alive = S.dead = 0;
+    S.startedAt = Date.now();
+    S.lastCounters = S.lastList = S.lastPersist = 0;
     lastBlip = 0;
     $("#scanStart").classList.add("hidden");
     $("#scanStop").classList.remove("hidden");
@@ -1888,14 +2068,14 @@ const SCANNER = (() => {
 
     let cursor = 0;
     const workers = [];
-    const n = Math.min(S.concurrency, queue.length);
+    const n = Math.min(S.concurrency, Q.total);
     const signal = S.controller.signal;
 
     for (let w = 0; w < n; w++) {
       workers.push((async () => {
-        while (cursor < queue.length && !signal.aborted) {
+        while (cursor < Q.total && !signal.aborted) {
           const idx = cursor++;
-          const { ip, port } = queue[idx];
+          const { ip, port } = Q.at(idx);
           let okTries = 0, sum = 0, min = Infinity;
           for (let tr = 0; tr < S.tries; tr++) {
             if (signal.aborted) break;
@@ -1904,12 +2084,18 @@ const SCANNER = (() => {
           }
           if (signal.aborted) break;
           S.tested++;
-          const alive = okTries > 0;
-          if (alive) S.alive++; else S.dead++;
-          S.results.push({ ip, port, min: alive ? Math.round(min) : null, avg: alive ? Math.round(sum / okTries) : null, alive });
-          if (alive) { lastBlip = performance.now(); }
-          renderCounters();
-          if (S.results.length % 8 === 0 || !S.running) renderResults(false);
+          if (okTries > 0) {
+            S.alive++;
+            S.results.push({ ip, port, min: Math.round(min), avg: Math.round(sum / okTries), alive: true });
+            maybeTrim();
+            lastBlip = performance.now();
+          } else {
+            S.dead++;
+          }
+          const now = Date.now();
+          if (now - S.lastCounters >= 150) { S.lastCounters = now; renderCounters(); }
+          if (now - S.lastList >= 800) { S.lastList = now; renderResults(false); }
+          if (now - S.lastPersist >= 2000) { S.lastPersist = now; persistResults(); }
         }
       })());
     }
@@ -1919,6 +2105,7 @@ const SCANNER = (() => {
     $("#scanStop").classList.add("hidden");
     $("#scanStatus").textContent = t("scan.done");
     $("#scanStatus").classList.remove("live");
+    persistResults();
     renderResults(false);
     renderCounters();
     renderTop();
@@ -1931,10 +2118,12 @@ const SCANNER = (() => {
     $("#scanStop").classList.add("hidden");
     $("#scanStatus").textContent = t("scan.done");
     $("#scanStatus").classList.remove("live");
+    persistResults();
+    renderCounters(); renderResults(false); renderTop();
   }
 
   function aliveResults() {
-    return S.results.filter((r) => r.alive).sort((a, b) => a.min - b.min);
+    return S.results.slice().sort((a, b) => a.min - b.min);
   }
 
   /* ---------------- UI rendering ---------------- */
@@ -1942,17 +2131,27 @@ const SCANNER = (() => {
     $("#scTested").textContent = num(S.tested);
     $("#scAlive").textContent = num(S.alive);
     $("#scDead").textContent = num(S.dead);
-    const total = buildQueueLen();
+    const total = S.qtotal || buildQueueLen();
     const pct = total ? Math.min(100, Math.round((S.tested / total) * 100)) : 0;
     $("#scanBar").style.width = pct + "%";
     $("#scanBar").textContent = pct + "%";
+    if (S.running && S.startedAt && S.tested > 5 && total > S.tested) {
+      const msPer = (Date.now() - S.startedAt) / S.tested;
+      $("#scanStatus").textContent = \`\${t("scan.running")} \xB7 \${pct}% \xB7 \${t("scan.eta")} ~\${fmtDur((total - S.tested) * msPer / 1000)}\`;
+    } else if (S.running) {
+      $("#scanStatus").textContent = t("scan.running");
+    }
   }
 
   function buildQueueLen() {
-    if (S.source === "custom") return parseList($("#scanCustom").value).length * S.ports.length;
-    if (S.source === "ranges") return S.target * S.ports.length;
-    if (S.source === "online") return Math.min(S.target, S.online.length || SEED.length) * S.ports.length;
-    return Math.min(S.target, SEED.length) * S.ports.length;
+    if (S.source === "custom") return customIps().length * (S.ports.length || 1);
+    if (S.source === "ranges") {
+      if (S.density === "per24") return V4_BLOCKCOUNT * (S.ports.length || 1);
+      if (S.density === "all") return V4_TOTAL;
+      return S.target * (S.ports.length || 1);
+    }
+    if (S.source === "online") return Math.min(S.target, S.online.length || SEED.length) * (S.ports.length || 1);
+    return Math.min(S.target, SEED.length) * (S.ports.length || 1);
   }
 
   function renderResults(forceEmpty) {
@@ -2077,21 +2276,51 @@ const SCANNER = (() => {
     a.click();
   }
   async function applyToPanel() {
-    const top = aliveResults().slice(0, 20).map((r) => r.ip);
-    if (!top.length) { toast(t("scan.none")); return; }
+    const all = aliveResults();
+    const v4 = all.filter((r) => !r.ip.includes(":")).slice(0, 20).map((r) => r.ip);
+    const v6 = all.filter((r) => r.ip.includes(":")).slice(0, 6).map((r) => r.ip);
+    if (!all.length) { toast(t("scan.none")); return; }
     if (MODE !== "live") { toast(t("toast.preview")); return; }
-    const res = await api("/api/settings", { method: "POST", body: { cleanIps: top } });
-    if (res.ok) { toast(t("scan.applied")); if (state.settings) state.settings.cleanIps = top; }
-    else toast(t("common.error"));
+    const body = {};
+    if (v4.length) body.cleanIps = v4;
+    if (v6.length) body.cleanIpv6 = v6;
+    const res = await api("/api/settings", { method: "POST", body });
+    if (res.ok) {
+      toast(t("scan.applied"));
+      if (state.settings) {
+        if (v4.length) state.settings.cleanIps = v4;
+        if (v6.length) state.settings.cleanIpv6 = v6;
+      }
+    } else toast(t("common.error"));
   }
 
   function onOpen() {
     if (!raf) drawRadar();
     prefillRelay();
     renderRelayCurrent();
+    refreshScanControls();
+    const saved = loadSavedResults();
+    if (saved) $("#scanLoadLast").classList.remove("hidden");
   }
 
   /* ---------------- wiring ---------------- */
+  function refreshScanControls() {
+    const isRanges = S.source === "ranges";
+    $("#scanDensityWrap").classList.toggle("hidden", !isRanges);
+    $("#scanVerWrap").classList.toggle("hidden", !isRanges && S.source !== "custom");
+    if (isRanges) $("#scanTargetWrap").classList.toggle("hidden", S.density !== "random");
+    else $("#scanTargetWrap").classList.toggle("hidden", S.source === "custom");
+  }
+  function setDensity(d) {
+    S.density = d;
+    $("#scanDensity").value = d;
+    refreshScanControls();
+  }
+  function setVer(v) {
+    S.ver = v;
+    $$("#scanVer .pchip").forEach((el) => el.classList.toggle("on", el.dataset.v === v));
+  }
+
   function initUI() {
     $("#scanStart").onclick = () => { readConfig(); runScan(); };
     $("#scanStop").onclick = stopScan;
@@ -2099,6 +2328,7 @@ const SCANNER = (() => {
     $("#scanSourceO").onclick = () => setSource("online");
     $("#scanSourceR").onclick = () => setSource("ranges");
     $("#scanSourceC").onclick = () => setSource("custom");
+    $("#scanLoadLast").onclick = restoreSavedResults;
     $("#relayStart").onclick = () => runRelay();
     $("#relayApply").onclick = () => applyRelay(false);
     $("#scanApply").onclick = applyToPanel;
@@ -2107,16 +2337,21 @@ const SCANNER = (() => {
     $("#scanTarget").onchange = () => { S.target = +$("#scanTarget").value; };
     $("#scanConc").onchange = () => { S.concurrency = +$("#scanConc").value; };
     $("#scanTimeout").onchange = () => { S.timeout = +$("#scanTimeout").value; };
+    $("#scanDensity").onchange = () => setDensity($("#scanDensity").value);
+    $$("#scanVer .pchip").forEach((el) => (el.onclick = () => setVer(el.dataset.v)));
     $$("#scanPorts .pchip").forEach((el) => (el.onclick = () => {
       el.classList.toggle("on");
       S.ports = $$("#scanPorts .pchip.on").map((x) => +x.dataset.port);
     }));
+    refreshScanControls();
   }
 
   function readConfig() {
     S.target = +($("#scanTarget").value || 200);
     S.concurrency = +($("#scanConc").value || 24);
     S.timeout = +($("#scanTimeout").value || 3500);
+    S.density = $("#scanDensity") ? $("#scanDensity").value : "per24";
+    S.ver = $$("#scanVer .pchip.on").map((x) => x.dataset.v)[0] || "4";
     S.ports = $$("#scanPorts .pchip.on").map((x) => +x.dataset.port);
     if (!S.ports.length) { S.ports = [443]; $$("#scanPorts .pchip[data-port='443']").classList.add("on"); }
   }
@@ -2128,7 +2363,7 @@ const SCANNER = (() => {
     $("#scanSourceR").classList.toggle("on", src === "ranges");
     $("#scanSourceC").classList.toggle("on", src === "custom");
     $("#scanCustomWrap").classList.toggle("hidden", src !== "custom");
-    $("#scanTargetWrap").classList.toggle("hidden", src === "custom");
+    refreshScanControls();
   }
 
   /* ---------------- online clean-IP pool ---------------- */
@@ -2865,4 +3100,4 @@ window.POOL = (() => {
 
 </body>
 </html>
-`,S="0.12.1",Ge=["https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt","https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt"],Oe=/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g,O=null;async function Ve(){if(O&&Date.now()-O.at<10*6e4)return O.ips;let t=new Set,e=n=>Promise.race([fetch(n),new Promise((r,o)=>setTimeout(()=>o(new Error("timeout")),8e3))]);for(let n of Ge)try{let o=await(await e(n)).text(),s,i=0;for(;(s=Oe.exec(o))&&i<4e3;){let l=s[1];l.split(".").map(Number).every(d=>d>=0&&d<=255)&&!l.startsWith("0.")&&(t.add(l),i++)}}catch{}let a=[...t];return O={ips:a,at:Date.now()},a}var Mt=(t,e=200)=>new Response(t,{status:e,headers:{"content-type":"text/html; charset=utf-8"}});function Me(t){return t.headers.set("access-control-allow-origin","*"),t}var Ra={async fetch(t,e,a){try{vt(),a.waitUntil(Rt(e));let n=new URL(t.url),r=n.pathname,o=await At(e);if((t.headers.get("Upgrade")||"").toLowerCase()==="websocket")return De(t,e,o);if(r==="/admin"||r==="/admin/")return Mt(Vt);if(r.startsWith("/api/"))return Me(await Qe(t,e,o,n));if(r.startsWith("/sub/"))return Je(t,e,o,r);let s=r.match(/^\/([0-9a-fA-F-]{36})\/?$/);return s?Ke(t,e,o,s[1]):r==="/health"?u({ok:!0,name:o.title}):o.host===B.host?Mt(Vt):Response.redirect("https://www.cloudflare.com",302)}catch(n){return u({error:String(n)},500)}}};function He(t){let e=new WebSocketPair,[a,n]=Object.values(e);n.accept();let r=JSON.stringify({ok:!0,panel:"nika",v:S});try{n.send(r)}catch{}return setTimeout(()=>{try{n.close()}catch{}},2e3),new Response(null,{status:101,webSocket:a})}async function De(t,e,a){let n=new URL(t.url);if(n.searchParams.get("probe")==="nika")return He(t);let r=(n.searchParams.get("proto")||t.headers.get("x-nika-proto")||"").toLowerCase(),o=await k(e),s=n.searchParams.get("uuid")||"";if(s){let i=o.find(l=>l.uuid.toLowerCase()===s.toLowerCase());return i?i.active?r==="trojan"?rt(t,o,a,e):nt(t,o,a,e):u({error:"user inactive"},403):u({error:"no user for this uuid"},403)}return r==="trojan"?rt(t,o,a,e):nt(t,o,a,e)}async function Qe(t,e,a,n){let r=n.pathname.replace("/api/",""),o=t.method.toUpperCase();if(r==="info")return u({name:a.title,setup:!a.adminPassHash,protocols:a.protocols,version:S});if(r==="update/check"){let s=await je();return u({current:S,latest:s.version,notes:s.notes||"",upToDate:Xe(S,s.version)>=0})}if(r==="ips"){let s=await Ve();return u({ips:s,count:s.length})}if(r==="speedtest"){let s=n.searchParams.get("bytes")||"4194304",i=Math.min(8*1024*1024,Math.max(64*1024,parseInt(s,10)||4*1024*1024)),l=new Uint8Array(64*1024);crypto.getRandomValues(l);let c=0,d=new ReadableStream({pull(A){let f=i-c;if(f<=0){A.close();return}let h=Math.min(l.length,f);A.enqueue(h===l.length?l:l.slice(0,h)),c+=h}});return new Response(d,{headers:{"content-type":"application/octet-stream","content-length":String(i),"cache-control":"no-store, no-cache, must-revalidate"}})}if(r==="login"&&o==="POST"){let i=(await t.json().catch(()=>({}))).password||"",l=!a.adminPassHash;if(l){if(!i||i.length<4)return u({error:"password too short"},400);a.adminPassHash=await X(i),await Q(e,a)}if(!(a.adminPassHash===await X(i)))return u({error:"wrong password"},401);let d=await T(a.sessionSecret,JSON.stringify({t:Date.now()}));await R(e,{icon:l?"\u{1F6E0}":"\u{1F510}",text:l?"\u0646\u0635\u0628 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0646\u0644 \u2014 \u0631\u0645\u0632 \u0627\u062F\u0645\u06CC\u0646 \u062B\u0628\u062A \u0634\u062F":"\u0648\u0631\u0648\u062F \u0627\u062F\u0645\u06CC\u0646 \u0628\u0647 \u067E\u0646\u0644",time:Date.now()});let A=u({ok:!0,setup:l});return A.headers.set("set-cookie",`${$}=${encodeURIComponent(d)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),A}if(r==="logout"){let s=u({ok:!0});return s.headers.set("set-cookie",`${$}=; HttpOnly; Path=/; Max-Age=0`),s}if(!await ft(t,a))return u({error:"unauthorized"},401);switch(r){case"status":{let s=await k(e);return u({title:a.title,setup:!1,users:s.length,active:s.filter(i=>i.active).length,usedGb:Math.round(s.reduce((i,l)=>i+(l.used||0),0)*100)/100,requestsToday:await Et(e),requestsTotal:await xt(e),protocols:a.protocols,activity:await qt(e),traffic7d:await zt(e)})}case"users":{let s=await k(e);if(o==="GET")return u(s);if(o==="POST"){let i=await t.json().catch(()=>({})),l={id:crypto.randomUUID(),name:i.name||"\u06A9\u0627\u0631\u0628\u0631",uuid:crypto.randomUUID(),password:mt(),quota:Number(i.quota)||50,used:0,days:Number(i.days)||30,active:!0,createdAt:Date.now()};return s.push(l),await x(e,s),await R(e,{icon:"\u{1F464}",text:`\u06A9\u0627\u0631\u0628\u0631 \u0633\u0627\u062E\u062A\u0647 \u0634\u062F \u2014 ${l.name}`,time:Date.now()}),u(l)}if(o==="DELETE"){let i=n.searchParams.get("id"),l=s.find(d=>d.id===i),c=s.filter(d=>d.id!==i);return await x(e,c),await R(e,{icon:"\u{1F5D1}",text:`\u06A9\u0627\u0631\u0628\u0631 \u062D\u0630\u0641 \u0634\u062F \u2014 ${l?.name||i}`,time:Date.now()}),u({ok:!0})}break}case"users/toggle":{if(o!=="POST")break;let s=await t.json().catch(()=>({})),i=await k(e),l=i.find(c=>c.id===s.id);return l?(l.active=!l.active,await x(e,i),await R(e,{icon:l.active?"\u{1F7E2}":"\u26D4",text:`${l.name} ${l.active?"\u0641\u0639\u0627\u0644":"\u063A\u06CC\u0631\u0641\u0639\u0627\u0644"} \u0634\u062F`,time:Date.now()}),u({ok:!0,active:l.active})):u({error:"not found"},404)}case"settings":{if(o==="GET")return u(a);if(o==="POST"){let s=await t.json().catch(()=>({})),i={...a};return typeof s.title=="string"&&(i.title=s.title),typeof s.host=="string"&&(i.host=s.host),typeof s.sni=="string"&&(i.sni=s.sni),typeof s.wsPath=="string"&&(i.wsPath=s.wsPath),Array.isArray(s.cleanIps)&&(i.cleanIps=s.cleanIps),Array.isArray(s.cleanIpv6)&&(i.cleanIpv6=s.cleanIpv6),typeof s.fixedIp=="string"&&(i.fixedIp=s.fixedIp.trim()),typeof s.relayDomain=="string"&&(i.relayDomain=s.relayDomain.trim()),Array.isArray(s.poolIps)&&(i.poolIps=s.poolIps),typeof s.poolCountry=="string"&&(i.poolCountry=s.poolCountry),typeof s.poolFlag=="string"&&(i.poolFlag=s.poolFlag),s.protocols&&(i.protocols={...a.protocols,...s.protocols}),D(i),await Q(e,i),await R(e,{icon:"\u2699\uFE0F",text:"\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),u({ok:!0})}break}case"pooltest":{if(o!=="POST")break;let s=await t.json().catch(()=>({})),i=Array.isArray(s.list)?s.list.filter(A=>typeof A=="string"):[];if(!i.length)return u({results:[],elapsed:0});let l=Date.now(),d=(await Ct(i)).map(A=>{let f=(A.addr||"").split(":")[0];return{...A,verified:z(f)}});return u({results:d,elapsed:Date.now()-l})}case"gen":{let s=n.searchParams.get("id"),l=(await k(e)).find(d=>d.id===s);if(!l)return u({error:"user not found"},404);let c={...a,host:lt(t,a)};return u({user:{id:l.id,name:l.name,quota:l.quota,used:Math.round((l.used||0)*100)/100,days:l.days,active:l.active},base64:Z(l,c),clash:et(l,c),singbox:at(l,c),warp:a.protocols.warp?kt(l):null})}case"update/apply":{if(o!=="POST")break;let s=await t.json().catch(()=>({})),i=await Te(e,a,s.token||"");return u(i,i.ok?200:400)}}return u({error:"not found"},404)}function lt(t,e){let a=(e.host||"").trim();return a&&a!==B.host?a:new URL(t.url).hostname}async function Je(t,e,a,n){let r=n.replace("/sub/",""),o=r.split("/")[0].split(".")[0],s=r.split(".").pop()?.toLowerCase()||"",l=(await k(e)).find(p=>p.password===o||p.uuid.replace(/-/g,"").slice(0,12)===o);if(!l)return u({error:"invalid token"},404);let c=t.headers.get("Accept")||"",d=t.headers.get("Sec-Fetch-Dest")||"",A=t.headers.get("Sec-Fetch-Mode")||"",f=d==="document"||A==="navigate";if(c.includes("text/html")&&f){let p=new URL(t.url).origin;return new Response(Ot({name:l.name,active:!!l.active,quota:Number(l.quota)||0,used:Math.round((l.used||0)*100)/100,days:Number(l.days)||0,origin:p,token:o,version:S,protocols:a.protocols}),{headers:{"content-type":"text/html; charset=utf-8"}})}let h=s==="yaml"||s==="yml",I=s==="json",m={...a,host:lt(t,a)},b=h?et(l,m):I?at(l,m):Z(l,m);return new Response(b,{headers:{"content-type":h?"text/yaml":I?"application/json":"text/plain"}})}async function Ke(t,e,a,n){let o=(await k(e)).find(l=>l.uuid.toLowerCase()===n.toLowerCase());if(!o)return u({error:"unknown uuid"},404);let s={...a,host:lt(t,a)},i=Z(o,s);return new Response(i,{headers:{"content-type":"text/plain"}})}var Dt="https://raw.githubusercontent.com/NikaTeem/Nika-Net/main",it=null,Ht=0;async function je(){if(it&&Date.now()-Ht<3e5)return it;try{let t=await fetch(`${Dt}/version.json`,{cf:{cacheTtl:300}});if(!t.ok)throw new Error("fetch failed");let e=await t.json();return it=e,Ht=Date.now(),e}catch{return{version:S,notes:""}}}function Xe(t,e){let a=t.split(".").map(r=>parseInt(r,10)||0),n=e.split(".").map(r=>parseInt(r,10)||0);for(let r=0;r<3;r++){let o=(a[r]||0)-(n[r]||0);if(o!==0)return o}return 0}async function Te(t,e,a){if(!a||a.length<20)return{ok:!1,error:"token required"};let n=await L(a,"/user/tokens/verify");if(!n?.success)return{ok:!1,error:n?.errors?.[0]?.message||"\u062A\u0648\u06A9\u0646 \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A"};let o=(await L(a,"/accounts?per_page=50"))?.result?.[0]?.id;if(!o)return{ok:!1,error:"\u0627\u06A9\u0627\u0646\u062A\u06CC \u0628\u0627 \u0627\u06CC\u0646 \u062A\u0648\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F"};let s=(e.host||"").split(".")[0];if(!s)return{ok:!1,error:"\u0627\u0628\u062A\u062F\u0627 Host \u0648\u0631\u06A9\u0631 \u0631\u0627 \u062F\u0631 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0648\u0627\u0631\u062F \u06A9\u0646"};let i=await Yt(a,o,[`nika-${s}-kv`,`${s}-kv`]),l=await fetch(`${Dt}/dist/worker.js`);if(!l.ok)return{ok:!1,error:"\u062F\u0631\u06CC\u0627\u0641\u062A \u0622\u062E\u0631\u06CC\u0646 \u0646\u0633\u062E\u0647 \u0645\u0645\u06A9\u0646 \u0646\u0634\u062F"};let c=await l.text(),A=await Lt(a,o,s,c,i?[{type:"kv_namespace",name:"NIKA_KV",namespace_id:i}]:[]);return A.ok?(await Pt(a,o,s),await R(t,{icon:"\u{1F504}",text:"\u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),{ok:!0}):{ok:!1,error:A.err}}export{Ra as default};
+`,S="0.13.0",Ge=["https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt","https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt"],Oe=/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g,O=null;async function Ve(){if(O&&Date.now()-O.at<10*6e4)return O.ips;let t=new Set,e=n=>Promise.race([fetch(n),new Promise((r,o)=>setTimeout(()=>o(new Error("timeout")),8e3))]);for(let n of Ge)try{let o=await(await e(n)).text(),s,i=0;for(;(s=Oe.exec(o))&&i<4e3;){let l=s[1];l.split(".").map(Number).every(d=>d>=0&&d<=255)&&!l.startsWith("0.")&&(t.add(l),i++)}}catch{}let a=[...t];return O={ips:a,at:Date.now()},a}var Mt=(t,e=200)=>new Response(t,{status:e,headers:{"content-type":"text/html; charset=utf-8"}});function Me(t){return t.headers.set("access-control-allow-origin","*"),t}var Ra={async fetch(t,e,a){try{vt(),a.waitUntil(Rt(e));let n=new URL(t.url),r=n.pathname,o=await At(e);if((t.headers.get("Upgrade")||"").toLowerCase()==="websocket")return De(t,e,o);if(r==="/admin"||r==="/admin/")return Mt(Vt);if(r.startsWith("/api/"))return Me(await Qe(t,e,o,n));if(r.startsWith("/sub/"))return Je(t,e,o,r);let s=r.match(/^\/([0-9a-fA-F-]{36})\/?$/);return s?Ke(t,e,o,s[1]):r==="/health"?u({ok:!0,name:o.title}):o.host===B.host?Mt(Vt):Response.redirect("https://www.cloudflare.com",302)}catch(n){return u({error:String(n)},500)}}};function He(t){let e=new WebSocketPair,[a,n]=Object.values(e);n.accept();let r=JSON.stringify({ok:!0,panel:"nika",v:S});try{n.send(r)}catch{}return setTimeout(()=>{try{n.close()}catch{}},2e3),new Response(null,{status:101,webSocket:a})}async function De(t,e,a){let n=new URL(t.url);if(n.searchParams.get("probe")==="nika")return He(t);let r=(n.searchParams.get("proto")||t.headers.get("x-nika-proto")||"").toLowerCase(),o=await k(e),s=n.searchParams.get("uuid")||"";if(s){let i=o.find(l=>l.uuid.toLowerCase()===s.toLowerCase());return i?i.active?r==="trojan"?rt(t,o,a,e):nt(t,o,a,e):u({error:"user inactive"},403):u({error:"no user for this uuid"},403)}return r==="trojan"?rt(t,o,a,e):nt(t,o,a,e)}async function Qe(t,e,a,n){let r=n.pathname.replace("/api/",""),o=t.method.toUpperCase();if(r==="info")return u({name:a.title,setup:!a.adminPassHash,protocols:a.protocols,version:S});if(r==="update/check"){let s=await je();return u({current:S,latest:s.version,notes:s.notes||"",upToDate:Xe(S,s.version)>=0})}if(r==="ips"){let s=await Ve();return u({ips:s,count:s.length})}if(r==="speedtest"){let s=n.searchParams.get("bytes")||"4194304",i=Math.min(8*1024*1024,Math.max(64*1024,parseInt(s,10)||4*1024*1024)),l=new Uint8Array(64*1024);crypto.getRandomValues(l);let c=0,d=new ReadableStream({pull(A){let f=i-c;if(f<=0){A.close();return}let h=Math.min(l.length,f);A.enqueue(h===l.length?l:l.slice(0,h)),c+=h}});return new Response(d,{headers:{"content-type":"application/octet-stream","content-length":String(i),"cache-control":"no-store, no-cache, must-revalidate"}})}if(r==="login"&&o==="POST"){let i=(await t.json().catch(()=>({}))).password||"",l=!a.adminPassHash;if(l){if(!i||i.length<4)return u({error:"password too short"},400);a.adminPassHash=await X(i),await Q(e,a)}if(!(a.adminPassHash===await X(i)))return u({error:"wrong password"},401);let d=await T(a.sessionSecret,JSON.stringify({t:Date.now()}));await R(e,{icon:l?"\u{1F6E0}":"\u{1F510}",text:l?"\u0646\u0635\u0628 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0646\u0644 \u2014 \u0631\u0645\u0632 \u0627\u062F\u0645\u06CC\u0646 \u062B\u0628\u062A \u0634\u062F":"\u0648\u0631\u0648\u062F \u0627\u062F\u0645\u06CC\u0646 \u0628\u0647 \u067E\u0646\u0644",time:Date.now()});let A=u({ok:!0,setup:l});return A.headers.set("set-cookie",`${$}=${encodeURIComponent(d)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),A}if(r==="logout"){let s=u({ok:!0});return s.headers.set("set-cookie",`${$}=; HttpOnly; Path=/; Max-Age=0`),s}if(!await ft(t,a))return u({error:"unauthorized"},401);switch(r){case"status":{let s=await k(e);return u({title:a.title,setup:!1,users:s.length,active:s.filter(i=>i.active).length,usedGb:Math.round(s.reduce((i,l)=>i+(l.used||0),0)*100)/100,requestsToday:await Et(e),requestsTotal:await xt(e),protocols:a.protocols,activity:await qt(e),traffic7d:await zt(e)})}case"users":{let s=await k(e);if(o==="GET")return u(s);if(o==="POST"){let i=await t.json().catch(()=>({})),l={id:crypto.randomUUID(),name:i.name||"\u06A9\u0627\u0631\u0628\u0631",uuid:crypto.randomUUID(),password:mt(),quota:Number(i.quota)||50,used:0,days:Number(i.days)||30,active:!0,createdAt:Date.now()};return s.push(l),await x(e,s),await R(e,{icon:"\u{1F464}",text:`\u06A9\u0627\u0631\u0628\u0631 \u0633\u0627\u062E\u062A\u0647 \u0634\u062F \u2014 ${l.name}`,time:Date.now()}),u(l)}if(o==="DELETE"){let i=n.searchParams.get("id"),l=s.find(d=>d.id===i),c=s.filter(d=>d.id!==i);return await x(e,c),await R(e,{icon:"\u{1F5D1}",text:`\u06A9\u0627\u0631\u0628\u0631 \u062D\u0630\u0641 \u0634\u062F \u2014 ${l?.name||i}`,time:Date.now()}),u({ok:!0})}break}case"users/toggle":{if(o!=="POST")break;let s=await t.json().catch(()=>({})),i=await k(e),l=i.find(c=>c.id===s.id);return l?(l.active=!l.active,await x(e,i),await R(e,{icon:l.active?"\u{1F7E2}":"\u26D4",text:`${l.name} ${l.active?"\u0641\u0639\u0627\u0644":"\u063A\u06CC\u0631\u0641\u0639\u0627\u0644"} \u0634\u062F`,time:Date.now()}),u({ok:!0,active:l.active})):u({error:"not found"},404)}case"settings":{if(o==="GET")return u(a);if(o==="POST"){let s=await t.json().catch(()=>({})),i={...a};return typeof s.title=="string"&&(i.title=s.title),typeof s.host=="string"&&(i.host=s.host),typeof s.sni=="string"&&(i.sni=s.sni),typeof s.wsPath=="string"&&(i.wsPath=s.wsPath),Array.isArray(s.cleanIps)&&(i.cleanIps=s.cleanIps),Array.isArray(s.cleanIpv6)&&(i.cleanIpv6=s.cleanIpv6),typeof s.fixedIp=="string"&&(i.fixedIp=s.fixedIp.trim()),typeof s.relayDomain=="string"&&(i.relayDomain=s.relayDomain.trim()),Array.isArray(s.poolIps)&&(i.poolIps=s.poolIps),typeof s.poolCountry=="string"&&(i.poolCountry=s.poolCountry),typeof s.poolFlag=="string"&&(i.poolFlag=s.poolFlag),s.protocols&&(i.protocols={...a.protocols,...s.protocols}),D(i),await Q(e,i),await R(e,{icon:"\u2699\uFE0F",text:"\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),u({ok:!0})}break}case"pooltest":{if(o!=="POST")break;let s=await t.json().catch(()=>({})),i=Array.isArray(s.list)?s.list.filter(A=>typeof A=="string"):[];if(!i.length)return u({results:[],elapsed:0});let l=Date.now(),d=(await Ct(i)).map(A=>{let f=(A.addr||"").split(":")[0];return{...A,verified:z(f)}});return u({results:d,elapsed:Date.now()-l})}case"gen":{let s=n.searchParams.get("id"),l=(await k(e)).find(d=>d.id===s);if(!l)return u({error:"user not found"},404);let c={...a,host:lt(t,a)};return u({user:{id:l.id,name:l.name,quota:l.quota,used:Math.round((l.used||0)*100)/100,days:l.days,active:l.active},base64:Z(l,c),clash:et(l,c),singbox:at(l,c),warp:a.protocols.warp?kt(l):null})}case"update/apply":{if(o!=="POST")break;let s=await t.json().catch(()=>({})),i=await Te(e,a,s.token||"");return u(i,i.ok?200:400)}}return u({error:"not found"},404)}function lt(t,e){let a=(e.host||"").trim();return a&&a!==B.host?a:new URL(t.url).hostname}async function Je(t,e,a,n){let r=n.replace("/sub/",""),o=r.split("/")[0].split(".")[0],s=r.split(".").pop()?.toLowerCase()||"",l=(await k(e)).find(p=>p.password===o||p.uuid.replace(/-/g,"").slice(0,12)===o);if(!l)return u({error:"invalid token"},404);let c=t.headers.get("Accept")||"",d=t.headers.get("Sec-Fetch-Dest")||"",A=t.headers.get("Sec-Fetch-Mode")||"",f=d==="document"||A==="navigate";if(c.includes("text/html")&&f){let p=new URL(t.url).origin;return new Response(Ot({name:l.name,active:!!l.active,quota:Number(l.quota)||0,used:Math.round((l.used||0)*100)/100,days:Number(l.days)||0,origin:p,token:o,version:S,protocols:a.protocols}),{headers:{"content-type":"text/html; charset=utf-8"}})}let h=s==="yaml"||s==="yml",I=s==="json",m={...a,host:lt(t,a)},b=h?et(l,m):I?at(l,m):Z(l,m);return new Response(b,{headers:{"content-type":h?"text/yaml":I?"application/json":"text/plain"}})}async function Ke(t,e,a,n){let o=(await k(e)).find(l=>l.uuid.toLowerCase()===n.toLowerCase());if(!o)return u({error:"unknown uuid"},404);let s={...a,host:lt(t,a)},i=Z(o,s);return new Response(i,{headers:{"content-type":"text/plain"}})}var Dt="https://raw.githubusercontent.com/NikaTeem/Nika-Net/main",it=null,Ht=0;async function je(){if(it&&Date.now()-Ht<3e5)return it;try{let t=await fetch(`${Dt}/version.json`,{cf:{cacheTtl:300}});if(!t.ok)throw new Error("fetch failed");let e=await t.json();return it=e,Ht=Date.now(),e}catch{return{version:S,notes:""}}}function Xe(t,e){let a=t.split(".").map(r=>parseInt(r,10)||0),n=e.split(".").map(r=>parseInt(r,10)||0);for(let r=0;r<3;r++){let o=(a[r]||0)-(n[r]||0);if(o!==0)return o}return 0}async function Te(t,e,a){if(!a||a.length<20)return{ok:!1,error:"token required"};let n=await L(a,"/user/tokens/verify");if(!n?.success)return{ok:!1,error:n?.errors?.[0]?.message||"\u062A\u0648\u06A9\u0646 \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A"};let o=(await L(a,"/accounts?per_page=50"))?.result?.[0]?.id;if(!o)return{ok:!1,error:"\u0627\u06A9\u0627\u0646\u062A\u06CC \u0628\u0627 \u0627\u06CC\u0646 \u062A\u0648\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F"};let s=(e.host||"").split(".")[0];if(!s)return{ok:!1,error:"\u0627\u0628\u062A\u062F\u0627 Host \u0648\u0631\u06A9\u0631 \u0631\u0627 \u062F\u0631 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0648\u0627\u0631\u062F \u06A9\u0646"};let i=await Yt(a,o,[`nika-${s}-kv`,`${s}-kv`]),l=await fetch(`${Dt}/dist/worker.js`);if(!l.ok)return{ok:!1,error:"\u062F\u0631\u06CC\u0627\u0641\u062A \u0622\u062E\u0631\u06CC\u0646 \u0646\u0633\u062E\u0647 \u0645\u0645\u06A9\u0646 \u0646\u0634\u062F"};let c=await l.text(),A=await Lt(a,o,s,c,i?[{type:"kv_namespace",name:"NIKA_KV",namespace_id:i}]:[]);return A.ok?(await Pt(a,o,s),await R(t,{icon:"\u{1F504}",text:"\u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),{ok:!0}):{ok:!1,error:A.err}}export{Ra as default};

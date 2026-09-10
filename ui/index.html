@@ -641,7 +641,22 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
               </select>
             </div>
             <div class="field"><label data-i18n="scan.conc">همزمانی</label>
-              <select class="input" id="scanConc"><option>8</option><option>16</option><option selected>24</option><option>40</option></select>
+              <select class="input" id="scanConc"><option>8</option><option>16</option><option selected>24</option><option>40</option><option>64</option><option>100</option></select>
+            </div>
+          </div>
+          <div class="field hidden" id="scanDensityWrap" style="margin-top:14px">
+            <label data-i18n="scan.density">تراکم اسکن</label>
+            <select class="input" id="scanDensity">
+              <option value="per24" selected data-i18n="scan.densityPer24">۱ از هر /۲۴ — کل شبکهٔ کلادفلر (~۶٬۰۰۰ IP)</option>
+              <option value="random" data-i18n="scan.densityRandom">نمونهٔ تصادفی (تعداد هدف)</option>
+              <option value="all" data-i18n="scan.densityAll">همهٔ IPهای کلادفلر (~۱٫۵ میلیون IP)</option>
+            </select>
+          </div>
+          <div class="field hidden" id="scanVerWrap" style="margin-top:14px"><label data-i18n="scan.ver">نسخهٔ IP</label>
+            <div class="chips" id="scanVer">
+              <button class="pchip on" data-v="4">IPv4</button>
+              <button class="pchip" data-v="6">IPv6</button>
+              <button class="pchip" data-v="46" data-i18n="scan.verBoth">هر دو</button>
             </div>
           </div>
           <div class="field" style="margin-top:14px"><label data-i18n="scan.ports">پورت ها</label>
@@ -700,6 +715,7 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
       <div class="card" style="margin-top:16px">
         <div class="card-title"><span>✎ <span data-i18n="scan.results">نتایج زنده</span></span>
           <span style="display:flex;gap:8px">
+            <button class="btn btn-ghost hidden" id="scanLoadLast" style="padding:8px 14px;font-size:12px">💾 <span data-i18n="scan.loadlast">نتایج قبلی</span></button>
             <button class="btn btn-ghost" id="scanCopy" style="padding:8px 14px;font-size:12px">📋 <span data-i18n="scan.copy">کپی</span></button>
             <button class="btn btn-ghost" id="scanExport" style="padding:8px 14px;font-size:12px">⬇ <span data-i18n="scan.export">خروجی</span></button>
             <button class="btn btn-ghost" id="scanLock" style="padding:8px 14px;font-size:12px" title="" data-i18n="scan.lock">🔒 IP ثابت</button>
@@ -1241,6 +1257,17 @@ I18N.fa["scan.top5"] = "۵ برتر";
 I18N.fa["scan.online"] = "مخزن آنلاین";
 I18N.fa["scan.ranges"] = "رنج کلودفلر";
 I18N.fa["scan.fetching"] = "دریافت مخزن آنلاین IP ها…";
+I18N.fa["scan.density"] = "تراکم اسکن";
+I18N.fa["scan.densityPer24"] = "۱ از هر /۲۴ — کل شبکهٔ کلادفلر (~۶٬۰۰۰ IP)";
+I18N.fa["scan.densityRandom"] = "نمونهٔ تصادفی (تعداد هدف)";
+I18N.fa["scan.densityAll"] = "همهٔ IPهای کلادفلر (~۱٫۵ میلیون IP)";
+I18N.fa["scan.ver"] = "نسخهٔ IP";
+I18N.fa["scan.verBoth"] = "هر دو";
+I18N.fa["scan.loadlast"] = "نتایج قبلی";
+I18N.fa["scan.loaded"] = "نتایج قبلی بارگذاری شد ✓";
+I18N.fa["scan.nolast"] = "نتیجهٔ ذخیره‌شده‌ای نیست — اول یک اسکن اجرا کن";
+I18N.fa["scan.eta"] = "باقیمانده";
+I18N.fa["scan.allwarn"] = "اسکن فوق‌دقیق (~۱٫۵ میلیون IP) شروع شد — این کار طولانی است؛ هر لحظه می‌توانی توقف کنی و نتیجه ذخیره می‌ماند";
 I18N.fa["relay.title"] = "تست رله";
 I18N.fa["relay.desc"] = "پیدا کردن بهترین دامنهٔ رله تا کانفیگ ها وصل شوند";
 I18N.fa["relay.help"] = "همهٔ دامنه‌ها خودکار جمع و تست می‌شوند: دامنهٔ ورکر، دامنهٔ رلهٔ فعلی، زیردامنه‌های احتمالی، فهرست عمومی و هر دامنه‌ای که اینجا بنویسی. بهترین (سالم + سریع + متصل به ورکر) خودکار انتخاب و اعمال می‌شود.";
@@ -1308,6 +1335,17 @@ I18N.en["scan.top5"] = "Top 5";
 I18N.en["scan.online"] = "Online pool";
 I18N.en["scan.ranges"] = "CF ranges";
 I18N.en["scan.fetching"] = "Fetching online IP pool…";
+I18N.en["scan.density"] = "Scan density";
+I18N.en["scan.densityPer24"] = "1 per /24 — whole Cloudflare network (~6,000 IPs)";
+I18N.en["scan.densityRandom"] = "Random sample (target count)";
+I18N.en["scan.densityAll"] = "Every Cloudflare IP (~1.5M IPs)";
+I18N.en["scan.ver"] = "IP version";
+I18N.en["scan.verBoth"] = "Both";
+I18N.en["scan.loadlast"] = "Saved results";
+I18N.en["scan.loaded"] = "Saved results loaded ✓";
+I18N.en["scan.nolast"] = "No saved results — run a scan first";
+I18N.en["scan.eta"] = "left";
+I18N.en["scan.allwarn"] = "Deep scan (~1.5M IPs) started — it takes a while; you can stop any time and the result is kept";
 I18N.en["relay.title"] = "Relay Test";
 I18N.en["relay.desc"] = "Find the best relay domain so configs connect";
 I18N.en["relay.help"] = "All domains are collected & tested automatically: your worker domain, current relay domain, likely subdomains, a public pool, plus anything you type here. The best (healthy + fast + reaching your worker) is picked & applied automatically.";
@@ -1345,30 +1383,100 @@ const SCANNER = (() => {
 
   const PORTS_ALL = [443, 2053, 2083, 2087, 2096, 8443];
 
-  /* Cloudflare published IPv4 ranges (weighted random sampling like SenPaiScanner) */
-  const CF_RANGES = [
+  /* ---- Cloudflare IP space (official ranges — mirrors the server's cfips.ts) ----
+   * The "ranges" source can now enumerate the ENTIRE Cloudflare network:
+   *   per24  → one IP per /24 across every range (~6,000 IPs — full colo coverage)
+   *   random → weighted random sample (quick)
+   *   all    → every single IPv4 (~1.5M IPs — the deep scan)
+   * Anycast means every address in a /24 lands on the same edge, so per24
+   * already covers every colo; "all" digs out the cleanest individual IPs. */
+  const CF_RANGES_V4 = [
     "173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18",
     "108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17",
-    "162.158.0.0/15","104.16.0.0/12","172.64.0.0/17","172.64.128.0/18","172.64.192.0/19",
-    "172.64.224.0/22","172.64.229.0/24","172.64.230.0/23","172.64.232.0/22","172.64.236.0/23",
-    "172.64.238.0/23","172.64.240.0/22","172.64.244.0/22","172.64.248.0/22","131.0.72.0/22",
+    "162.158.0.0/15","104.16.0.0/13","104.24.0.0/14","172.64.0.0/13","131.0.72.0/22",
   ];
+  const CF_IPV6_SEEDS = ["2606:4700::6810:7c60", "2606:4700::6810:7b60", "2606:4700::6812:1c07", "2606:4700:7::da"];
 
-  function randIp(cidr) {
-    const [ip, bits] = cidr.split("/");
-    const b = ip.split(".").map(Number);
-    const base = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
-    const hostBits = 32 - (+bits);
-    const rnd = Math.floor(Math.random() * Math.pow(2, hostBits));
-    const out = (base + rnd) >>> 0;
-    return [(out >>> 24) & 255, (out >>> 16) & 255, (out >>> 8) & 255, out & 255].join(".");
+  function intToIp(v) {
+    v = v >>> 0;
+    return [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255].join(".");
+  }
+  function ipToInt(ip) {
+    const p = ip.split(".").map(Number);
+    return (((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) >>> 0);
   }
 
-  function randomRangeIps(n) {
+  const V4 = CF_RANGES_V4.map((cidr) => {
+    const [ip, bits] = cidr.split("/");
+    return { base: ipToInt(ip), size: Math.pow(2, 32 - (+bits)) };
+  });
+  const V4_TOTAL = V4.reduce((a, r) => a + r.size, 0);           // ~1.52M IPs
+  const V4_BLOCKCOUNT = V4.reduce((a, r) => a + r.size / 256, 0); // ~5,956 /24 blocks
+
+  function v4AtGlobal(index) {
+    let i = index;
+    for (const r of V4) {
+      if (i < r.size) return intToIp((r.base + i) >>> 0);
+      i -= r.size;
+    }
+    return intToIp(V4[0].base);
+  }
+  function per24Ips() {
     const out = [];
-    for (let i = 0; i < n; i++) out.push(randIp(CF_RANGES[Math.floor(Math.random() * CF_RANGES.length)]));
+    for (const r of V4) for (let off = 0; off < r.size; off += 256) out.push(intToIp((r.base + off) >>> 0));
     return out;
   }
+  function randomRangeIps(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(v4AtGlobal(Math.floor(Math.random() * V4_TOTAL)));
+    return out;
+  }
+  // random address inside Cloudflare's 2606:4700::/32 anycast block
+  function randV6() {
+    const g = ["2606", "4700"];
+    for (let i = 0; i < 6; i++) g.push(Math.floor(Math.random() * 0x10000).toString(16));
+    return g.join(":");
+  }
+  function v6List(n) {
+    const out = CF_IPV6_SEEDS.slice();
+    while (out.length < n) out.push(randV6());
+    return out.slice(0, n);
+  }
+
+  // custom-list CIDR expansion: whole /24 (or smaller) fully, larger ranges 1-per-/24, bounded
+  function expandCidr(cidr) {
+    const [ip, bitsStr] = cidr.split("/");
+    const bits = +bitsStr;
+    const p = ip.split(".").map(Number);
+    if (p.length !== 4 || p.some((x) => isNaN(x) || x < 0 || x > 255)) return [];
+    const base = ipToInt(ip);
+    const size = Math.pow(2, 32 - bits);
+    const stride = size <= 256 ? 1 : 256;
+    const cap = Math.min(size, 65536);
+    const out = [];
+    for (let i = 0; i < cap; i += stride) out.push(intToIp((base + i) >>> 0));
+    return out;
+  }
+  let customCache = { text: "", list: [] };
+  function customIps() {
+    const ta = $("#scanCustom");
+    const text = ta ? ta.value : "";
+    if (customCache.text === text) return customCache.list;
+    const out = [];
+    for (let line of (text || "").split("\n")) {
+      line = line.trim();
+      if (!line || line.startsWith("#")) continue;
+      if (line.includes("/")) out.push(...expandCidr(line));
+      else if (line.includes(":")) out.push(line); // IPv6 literal
+      else {
+        const m = line.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/);
+        if (m) out.push(m[1]);
+      }
+    }
+    customCache = { text, list: out };
+    return out;
+  }
+
   const S = {
     running: false,
     controller: null,
@@ -1378,12 +1486,16 @@ const SCANNER = (() => {
     ports: [443],
     target: 200,
     source: "bundled",
-    results: [],      // {ip, port, min, avg, ok, dead}
-    byIp: new Map(),
+    density: "per24",   // "per24" | "random" | "all" (Cloudflare-range source)
+    ver: "4",           // "4" | "6" | "46"
+    results: [],        // ALIVE results only — {ip, port, min, avg, alive}
     tested: 0,
     alive: 0,
     dead: 0,
-    online: [],       // online clean-IP pool (fetched via /api/ips)
+    online: [],         // online clean-IP pool (fetched via /api/ips)
+    startedAt: 0,
+    lastCounters: 0,
+    lastList: 0,
   };
   const R = { running: false, results: [], best: null }; // relay-test state
   let raf = null;
@@ -1396,7 +1508,8 @@ const SCANNER = (() => {
       const ctl = new AbortController();
       const t0 = setTimeout(() => ctl.abort(), timeout);
       const start = performance.now();
-      fetch(`https://${ip}:${port}/`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
+      const host = ip.includes(":") ? `[${ip}]` : ip;
+      fetch(`https://${host}:${port}/`, { mode: "no-cors", cache: "no-store", signal: ctl.signal, redirect: "manual" })
         .then(() => { clearTimeout(t0); resolve({ ok: true, ms: Math.max(1, performance.now() - start) }); })
         .catch(() => {
           clearTimeout(t0);
@@ -1409,39 +1522,106 @@ const SCANNER = (() => {
     });
   }
 
-  function parseList(text) {
-    const ips = new Set();
-    for (let line of (text || "").split("\n")) {
-      line = line.trim();
-      if (!line || line.startsWith("#")) continue;
-      // CIDR → expand? just take the base IP for a /32-ish probe
-      if (line.includes("/")) line = line.split("/")[0];
-      const m = line.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/);
-      if (m && /^\d{1,3}(\.\d{1,3}){3}$/.test(m[1])) ips.add(m[1]);
+  /* Virtual queue: { total, at(i) => {ip, port} }. Lazy so the ~1.5M-IP deep scan
+     needs no materialized array in memory. */
+  function buildQueue() {
+    let ips = null;
+    let virtual = null;
+    let v6 = [];
+    const ports = S.ports.length ? S.ports : [443];
+    const want4 = S.ver !== "6";
+    const want6 = S.ver !== "4";
+
+    if (S.source === "custom") {
+      ips = customIps().filter((x) => (x.includes(":") ? want6 : want4));
+    } else if (S.source === "ranges") {
+      if (want4) {
+        if (S.density === "per24") ips = per24Ips();
+        else if (S.density === "random") ips = randomRangeIps(S.target);
+        else virtual = { at: (i) => v4AtGlobal(i), total: V4_TOTAL };
+      }
+      if (want6) v6 = v6List(S.density === "random" ? Math.max(8, Math.round(S.target / 3)) : 160);
+    } else if (S.source === "online") {
+      ips = (S.online.length ? S.online : SEED).slice(0, Math.min(S.target, S.online.length || SEED.length));
+    } else {
+      ips = SEED.slice(0, Math.min(S.target, SEED.length));
     }
-    return [...ips];
+
+    const ports4 = virtual ? [443] : ports; // the "all" mega-scan sticks to 443
+    const v4total = (virtual ? virtual.total : (ips ? ips.length : 0)) * ports4.length;
+    const v6total = v6.length * ports.length;
+    const total = v4total + v6total;
+
+    const at = (i) => {
+      if (i < v4total) {
+        const k = Math.floor(i / ports4.length);
+        return { ip: virtual ? virtual.at(k) : ips[k], port: ports4[i % ports4.length] };
+      }
+      const j = i - v4total;
+      const k = Math.floor(j / ports.length);
+      return { ip: v6[k], port: ports[j % ports.length] };
+    };
+    return { total, at };
   }
 
-  function buildQueue() {
-    let list;
-    if (S.source === "custom") list = parseList($("#scanCustom").value);
-    else if (S.source === "ranges") list = randomRangeIps(S.target);
-    else if (S.source === "online") list = (S.online.length ? S.online : SEED).slice(0, Math.min(S.target, S.online.length || SEED.length));
-    else list = SEED.slice(0, Math.min(S.target, SEED.length));
-    const queue = [];
-    for (const ip of list) for (const port of S.ports) queue.push({ ip, port });
-    return queue;
+  const MAX_KEEP = 3000;               // cap on stored alive results (deep scans)
+  const SCAN_SAVE_KEY = "nn_scan_v1";
+
+  function maybeTrim() {
+    if (S.results.length > MAX_KEEP + 1500) {
+      S.results.sort((a, b) => a.min - b.min);
+      S.results.length = MAX_KEEP;
+    }
+  }
+  function fmtDur(sec) {
+    sec = Math.max(0, Math.round(sec));
+    if (sec < 60) return sec + "s";
+    if (sec < 3600) return Math.floor(sec / 60) + "m " + (sec % 60) + "s";
+    return Math.floor(sec / 3600) + "h " + Math.floor((sec % 3600) / 60) + "m";
+  }
+  function persistResults() {
+    try {
+      localStorage.setItem(SCAN_SAVE_KEY, JSON.stringify({
+        at: Date.now(), source: S.source, density: S.density, ver: S.ver,
+        tested: S.tested, alive: S.alive, dead: S.dead,
+        results: aliveResults().slice(0, 500).map((r) => ({ ip: r.ip, port: r.port, min: r.min, avg: r.avg })),
+      }));
+    } catch (e) { /* ignore */ }
+  }
+  function loadSavedResults() {
+    try {
+      const j = JSON.parse(localStorage.getItem(SCAN_SAVE_KEY) || "null");
+      if (j && Array.isArray(j.results) && j.results.length) return j;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+  function restoreSavedResults() {
+    const j = loadSavedResults();
+    if (!j) { toast(t("scan.nolast")); return; }
+    S.results = j.results.map((r) => ({ ip: r.ip, port: r.port || 443, min: r.min, avg: r.avg, alive: true }));
+    S.tested = j.tested || S.results.length;
+    S.alive = j.alive || S.results.length;
+    S.dead = j.dead || 0;
+    if (j.source) S.source = j.source;
+    if (j.density) S.density = j.density;
+    if (j.ver) S.ver = j.ver;
+    setSource(S.source); setDensity(S.density); setVer(S.ver);
+    renderCounters(); renderResults(false); renderTop();
+    toast(t("scan.loaded"));
   }
 
   async function runScan() {
     await ensureOnline();
-    const queue = buildQueue();
-    if (!queue.length) { toast(t("scan.none")); return; }
+    const Q = buildQueue();
+    if (!Q.total) { toast(t("scan.none")); return; }
+    if (S.source === "ranges" && S.density === "all") toast(t("scan.allwarn"));
+    S.qtotal = Q.total;
     S.running = true;
     S.controller = new AbortController();
     S.results = [];
-    S.byIp = new Map();
     S.tested = S.alive = S.dead = 0;
+    S.startedAt = Date.now();
+    S.lastCounters = S.lastList = S.lastPersist = 0;
     lastBlip = 0;
     $("#scanStart").classList.add("hidden");
     $("#scanStop").classList.remove("hidden");
@@ -1453,14 +1633,14 @@ const SCANNER = (() => {
 
     let cursor = 0;
     const workers = [];
-    const n = Math.min(S.concurrency, queue.length);
+    const n = Math.min(S.concurrency, Q.total);
     const signal = S.controller.signal;
 
     for (let w = 0; w < n; w++) {
       workers.push((async () => {
-        while (cursor < queue.length && !signal.aborted) {
+        while (cursor < Q.total && !signal.aborted) {
           const idx = cursor++;
-          const { ip, port } = queue[idx];
+          const { ip, port } = Q.at(idx);
           let okTries = 0, sum = 0, min = Infinity;
           for (let tr = 0; tr < S.tries; tr++) {
             if (signal.aborted) break;
@@ -1469,12 +1649,18 @@ const SCANNER = (() => {
           }
           if (signal.aborted) break;
           S.tested++;
-          const alive = okTries > 0;
-          if (alive) S.alive++; else S.dead++;
-          S.results.push({ ip, port, min: alive ? Math.round(min) : null, avg: alive ? Math.round(sum / okTries) : null, alive });
-          if (alive) { lastBlip = performance.now(); }
-          renderCounters();
-          if (S.results.length % 8 === 0 || !S.running) renderResults(false);
+          if (okTries > 0) {
+            S.alive++;
+            S.results.push({ ip, port, min: Math.round(min), avg: Math.round(sum / okTries), alive: true });
+            maybeTrim();
+            lastBlip = performance.now();
+          } else {
+            S.dead++;
+          }
+          const now = Date.now();
+          if (now - S.lastCounters >= 150) { S.lastCounters = now; renderCounters(); }
+          if (now - S.lastList >= 800) { S.lastList = now; renderResults(false); }
+          if (now - S.lastPersist >= 2000) { S.lastPersist = now; persistResults(); }
         }
       })());
     }
@@ -1484,6 +1670,7 @@ const SCANNER = (() => {
     $("#scanStop").classList.add("hidden");
     $("#scanStatus").textContent = t("scan.done");
     $("#scanStatus").classList.remove("live");
+    persistResults();
     renderResults(false);
     renderCounters();
     renderTop();
@@ -1496,10 +1683,12 @@ const SCANNER = (() => {
     $("#scanStop").classList.add("hidden");
     $("#scanStatus").textContent = t("scan.done");
     $("#scanStatus").classList.remove("live");
+    persistResults();
+    renderCounters(); renderResults(false); renderTop();
   }
 
   function aliveResults() {
-    return S.results.filter((r) => r.alive).sort((a, b) => a.min - b.min);
+    return S.results.slice().sort((a, b) => a.min - b.min);
   }
 
   /* ---------------- UI rendering ---------------- */
@@ -1507,17 +1696,27 @@ const SCANNER = (() => {
     $("#scTested").textContent = num(S.tested);
     $("#scAlive").textContent = num(S.alive);
     $("#scDead").textContent = num(S.dead);
-    const total = buildQueueLen();
+    const total = S.qtotal || buildQueueLen();
     const pct = total ? Math.min(100, Math.round((S.tested / total) * 100)) : 0;
     $("#scanBar").style.width = pct + "%";
     $("#scanBar").textContent = pct + "%";
+    if (S.running && S.startedAt && S.tested > 5 && total > S.tested) {
+      const msPer = (Date.now() - S.startedAt) / S.tested;
+      $("#scanStatus").textContent = `${t("scan.running")} · ${pct}% · ${t("scan.eta")} ~${fmtDur((total - S.tested) * msPer / 1000)}`;
+    } else if (S.running) {
+      $("#scanStatus").textContent = t("scan.running");
+    }
   }
 
   function buildQueueLen() {
-    if (S.source === "custom") return parseList($("#scanCustom").value).length * S.ports.length;
-    if (S.source === "ranges") return S.target * S.ports.length;
-    if (S.source === "online") return Math.min(S.target, S.online.length || SEED.length) * S.ports.length;
-    return Math.min(S.target, SEED.length) * S.ports.length;
+    if (S.source === "custom") return customIps().length * (S.ports.length || 1);
+    if (S.source === "ranges") {
+      if (S.density === "per24") return V4_BLOCKCOUNT * (S.ports.length || 1);
+      if (S.density === "all") return V4_TOTAL;
+      return S.target * (S.ports.length || 1);
+    }
+    if (S.source === "online") return Math.min(S.target, S.online.length || SEED.length) * (S.ports.length || 1);
+    return Math.min(S.target, SEED.length) * (S.ports.length || 1);
   }
 
   function renderResults(forceEmpty) {
@@ -1642,21 +1841,51 @@ const SCANNER = (() => {
     a.click();
   }
   async function applyToPanel() {
-    const top = aliveResults().slice(0, 20).map((r) => r.ip);
-    if (!top.length) { toast(t("scan.none")); return; }
+    const all = aliveResults();
+    const v4 = all.filter((r) => !r.ip.includes(":")).slice(0, 20).map((r) => r.ip);
+    const v6 = all.filter((r) => r.ip.includes(":")).slice(0, 6).map((r) => r.ip);
+    if (!all.length) { toast(t("scan.none")); return; }
     if (MODE !== "live") { toast(t("toast.preview")); return; }
-    const res = await api("/api/settings", { method: "POST", body: { cleanIps: top } });
-    if (res.ok) { toast(t("scan.applied")); if (state.settings) state.settings.cleanIps = top; }
-    else toast(t("common.error"));
+    const body = {};
+    if (v4.length) body.cleanIps = v4;
+    if (v6.length) body.cleanIpv6 = v6;
+    const res = await api("/api/settings", { method: "POST", body });
+    if (res.ok) {
+      toast(t("scan.applied"));
+      if (state.settings) {
+        if (v4.length) state.settings.cleanIps = v4;
+        if (v6.length) state.settings.cleanIpv6 = v6;
+      }
+    } else toast(t("common.error"));
   }
 
   function onOpen() {
     if (!raf) drawRadar();
     prefillRelay();
     renderRelayCurrent();
+    refreshScanControls();
+    const saved = loadSavedResults();
+    if (saved) $("#scanLoadLast").classList.remove("hidden");
   }
 
   /* ---------------- wiring ---------------- */
+  function refreshScanControls() {
+    const isRanges = S.source === "ranges";
+    $("#scanDensityWrap").classList.toggle("hidden", !isRanges);
+    $("#scanVerWrap").classList.toggle("hidden", !isRanges && S.source !== "custom");
+    if (isRanges) $("#scanTargetWrap").classList.toggle("hidden", S.density !== "random");
+    else $("#scanTargetWrap").classList.toggle("hidden", S.source === "custom");
+  }
+  function setDensity(d) {
+    S.density = d;
+    $("#scanDensity").value = d;
+    refreshScanControls();
+  }
+  function setVer(v) {
+    S.ver = v;
+    $$("#scanVer .pchip").forEach((el) => el.classList.toggle("on", el.dataset.v === v));
+  }
+
   function initUI() {
     $("#scanStart").onclick = () => { readConfig(); runScan(); };
     $("#scanStop").onclick = stopScan;
@@ -1664,6 +1893,7 @@ const SCANNER = (() => {
     $("#scanSourceO").onclick = () => setSource("online");
     $("#scanSourceR").onclick = () => setSource("ranges");
     $("#scanSourceC").onclick = () => setSource("custom");
+    $("#scanLoadLast").onclick = restoreSavedResults;
     $("#relayStart").onclick = () => runRelay();
     $("#relayApply").onclick = () => applyRelay(false);
     $("#scanApply").onclick = applyToPanel;
@@ -1672,16 +1902,21 @@ const SCANNER = (() => {
     $("#scanTarget").onchange = () => { S.target = +$("#scanTarget").value; };
     $("#scanConc").onchange = () => { S.concurrency = +$("#scanConc").value; };
     $("#scanTimeout").onchange = () => { S.timeout = +$("#scanTimeout").value; };
+    $("#scanDensity").onchange = () => setDensity($("#scanDensity").value);
+    $$("#scanVer .pchip").forEach((el) => (el.onclick = () => setVer(el.dataset.v)));
     $$("#scanPorts .pchip").forEach((el) => (el.onclick = () => {
       el.classList.toggle("on");
       S.ports = $$("#scanPorts .pchip.on").map((x) => +x.dataset.port);
     }));
+    refreshScanControls();
   }
 
   function readConfig() {
     S.target = +($("#scanTarget").value || 200);
     S.concurrency = +($("#scanConc").value || 24);
     S.timeout = +($("#scanTimeout").value || 3500);
+    S.density = $("#scanDensity") ? $("#scanDensity").value : "per24";
+    S.ver = $$("#scanVer .pchip.on").map((x) => x.dataset.v)[0] || "4";
     S.ports = $$("#scanPorts .pchip.on").map((x) => +x.dataset.port);
     if (!S.ports.length) { S.ports = [443]; $$("#scanPorts .pchip[data-port='443']").classList.add("on"); }
   }
@@ -1693,7 +1928,7 @@ const SCANNER = (() => {
     $("#scanSourceR").classList.toggle("on", src === "ranges");
     $("#scanSourceC").classList.toggle("on", src === "custom");
     $("#scanCustomWrap").classList.toggle("hidden", src !== "custom");
-    $("#scanTargetWrap").classList.toggle("hidden", src === "custom");
+    refreshScanControls();
   }
 
   /* ---------------- online clean-IP pool ---------------- */
