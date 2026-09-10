@@ -1510,18 +1510,36 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     }
     const cd = await env.BOT_KV.get(CD_KEY + id);
     if (cd && Date.now() - parseInt(cd, 10) < 30_000) {
-      return json({ ok: false, error: "لطفاً چند لحظه صبر کن (کد قبلی هنوز معتبر است)" }, 429);
+      return json({ ok: false, error: "لطفاً چند لحظه صبر کن — کد قبلی به تلگرامت فرستاده شده و هنوز معتبر است" }, 429);
     }
     const code = randomCode();
     await env.BOT_KV.put(CODE_KEY + id, code, { expirationTtl: 300 });
-    await env.BOT_KV.put(CD_KEY + id, String(Date.now()), { expirationTtl: 60 });
-    try {
-      const r: any = await tg.sendMessage(env, id, `🔐 <b>کد ورود پنل مدیریت</b>\n\n<code>${code}</code>\n\nاین کد تا <b>۵ دقیقه</b> معتبر است. آن را برای کسی نفرست.`);
-      if (!r?.ok) throw new Error(r?.description || "sendMessage failed");
-    } catch (e) {
-      await env.BOT_KV.delete(CODE_KEY + id).catch(() => {});
-      return json({ ok: false, error: "کد ساخته شد ولی ارسال به تلگرام ناموفق بود — دوباره تلاش کن" }, 502);
+    // ارسال کد با تلاش مجدد خودکار — مثلاً وقتی تلگرام موقتاً محدودیت نرخ (429) بدهد
+    let sent = false;
+    let lastErr = "";
+    for (let attempt = 0; attempt < 3 && !sent; attempt++) {
+      try {
+        const r: any = await tg.sendMessage(env, id, `🔐 <b>کد ورود پنل مدیریت</b>\n\n<code>${code}</code>\n\nاین کد تا <b>۵ دقیقه</b> معتبر است. آن را برای کسی نفرست.`);
+        if (r?.ok) { sent = true; break; }
+        lastErr = r?.description || "sendMessage failed";
+        const retryAfter = Number(r?.parameters?.retry_after);
+        if (r?.error_code === 429 && Number.isFinite(retryAfter) && retryAfter > 0) {
+          // صبر کوتاه (حداکثر ۶ ثانیه) و تلاش دوباره — CPU آزاد می‌ماند
+          await new Promise((res) => setTimeout(res, Math.min(6, retryAfter) * 1000));
+        }
+      } catch (e) {
+        lastErr = (e as Error)?.message || String(e);
+      }
     }
+    if (!sent) {
+      await env.BOT_KV.delete(CODE_KEY + id).catch(() => {});
+      return json({
+        ok: false,
+        error: "ارسال کد به تلگرام ناموفق بود" + (lastErr ? ` (${lastErr})` : "") + ". چند لحظه بعد دوباره تلاش کن.",
+      }, 502);
+    }
+    // فقط بعد از ارسال موفق، محدودیت ضد اسپم فعال می‌شود
+    await env.BOT_KV.put(CD_KEY + id, String(Date.now()), { expirationTtl: 60 }).catch(() => {});
     return json({ ok: true, sent: true });
   }
 
