@@ -243,12 +243,15 @@ function pageRow(lang: Lang, page: number, total: number, prefix: string): Btn[]
 
 /* ============================ reply keyboard ⌨️ ============================ */
 
-export function replyMenu(s: UserState): ReplyKb {
+export function replyMenu(s: UserState, appUrl?: string): ReplyKb {
   const lang = L(s);
+  const supBtn = appUrl
+    ? { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support", web_app: { url: appUrl } }
+    : { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support" };
   if (lang === "fa") {
-    return replyKb([[{ text: "🚀 ساخت پنل" }], [{ text: "🗂 پنل‌ها" }, { text: "🏠 منو" }], [{ text: "🎧 پشتیبانی" }]]);
+    return replyKb([[{ text: "🚀 ساخت پنل" }], [{ text: "🗂 پنل‌ها" }, { text: "🏠 منو" }], [supBtn]]);
   }
-  return replyKb([[{ text: "🚀 New panel" }], [{ text: "🗂 Panels" }, { text: "🏠 Menu" }], [{ text: "🎧 Support" }]]);
+  return replyKb([[{ text: "🚀 New panel" }], [{ text: "🗂 Panels" }, { text: "🏠 Menu" }], [supBtn]]);
 }
 
 export const REPLY_LABELS: Record<string, "menu" | "panels" | "new" | "support"> = {
@@ -260,7 +263,7 @@ export const REPLY_LABELS: Record<string, "menu" | "panels" | "new" | "support">
 
 /* ============================ پشتیبانی 🎧 ============================ */
 
-export function supportIntro(s: UserState): { text: string; kb: Kb } {
+export function supportIntro(s: UserState, appUrl?: string): { text: string; kb: Kb } {
   const lang = L(s);
   const title = lang === "fa" ? "پشتیبانی Nika Net" : "Nika Net Support";
   const body =
@@ -268,20 +271,23 @@ export function supportIntro(s: UserState): { text: string; kb: Kb } {
       ? [
           "سلام! 👋 به پشتیبانی Nika Net خوش اومدی.",
           "",
-          "مشکل یا سؤالت رو همین‌جا تایپ کن و بفرست — مثل یک چت معمولی. پیامت مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا (پی‌وی خودت) دریافت می‌کنی. 📬",
-          "",
-          "برای شروع، فقط پیامت رو بنویس.",
+          "دو راه برای ارتباط با ما داری:",
+          "• 📱 دکمهٔ زیر رو بزن تا اپ پشتیبانی (چت زنده) باز بشه — مثل یک چت واقعی.",
+          "• یا همین‌جا پیامت رو تایپ کن و بفرست؛ پیامت مستقیم به تیم پشتیبانی می‌رسه و جوابش رو همین‌جا (پی‌وی خودت) دریافت می‌کنی. 📬",
         ].join("\n")
       : [
           "Hi! 👋 Welcome to Nika Net support.",
           "",
-          "Type your question or issue right here and send it — just like a normal chat. It goes straight to our support team and you'll get the answer right here in your own private chat. 📬",
-          "",
-          "To start, simply write your message.",
+          "Two ways to reach us:",
+          "• 📱 Tap the button below to open the support app (live chat) — just like a real chat.",
+          "• Or type your message right here; it goes straight to our team and you'll get the answer right here in your own chat. 📬",
         ].join("\n");
+  const rows: Btn[][] = [];
+  if (appUrl) rows.push([{ text: lang === "fa" ? "📱 باز کردن اپ پشتیبانی" : "📱 Open support app", web_app: appUrl, color: "primary", emoji: false }]);
+  rows.push([{ text: lang === "fa" ? "🏠 بازگشت به منو" : "🏠 Back to menu", cb: "menu:main", color: "gray", emoji: false }]);
   return {
     text: makeText(title, body, lang === "fa" ? "پیامت رو بنویس…" : "Type your message…", lang === "fa" ? "پشتیبانی" : "Support", "help"),
-    kb: kb([[{ text: lang === "fa" ? "🏠 بازگشت به منو" : "🏠 Back to menu", cb: "menu:main", color: "gray", emoji: false }]]),
+    kb: kb(rows),
   };
 }
 
@@ -302,7 +308,7 @@ export function supportNotify(ticket: { name?: string; username?: string }, text
 
 /* ============================ main menu ⚡ ============================ */
 
-export function mainMenu(s: UserState, firstName?: string, isOwner = false): { text: string; kb: Kb } {
+export function mainMenu(s: UserState, firstName?: string, isOwner = false, meta?: BotMeta): { text: string; kb: Kb } {
   const lang = L(s);
   const name = firstName ? esc(firstName) : "دوست";
   const at = activeTok(s);
@@ -327,6 +333,10 @@ export function mainMenu(s: UserState, firstName?: string, isOwner = false): { t
     [{ text: t(lang, "upd_all"), cb: "upd:all", color: "primary", emoji: false }],
     [{ text: t(lang, "b_help"), cb: "menu:help", color: "gray", emoji: false }],
   ];
+  // اپ پشتیبانی (Mini App تلگرام)
+  if (meta?.origin) {
+    rows.push([{ text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support", web_app: `${meta.origin}/app/support`, color: "primary", emoji: false }]);
+  }
   // مالک فقط — مدیریت بات (عضویت اجباری + ادمین کردن در کانال)
   if (isOwner) {
     rows.push([{ text: t(lang, "o_menu"), cb: "menu:owner", color: "danger", emoji: false }]);

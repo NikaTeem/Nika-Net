@@ -1,4 +1,4 @@
 {
-  "version": "0.7.8",
-  "notes": "🎨 پنل مدیریت بات: تم Aurora-glass + فونت Vazirmatn/Lalezar + بخش «پیام شخصی» (چت تلگرامی) + اپ پشتیبانی Nika Net (تیکت و پاسخ)"
+  "version": "0.7.9",
+  "notes": "📱 پشتیبانی به‌صورت Mini App تلگرام (/app/support) — ورود امن با HMAC initData، چت زنده کاربر ↔ پشتیبانی، همگام با پنل مدیریت"
 }

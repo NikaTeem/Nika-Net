@@ -240,7 +240,9 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     s.state = "idle";
     await st.saveState(env, chatId, s);
     const fname = msg.from?.first_name || "";
-    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s));
+    const meta = await fj.botMeta(env);
+    const appUrl = `${meta.origin}/app/support`;
+    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, appUrl));
     const m = await tg.sendMessage(env, chatId, "🎨");
     const msgId = m?.result?.message_id as number | undefined;
     const intro = t(L(s), "w_hello", { n: ui.esc(fname) });
@@ -249,7 +251,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         await tg.editMessage(env, chatId, msgId, `🎨 ${intro.slice(0, i)}▌`).catch(() => {});
         await sleep(70);
       }
-      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId));
+      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId), meta);
       await tg.editMessage(env, chatId, msgId, mm.text, mm.kb).catch(() => {});
     }
     return;
@@ -257,7 +259,8 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
 
   if (text === "/menu") {
     const s = await st.getState(env, chatId);
-    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
+    const meta = await fj.botMeta(env);
+    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId), meta);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
 
@@ -265,7 +268,8 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     const s = await st.getState(env, chatId);
     s.lang = s.lang === "fa" ? "en" : "fa";
     await st.saveState(env, chatId, s);
-    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s));
+    const meta = await fj.botMeta(env);
+    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, `${meta.origin}/app/support`));
     const m = ui.settingsMenu(s);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
@@ -300,7 +304,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   if (rl) {
     const s = await st.getState(env, chatId);
     if (rl === "menu") {
-      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
+      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId), await fj.botMeta(env));
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
     if (rl === "panels") {
@@ -309,7 +313,8 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     }
     if (rl === "new") return await buildEntry(env, chatId, msg.message_id);
     if (rl === "support") {
-      const m = ui.supportIntro(s);
+      const meta = await fj.botMeta(env);
+      const m = ui.supportIntro(s, `${meta.origin}/app/support`);
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
   }
@@ -335,7 +340,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     default: {
       // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
       if (await isOwner(env, chatId)) {
-        const m = ui.mainMenu(s, msg.from?.first_name, true);
+        const m = ui.mainMenu(s, msg.from?.first_name, true, await fj.botMeta(env));
         return void (await tg.sendMessage(env, chatId, m.text, m.kb));
       }
       if (!text) return; // استیکر/عکس/فایل بدون متن → نادیده بگیر
@@ -946,7 +951,7 @@ async function navMenu(env: Env, chatId: number, msgId: number, name: string, fi
     case "settings": m = ui.settingsMenu(s); break;
     case "help": m = ui.helpMenu(s); break;
     case "owner": m = ui.ownerMenu(s, await fj.botMeta(env)); break;
-    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
+    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId), await fj.botMeta(env));
   }
   await reply(env, chatId, msgId, m.text, m.kb);
 }
@@ -969,7 +974,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     if (joined) {
       const wmsg = cfg.verifyMessage?.trim() || t(L(s), "fj_welcome");
       await tg.sendMessage(env, chatId, wmsg).catch(() => {});
-      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
+      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId), await fj.botMeta(env));
       await tg.sendMessage(env, chatId, m.text, m.kb);
     }
     return;
@@ -1098,7 +1103,8 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   if (data === "do:lang") {
     s.lang = s.lang === "fa" ? "en" : "fa";
     await st.saveState(env, chatId, s);
-    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s));
+    const meta = await fj.botMeta(env);
+    await tg.sendMessage(env, chatId, "⌨️", ui.replyMenu(s, `${meta.origin}/app/support`));
     const m = ui.settingsMenu(s);
     await tg.answerCallback(env, cq.id).catch(() => {});
     return void (await reply(env, chatId, msgId, m.text, m.kb));
