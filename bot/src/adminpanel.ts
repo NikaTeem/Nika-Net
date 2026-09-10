@@ -274,6 +274,7 @@ const PANEL_HTML = `<!doctype html>
   .olink-divider{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:11px;margin:16px 0 10px}
   .olink-divider::before,.olink-divider::after{content:"";flex:1;height:1px;
     background:repeating-linear-gradient(90deg, var(--border-strong) 0 5px, transparent 5px 10px)}
+  .ver{text-align:center;color:var(--faint);font-size:10.5px;margin-top:14px;letter-spacing:.5px;direction:ltr}
 
   /* wave animation for the bot's hand */
   .wave-arm{transform-box:fill-box;transform-origin:0% 100%;animation:wavearm 1.7s ease-in-out infinite}
@@ -389,6 +390,7 @@ const PANEL_HTML = `<!doctype html>
       </div>
       <div class="hint" id="lgMsg">فقط <b>مالک ربات</b> می‌تواند وارد شود.</div>
       <div class="olink-divider"><span>لینک‌های رسمی Nika Net</span></div><div class="olinks col"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
+      <div class="ver">Nika Net Panel · v0.10.3</div>
     </div>
   </div>
 </div>
@@ -1472,12 +1474,23 @@ const PANEL_HTML = `<!doctype html>
 function json(resp: unknown, status = 200): Response {
   return new Response(JSON.stringify(resp), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      // پنل مدیریت خصوصی است — مرورگر هیچ‌وقت پاسخ‌های API را کش نکند
+      "cache-control": "no-store",
+    },
   });
 }
 
 const html = (body: string, status = 200) =>
-  new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
+  new Response(body, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      // جلوگیری از کش مرورگر: بعد از هر آپدیت، کاربر نسخهٔ تازهٔ پنل را می‌گیرد
+      "cache-control": "no-store, no-cache, must-revalidate",
+    },
+  });
 
 async function readJson(req: Request): Promise<Record<string, any>> {
   try {

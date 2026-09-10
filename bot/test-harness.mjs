@@ -212,6 +212,8 @@ check("closeall بسته شد و status ها closed است", r.j.tickets.filter(
   let syntaxOk = false;
   if (pm) { try { new vm.Script(pm[1]); syntaxOk = true; } catch (e) { errors.push("panel script syntax: " + e.message); } }
   check("اسکریپت صفحهٔ پنل بدون خطای نحوی", syntaxOk);
+  check("پنل: هدر cache-control ضد کش", (pres.headers.get("cache-control") || "").includes("no-store"));
+  check("پنل: نشانگر نسخه در HTML", phtml.includes("v0.10.3"));
 }
 
 let lr = await panelRaw("/panel/api/logininfo");
