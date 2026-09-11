@@ -734,6 +734,11 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
       <div class="card" style="margin-top:16px">
         <div class="card-title"><span>✎ <span data-i18n="set.cleanip">IP های تمیز</span></span><span class="mini" data-i18n="set.cleanipD">هر خط یک IP</span></div>
         <textarea class="input" id="setIps" dir="ltr"></textarea>
+        <div class="field" style="margin-top:14px"><label data-i18n="set.ports">پورت‌های اتصال</label>
+          <input class="input" id="setPorts" dir="ltr" placeholder="443, 2053, 2083, 2087, 2096, 8443" />
+          <div class="d" style="color:var(--muted);font-size:12px;margin-top:6px;font-family:var(--mono)" data-i18n="set.portsD">کانفیگ‌ها روی چند پورت ساخته می‌شوند — اگر ۴۴۳ بسته یا کند باشد، پورت‌های جایگزین کار می‌کنند</div>
+        </div>
+        <div class="d" style="margin-top:16px;padding:10px 12px;border:1px dashed var(--border-strong);border-radius:10px;color:var(--muted);font-size:12.5px;line-height:1.9" data-i18n="set.cfnote">ℹ نکته</div>
         <div class="field" style="margin-top:14px"><label data-i18n="set.fixedip">IP ثابت (اختیاری)</label>
           <input class="input" id="setFixedIp" dir="ltr" placeholder="188.114.96.9 یا 104.16.1.1:443" />
           <div class="d" style="color:var(--muted);font-size:12px;margin-top:6px;font-family:var(--mono)" data-i18n="set.fixedipD">وقتی ست شود، همهٔ کانفیگ‌ها با همین IP ساخته می‌شوند (بدون چرخش تصادفی). خالی = تصادفی از بین IP های تمیز</div>

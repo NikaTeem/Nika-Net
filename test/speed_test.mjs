@@ -59,27 +59,28 @@ check("pickIpv6Addrs: returns IPv6 edges", v6.length === 2 && v6[0].host.include
 /* ---- variants (BPB-parity) ---- */
 const links = mod.buildNamedLinks(u, s);
 const labels = links.map((l) => l.label);
-check("variants: Domain + IPv4 + IPv6 per protocol (6 links)", links.length === 6);
+check("variants: 8 addresses × 2 protocols (16 links)", links.length === 16);
 check("variants: has Domain", labels.includes("Domain"));
 check("variants: has IPv4", labels.includes("IPv4"));
 check("variants: has IPv6", labels.includes("IPv6"));
+check("variants: multi-port (non-443 ports emitted)", labels.some((l) => l.includes("2053") || l.includes("2083")));
 const domainLink = links.find((l) => l.label === "Domain" && l.kind === "vless");
-check("variants: Domain uses front host", domainLink && domainLink.addr.host === "nika.example.workers.dev");
-const ipv4Link = links.find((l) => l.label === "IPv4" && l.kind === "vless");
+check("variants: Domain uses front host on 443", domainLink && domainLink.addr.host === "nika.example.workers.dev" && domainLink.addr.port === 443);
+const ipv4Link = links.find((l) => l.label.startsWith("IPv4") && l.kind === "vless");
 check("variants: IPv4 uses a clean CF edge", ipv4Link && /^\d{1,3}(\.\d{1,3}){3}$/.test(ipv4Link.addr.host));
-const ipv6Link = links.find((l) => l.label === "IPv6" && l.kind === "vless");
+const ipv6Link = links.find((l) => l.label.startsWith("IPv6") && l.kind === "vless");
 check("variants: IPv6 uses an IPv6 edge", ipv6Link && ipv6Link.addr.host.includes(":"));
 
 /* ---- fixed IP lock (applies to the IPv4 variant) ---- */
 const sFix = { ...s, fixedIp: "104.17.147.22:8443" };
-const fixLink = mod.buildNamedLinks(u, sFix).find((l) => l.label === "IPv4" && l.kind === "vless");
+const fixLink = mod.buildNamedLinks(u, sFix).find((l) => l.label.startsWith("IPv4") && l.kind === "vless");
 check("fixed IP lock honoured (IPv4 variant)", fixLink && fixLink.addr.host === "104.17.147.22" && fixLink.addr.port === 8443);
 
 /* ---- base64 bundle ---- */
 const b64 = mod.buildBase64Bundle(u, s);
 const decoded = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
 const bundleLinks = decoded.split("\n").filter(Boolean);
-check("base64 bundle: 6 links", bundleLinks.length === 6);
+check("base64 bundle: 16 links", bundleLinks.length === 16);
 check("base64: vless/trojan", bundleLinks.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
 check("base64: first link is Domain variant (reliable default)", bundleLinks[0].includes("Domain"));
 check("base64: fp=random", bundleLinks.every((l) => l.includes("fp=random")));
@@ -87,13 +88,13 @@ check("base64: fp=random", bundleLinks.every((l) => l.includes("fp=random")));
 /* ---- clash / singbox ---- */
 const yaml = mod.buildClashYaml(u, s);
 check("clash: url-test auto group", yaml.includes("url-test") && yaml.includes("Auto"));
-check("clash: 6 proxies", (yaml.match(/type: vless/g) || []).length + (yaml.match(/type: trojan/g) || []).length === 6);
+check("clash: 16 proxies", (yaml.match(/type: vless/g) || []).length + (yaml.match(/type: trojan/g) || []).length === 16);
 check("clash: domain variant present", yaml.includes("Domain"));
 
 const sb = mod.buildSingboxJson(u, s);
 const sbj = JSON.parse(sb);
 check("singbox: urltest outbound", sbj.outbounds.some((o) => o.type === "urltest"));
-check("singbox: 9 outbounds (6 nodes + urltest + selector + direct)", sbj.outbounds.length === 9);
+check("singbox: 19 outbounds (16 nodes + urltest + selector + direct)", sbj.outbounds.length === 19);
 
 rmSync(OUT, { recursive: true, force: true });
 console.log(failed ? `\n${failed} FAILED ❌` : "\nALL PASSED ✅");

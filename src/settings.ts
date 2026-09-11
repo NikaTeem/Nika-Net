@@ -201,6 +201,25 @@ function sanitizePoolMeta(s: Settings): boolean {
   return changed;
 }
 
+// cleanPorts — Cloudflare HTTPS ports for config variants; keep only valid
+// ports, dedupe, and always make sure 443 is present (a config set with no
+// 443 would be surprising — most clients expect it).
+function sanitizeCleanPorts(s: Settings): boolean {
+  if (!Array.isArray(s.cleanPorts)) { s.cleanPorts = [...DEFAULTS.cleanPorts]; return true; }
+  const kept: number[] = [];
+  const seen = new Set<number>();
+  for (const p of s.cleanPorts.slice(0, 8)) {
+    const n = Number(p);
+    if (!Number.isInteger(n) || n < 1 || n > 65535 || seen.has(n)) continue;
+    seen.add(n);
+    kept.push(n);
+  }
+  if (!kept.includes(443)) kept.unshift(443);
+  const changed = kept.length !== s.cleanPorts.length || kept.some((v, i) => v !== s.cleanPorts[i]);
+  s.cleanPorts = kept.length ? kept : [...DEFAULTS.cleanPorts];
+  return changed;
+}
+
 // Runs both scrubbers before a settings write so a bad value is never persisted
 // (getSettings also runs them on read as a second line of defence).
 export function sanitizeSettings(s: Settings): boolean {
@@ -209,7 +228,8 @@ export function sanitizeSettings(s: Settings): boolean {
   const c = sanitizePoolIps(s);
   const d = sanitizePoolMeta(s);
   const e = sanitizeCleanIpv6(s);
-  return a || b || c || d || e;
+  const f = sanitizeCleanPorts(s);
+  return a || b || c || d || e || f;
 }
 
 export async function getSettings(env: Env): Promise<Settings> {

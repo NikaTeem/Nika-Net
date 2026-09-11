@@ -73,9 +73,10 @@ check("create user ok", r.ok && !!user.uuid);
 r = await req("/api/gen?id=" + user.id, { headers: { cookie } });
 const gen = await r.json();
 const links = atob(gen.base64.replace(/-/g, "+").replace(/_/g, "/")).split("\n").filter(Boolean);
-check("/api/gen: base64 has 6 links (Domain+IPv4+IPv6 × 2 protocols)", links.length === 6);
+check("/api/gen: base64 has multi links (Domain+IPv4+IPv6 × ports × 2 protocols)", links.length >= 6);
 check("/api/gen: links are vless/trojan", links.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
 check("/api/gen: first link is Domain (reliable default)", links[0].includes("Domain"));
+check("/api/gen: multi-port present (non-443)", links.some((l) => /:(2053|2083|2087|2096|8443)\?/.test(l)));
 check("/api/gen: clash has url-test", gen.clash.includes("url-test"));
 check("/api/gen: singbox has urltest", gen.singbox.includes("urltest"));
 
@@ -84,7 +85,7 @@ const token = user.password;
 r = await req("/sub/" + token, { headers: { accept: "application/json" } });
 const subBody = await r.text();
 const subLinks = atob(subBody.replace(/-/g, "+").replace(/_/g, "/")).split("\n").filter(Boolean);
-check("/sub/<token>: returns multi-link bundle", subLinks.length === 6);
+check("/sub/<token>: returns multi-link bundle", subLinks.length >= 6);
 check("/sub/<token>: links are vless/trojan", subLinks.every((l) => l.startsWith("vless://") || l.startsWith("trojan://")));
 
 // 6) client config fetch by uuid

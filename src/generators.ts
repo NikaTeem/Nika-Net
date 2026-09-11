@@ -100,13 +100,16 @@ export function pickIpv6Addrs(s: Settings, n: number): Addr[] {
 
 /* ---------------------- link builders ---------------------- */
 
+// RFC 3986: an IPv6 literal in a URI authority must be bracketed.
+const uriHost = (h: string): string => (h.includes(":") ? `[${h}]` : h);
+
 function vlessLink(u: User, s: Settings, a: Addr, label: string): string {
   const f = front(s);
   const q = new URLSearchParams({
     encryption: "none", security: "tls", sni: f, fp: "random",
     type: "ws", host: f, path: s.wsPath + "?ed=2048&proto=vless",
   });
-  return `vless://${u.uuid}@${a.host}:${a.port}?${q.toString()}#${remark(s, label)}`;
+  return `vless://${u.uuid}@${uriHost(a.host)}:${a.port}?${q.toString()}#${remark(s, label)}`;
 }
 
 function trojanLink(u: User, s: Settings, a: Addr, label: string): string {
@@ -115,7 +118,7 @@ function trojanLink(u: User, s: Settings, a: Addr, label: string): string {
     security: "tls", sni: f, fp: "random", type: "ws", host: f,
     path: s.wsPath + "?ed=2048&proto=trojan",
   });
-  return `trojan://${u.password}@${a.host}:${a.port}?${q.toString()}#${remark(s, label)}`;
+  return `trojan://${u.password}@${uriHost(a.host)}:${a.port}?${q.toString()}#${remark(s, label)}`;
 }
 
 function remark(s: Settings, label: string): string {
@@ -125,36 +128,75 @@ function remark(s: Settings, label: string): string {
 
 /* ---------------------- variant assembly ---------------------- */
 
+// Cloudflare edge HTTPS ports the configs rotate across. 443 first (most
+// compatible), then the alternates — several ports = a port-level block or
+// throttle on 443 alone can't take the panel down.
+function portsFor(s: Settings): number[] {
+  const p = (s.cleanPorts || []).filter((n) => Number.isInteger(n) && n >= 1 && n <= 65535);
+  if (!p.length) return [443, 2053, 2083, 2087, 2096, 8443];
+  return p.includes(443) ? p : [443, ...p];
+}
+
 interface Variant {
   label: string; // "Domain" | "IPv4" | "IPv6"
   addrs: Addr[];
 }
 
-/** Build the per-protocol variant set (Domain + IPv4 + IPv6). */
+/** Build the per-protocol variant set (Domain + IPv4 + IPv6, multiple ports). */
 function buildVariants(s: Settings, u: User): Variant[] {
   const f = front(s);
-  const out: Variant[] = [{ label: "Domain", addrs: [{ host: f, port: 443 }] }];
-  const v4 = pickIpv4Addrs(s, 1);
-  if (v4.length) out.push({ label: "IPv4", addrs: v4 });
-  const v6 = pickIpv6Addrs(s, 1);
-  if (v6.length) out.push({ label: "IPv6", addrs: v6 });
+  const ports = portsFor(s);
+  const out: Variant[] = [];
+
+  // Domain — always reliable, its SNI is the domain itself. Emit 443 + a few
+  // alternates: an SNI probe usually only inspects 443, so the same clean
+  // domain on 2053/2083… slips straight through.
+  const domainAddrs: Addr[] = [];
+  for (let i = 0; i < Math.min(ports.length, 3); i++) {
+    domainAddrs.push({ host: f, port: ports[i] });
+  }
+  out.push({ label: "Domain", addrs: domainAddrs });
+
+  // IPv4 — top clean IPs, rotated across the ports (different IP+port pairs).
+  // An explicit port on an IP (fixed-IP lock / pool entry) is always kept.
+  const v4 = pickIpv4Addrs(s, 4);
+  if (v4.length) {
+    const addrs: Addr[] = [];
+    for (let i = 0; i < v4.length; i++) {
+      const port = v4[i].port && v4[i].port !== 443 ? v4[i].port : ports[i % ports.length];
+      addrs.push({ host: v4[i].host, port });
+    }
+    out.push({ label: "IPv4", addrs });
+  }
+
+  // IPv6 — a couple of edges, same rotation.
+  const v6 = pickIpv6Addrs(s, 3);
+  if (v6.length) {
+    const addrs: Addr[] = [];
+    for (let i = 0; i < v6.length; i++) {
+      const port = v6[i].port && v6[i].port !== 443 ? v6[i].port : ports[i % ports.length];
+      addrs.push({ host: v6[i].host, port });
+    }
+    out.push({ label: "IPv6", addrs });
+  }
+
   return out;
 }
 
 export interface NamedLink {
-  label: string; // "Domain" | "IPv4" | "IPv6"
+  label: string; // "Domain" | "IPv4" | "IPv6" (+ port when not 443)
   kind: "vless" | "trojan";
   addr: Addr;
 }
 
 /** All (protocol × variant) links for a subscription. */
 export function buildNamedLinks(u: User, s: Settings): NamedLink[] {
-  const variants = buildVariants(s, u);
   const out: NamedLink[] = [];
-  for (const v of variants) {
+  for (const v of buildVariants(s, u)) {
     for (const a of v.addrs) {
-      if (s.protocols.vless) out.push({ label: v.label, kind: "vless", addr: a });
-      if (s.protocols.trojan) out.push({ label: v.label, kind: "trojan", addr: a });
+      const label = v.label + (a.port !== 443 ? " · " + a.port : "");
+      if (s.protocols.vless) out.push({ label, kind: "vless", addr: a });
+      if (s.protocols.trojan) out.push({ label, kind: "trojan", addr: a });
     }
   }
   return out;

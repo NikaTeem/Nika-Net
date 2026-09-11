@@ -41,6 +41,8 @@ const I18N = {
     "u.active": "فعال", "u.inactive": "غیرفعال", "u.expired": "منقضی", "u.openStatus": "باز کردن صفحه وضعیت کاربر", "u.del": "حذف",
     "set.general": "عمومی", "set.title": "عنوان پنل", "set.host": "دامنه / Host ورکر", "set.sni": "SNI / Host جعلی",
     "set.wsPath": "مسیر WebSocket", "set.security": "امنیت", "set.newpass": "رمز عبور جدید", "set.brute": "محافظت Brute-Force",
+    "set.ports": "پورت‌های اتصال", "set.portsD": "کانفیگ‌ها روی چند پورت ساخته می‌شوند — اگر ۴۴۳ بسته یا کند باشد، پورت‌های جایگزین کار می‌کنند",
+    "set.cfnote": "ℹ نکته: سایت‌هایی که پشتِ خودِ Cloudflare هستند (مثل dash.cloudflare.com یا whatismyipaddress.com) از هیچ پنل Workers رد نمی‌شوند — Cloudflare اتصال به شبکهٔ خودش را می‌بندد. بقیهٔ سایت‌ها (یوتیوب، تلگرام، اینستاگرام، ویکی‌پدیا و…) عادی کار می‌کنند.",
     "set.bruteD": "مسدودسازی موقت بعد از تلاش ناموفق", "set.cleanip": "IP های تمیز", "set.cleanipD": "هر خط یک IP", "set.save": "ذخیره تنظیمات",
     "m.addUser": "کاربر جدید", "m.name": "نام کاربر", "m.namePh": "مثلاً: علی", "m.quota": "سهمیه (GB)", "m.days": "مدت (روز)",
     "m.save": "ذخیره", "m.cancel": "انصراف",
@@ -67,6 +69,8 @@ const I18N = {
     "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.openStatus": "Open user status page", "u.del": "Delete",
     "set.general": "General", "set.title": "Panel title", "set.host": "Worker domain / host", "set.sni": "Fake SNI / Host",
     "set.wsPath": "WebSocket path", "set.security": "Security", "set.newpass": "New password", "set.brute": "Brute-force protection",
+    "set.ports": "Connect ports", "set.portsD": "Configs are generated on several ports — if 443 is blocked or slow, the alternates still work",
+    "set.cfnote": "ℹ Note: sites hosted on Cloudflare itself (e.g. dash.cloudflare.com, whatismyipaddress.com) can't be reached through any Workers panel — Cloudflare closes connections into its own network. Everything else (YouTube, Telegram, Instagram, Wikipedia…) works normally.",
     "set.bruteD": "Temporary block after failed attempts", "set.cleanip": "Clean IPs", "set.cleanipD": "One IP per line", "set.save": "Save settings",
     "m.addUser": "New user", "m.name": "Name", "m.namePh": "e.g. Ali", "m.quota": "Quota (GB)", "m.days": "Days",
     "m.save": "Save", "m.cancel": "Cancel",
@@ -421,6 +425,8 @@ function fillSettingsForm() {
   $("#setSni").value = (state.settings && state.settings.sni) || "";
   $("#setWsPath").value = (state.settings && state.settings.wsPath) || "";
   $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("\n");
+  const ports = (state.settings && state.settings.cleanPorts) || [443, 2053, 2083, 2087, 2096, 8443];
+  $("#setPorts").value = ports.join(",");
 }
 $("#saveBtn").onclick = async () => {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
@@ -430,6 +436,7 @@ $("#saveBtn").onclick = async () => {
     sni: $("#setSni").value,
     wsPath: $("#setWsPath").value || "/nika-ws",
     cleanIps: $("#setIps").value.split("\n").map((x) => x.trim()).filter(Boolean),
+    cleanPorts: $("#setPorts").value.split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isInteger(n) && n > 0),
     protocols: proto,
   };
   const res = await api("/api/settings", { method: "POST", body });

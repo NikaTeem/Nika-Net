@@ -24,6 +24,7 @@ export interface Settings {
   wsPath: string;      // websocket path
   cleanIps: string[];  // verified Cloudflare anycast IPv4 edges (connect addresses)
   cleanIpv6: string[]; // verified Cloudflare anycast IPv6 edges (for the IPv6 config variant)
+  cleanPorts: number[]; // Cloudflare HTTPS ports emitted in configs (443 + alternates)
   fixedIp: string;     // locked connect address ("ip" or "ip:port") — configs use it instead of a random clean IP
   relayDomain: string; // chosen fronting domain ("دامنهٔ رله") — set by Relay Test
   poolIps: string[];   // best alive IPs applied from the Proxy IP Pool ("ip[:port]") — configs prefer them (CF-valid only)
@@ -55,6 +56,10 @@ export const DEFAULTS: Settings = {
   // Verified Cloudflare anycast IPv6 edges (resolved from Cloudflare-fronted
   // domains). Anycast → nearest colo, same as the IPv4 edges.
   cleanIpv6: ["2606:4700::6810:7c60", "2606:4700::6810:7b60", "2606:4700::6812:1c07", "2606:4700:7::da"],
+  // Cloudflare edge HTTPS ports. 443 is default; 2053/2083/2087/2096/8443 are
+  // the alternates. Emitting configs on several ports means a port-level block
+  // or throttle on 443 alone can't take the panel down.
+  cleanPorts: [443, 2053, 2083, 2087, 2096, 8443],
   fixedIp: "",
   relayDomain: "",
   poolIps: [],

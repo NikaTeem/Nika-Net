@@ -325,6 +325,7 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (typeof b.wsPath === "string") next.wsPath = b.wsPath;
         if (Array.isArray(b.cleanIps)) next.cleanIps = b.cleanIps;
         if (Array.isArray(b.cleanIpv6)) next.cleanIpv6 = b.cleanIpv6;
+        if (Array.isArray(b.cleanPorts)) next.cleanPorts = b.cleanPorts.map((p: unknown) => Number(p));
         if (typeof b.fixedIp === "string") next.fixedIp = b.fixedIp.trim();
         if (typeof b.relayDomain === "string") next.relayDomain = b.relayDomain.trim();
         if (Array.isArray(b.poolIps)) next.poolIps = b.poolIps;
