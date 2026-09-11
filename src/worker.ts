@@ -76,7 +76,9 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
       metrics.bumpRequest();
-      ctx.waitUntil(metrics.flush(env));
+      // flush counters at most once per 60 s (self-throttled, with a debounced
+      // trailing flush scheduled via waitUntil inside flush()).
+      ctx.waitUntil(metrics.flush(env, ctx));
 
       const url = new URL(req.url);
       const path = url.pathname;

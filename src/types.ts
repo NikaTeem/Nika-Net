@@ -39,6 +39,7 @@ export interface Env {
   NIKA_DB?: D1Database;
   NIKA_KV?: KVNamespace;
   NIKA_ADMIN?: string;      // optional initial admin password secret
+  NIKA_NS?: string;         // optional storage key prefix (keeps shared DB/KV independent per deployment)
   [key: string]: unknown;
 }
 

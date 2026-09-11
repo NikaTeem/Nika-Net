@@ -36,14 +36,14 @@ const check = (name, cond) => {
   if (!cond) failed++;
 };
 
-async function req(path, init = {}, cf = null) {
+async function req(path, init = {}, cf = null, useEnv = env) {
   const r = new Request("https://nika.example.workers.dev" + path, {
     method: init.method || "GET",
     headers: { "content-type": "application/json", ...(init.headers || {}) },
     body: init.body ? JSON.stringify(init.body) : undefined,
   });
   if (cf) r.cf = cf;
-  const res = await worker.fetch(r, env, ctx);
+  const res = await worker.fetch(r, useEnv, ctx);
   return res;
 }
 
@@ -109,6 +109,78 @@ check("/api/pooltest: non-CF IP is NOT verified", (pt.results || []).find((x) =>
 r = await req("/api/ips");
 const ips = await r.json();
 check("/api/ips: returns ips list", Array.isArray(ips.ips) && ips.ips.length > 0);
+
+// 11) KV quota resilience: a KV that throws "limit exceeded" must NEVER turn
+//     into a 500 error. This is the regression for the "panel always shows
+//     KV put() limit exceeded" production bug.
+{
+  const kvEnv = {
+    NIKA_KV: {
+      data: new Map(),
+      async get(key) { return this.data.get(key) ?? null; },
+      // fully exhausted quota: every write throws the CF free-tier error
+      async put() { throw new Error("KV put() limit exceeded for the day."); },
+    },
+  };
+  // first-run login → settings write throws quota error; must still succeed
+  let q = await req("/api/login", { method: "POST", body: { password: "test1234" } }, null, kvEnv);
+  check("KV-quota: first-run login succeeds", q.status === 200 && (await q.json()).ok === true);
+  const qcookie = q.headers.get("set-cookie") || "";
+
+  // create user → saveUsers write now throws quota error; must still succeed
+  q = await req("/api/users", { method: "POST", body: { name: "تست", quota: 10, days: 30 }, headers: { cookie: qcookie } }, null, kvEnv);
+  check("KV-quota: create user still succeeds (write errors swallowed)", q.ok && !!(await q.json()).uuid);
+
+  // status (reads) must not 500
+  q = await req("/api/status", { headers: { cookie: qcookie } }, null, kvEnv);
+  check("KV-quota: status still 200", q.status === 200);
+
+  // panel HTML must still load
+  q = await req("/admin", {}, null, kvEnv);
+  check("KV-quota: panel HTML still 200", q.status === 200);
+}
+
+// 12) NIKA_NS prefix: two deployments sharing one store stay independent.
+{
+  const nsA = { NIKA_NS: "panel-a" };
+  const nsB = { NIKA_NS: "panel-b" };
+  let a = await req("/api/login", { method: "POST", body: { password: "test1234" } }, null, nsA);
+  check("NIKA_NS: panel-a first-run login ok", a.status === 200);
+  a = await req("/api/info", {}, null, nsA);
+  const infoA = await a.json();
+  a = await req("/api/info", {}, null, nsB);
+  const infoB = await a.json();
+  check("NIKA_NS: panel-a setup=false (own settings persisted)", infoA.setup === false);
+  check("NIKA_NS: panel-b setup=true (independent)", infoB.setup === true);
+}
+
+// 13) D1 storage path (primary store): settings persist via NIKA_DB.
+{
+  const d1 = {
+    data: new Map(),
+    prepare(sql) {
+      return {
+        bind: (...params) => ({
+          first: async () => {
+            const key = params[0];
+            return d1.data.has(key) ? { value: d1.data.get(key) } : null;
+          },
+          run: async () => {
+            const [key, value] = params;
+            d1.data.set(key, value);
+            return { success: true };
+          },
+        }),
+      };
+    },
+  };
+  const envD1 = { NIKA_DB: d1, NIKA_NS: "d1test" };
+  let q = await req("/api/login", { method: "POST", body: { password: "test1234" } }, null, envD1);
+  check("D1: first-run login ok", q.status === 200);
+  q = await req("/api/info", {}, null, envD1);
+  check("D1: setup persisted via D1", (await q.json()).setup === false);
+  check("D1: settings stored under prefixed key", d1.data.has("d1test:settings"));
+}
 
 rmSync(OUT, { recursive: true, force: true });
 console.log(failed ? `\n${failed} FAILED ❌` : "\nALL SMOKE PASSED ✅");

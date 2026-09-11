@@ -11,6 +11,13 @@ const CACHE_TTL = 3000;
 const cache = new Map<string, { v: string; at: number }>();
 const mem = new Map<string, string>();
 
+// Optional per-deployment key prefix (NIKA_NS). Lets several panel workers
+// share one D1 database (or KV namespace) while keeping their settings/users
+// fully independent — each deployment reads/writes only its own `ns:` keys.
+function nskey(env: Env, key: string): string {
+  return env.NIKA_NS ? `${env.NIKA_NS}:${key}` : key;
+}
+
 async function d1get(env: Env, key: string): Promise<string | null> {
   try {
     const r = await env.NIKA_DB!.prepare("SELECT value FROM kv WHERE key = ?1").bind(key).first<{ value: string }>();
@@ -29,7 +36,37 @@ async function d1put(env: Env, key: string, value: string): Promise<void> {
   }
 }
 
+// KV writes are NON-FATAL. Cloudflare's free tier caps KV at 1,000 writes/day
+// per namespace, and a busy panel would otherwise take itself down with
+// "KV put() limit exceeded for the day." on every request. Reads always work;
+// a failed write must never break a request. High-frequency metric keys are
+// additionally budgeted per isolate (and back off after a quota error) so they
+// leave headroom for critical admin writes (password setup, user changes).
+let kvWriteBlockedUntil = 0;
+const KV_WRITE_BLOCK_MS = 10 * 60_000;
+let writeDay = "";
+let metricWritesToday = 0;
+const METRIC_DAILY_CAP = 700; // per isolate; under CF's 1,000/day/namespace
+const METRIC_KEY_RE = /^(metrics:|counters:|traffic:|activity)$/;
+
+function budgetAllow(): boolean {
+  const d = new Date();
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  if (day !== writeDay) {
+    writeDay = day;
+    metricWritesToday = 0;
+    kvWriteBlockedUntil = 0;
+  }
+  if (Date.now() < kvWriteBlockedUntil) return false;
+  if (metricWritesToday >= METRIC_DAILY_CAP) {
+    kvWriteBlockedUntil = Date.now() + KV_WRITE_BLOCK_MS; // stop trying for a while
+    return false;
+  }
+  return true;
+}
+
 async function rawGet(env: Env, key: string): Promise<string | null> {
+  key = nskey(env, key);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL) return hit.v;
   let v: string | null = null;
@@ -37,17 +74,33 @@ async function rawGet(env: Env, key: string): Promise<string | null> {
   // cacheTtl:30 is the KV minimum — shrinks the edge-cache staleness window
   // (default is 60 s) so settings changes like the fixed-IP lock propagate
   // quickly across isolates.
-  else if (env.NIKA_KV) v = await env.NIKA_KV.get(key, { cacheTtl: 30 });
+  else if (env.NIKA_KV) {
+    try { v = await env.NIKA_KV.get(key, { cacheTtl: 30 }); }
+    catch { v = null; } // a read failure must not break the request either
+  }
   else v = mem.get(key) ?? null;
   if (v !== null) cache.set(key, { v, at: Date.now() });
   return v;
 }
 
 async function rawPut(env: Env, key: string, value: string): Promise<void> {
+  key = nskey(env, key);
   cache.set(key, { v: value, at: Date.now() });
-  if (env.NIKA_DB) await d1put(env, key, value);
-  else if (env.NIKA_KV) await env.NIKA_KV.put(key, value);
-  else mem.set(key, value);
+  if (env.NIKA_DB) { await d1put(env, key, value); return; }
+  if (env.NIKA_KV) {
+    const isMetric = METRIC_KEY_RE.test(key);
+    if (isMetric && !budgetAllow()) return;
+    try {
+      await env.NIKA_KV.put(key, value);
+      if (isMetric) metricWritesToday++;
+    } catch (e) {
+      const msg = String((e as { message?: string } | null)?.message ?? e);
+      if (/limit exceeded/i.test(msg)) kvWriteBlockedUntil = Date.now() + KV_WRITE_BLOCK_MS;
+      // swallow: never let a storage write failure break a request
+    }
+    return;
+  }
+  mem.set(key, value);
 }
 
 // Resolver / non-edge anycast IPs that MUST never appear as a connect address:
