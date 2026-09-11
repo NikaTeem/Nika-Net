@@ -10,6 +10,7 @@ import { Env } from "./types";
 import * as tg from "./telegram";
 import * as fj from "./forcedjoin";
 import * as st from "./state";
+import * as adm from "./admin";
 
 const CODE_KEY = "panel:code:";
 const CD_KEY = "panel:cd:";
@@ -165,6 +166,14 @@ export async function sessionOwner(env: Env, cookieHeader: string): Promise<numb
   return Number.isNaN(id) ? null : id;
 }
 
+// نقش کاربرِ نشست: owner / admin / null (کد تلگرام فقط مالک؛ رمز عبور مالک + ادمین‌ها)
+export async function sessionRole(env: Env, cookieHeader: string): Promise<"owner" | "admin" | null> {
+  const id = await sessionOwner(env, cookieHeader);
+  if (id === null) return null;
+  const r = await adm.role(env, id);
+  return r === "user" ? null : r;
+}
+
 // خروج: حذف نشست
 export async function destroySession(env: Env, cookieHeader: string): Promise<void> {
   const token = readCookie(cookieHeader);
@@ -178,9 +187,10 @@ export async function hasPassword(env: Env): Promise<boolean> {
 }
 
 // ورود با «آیدی عددی + رمز عبور» → در موفقیت توکن نشست برمی‌گرداند
+// (مالک + ادمین‌ها می‌توانند با رمز عبور وارد شوند)
 export async function passwordLogin(env: Env, id: number, password: string): Promise<string | null> {
-  const owner = await fj.ownerId(env);
-  if (!Number.isInteger(id) || id !== owner) return null;
+  if (!Number.isInteger(id)) return null;
+  if (!(await adm.isAdmin(env, id))) return null; // فقط مالک یا ادمین
   const fails = parseInt((await env.BOT_KV.get(PWFAIL_KEY + id)) || "0", 10) || 0;
   if (fails >= PW_MAX_TRIES) return null; // قفل موقت
   const stored = (await env.BOT_KV.get(PW_KEY)) || "";

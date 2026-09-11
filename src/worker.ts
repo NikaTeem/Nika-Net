@@ -209,22 +209,31 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
   // login
   if (op === "login" && method === "POST") {
     const body = (await req.json().catch(() => ({}))) as { password?: string };
-    const pass = body.password || "";
-    const firstRun = !settings.adminPassHash;
-    if (firstRun) {
-      if (!pass || pass.length < 4) return jsonResp({ error: "password too short" }, 400);
+    const pass = typeof body.password === "string" ? body.password : "";
+
+    // First run: whatever password the admin types becomes THE admin password.
+    // This path never compares against an existing hash, so it can never
+    // reply "wrong password" during initial setup.
+    if (!settings.adminPassHash) {
+      if (pass.length < 4) return jsonResp({ error: "password too short" }, 400);
       settings.adminPassHash = await auth.sha256Hex(pass);
-      await store.saveSettings(env, settings);
+      try { await store.saveSettings(env, settings); } catch { /* keep in-memory hash */ }
+      const token = await auth.signSession(settings.sessionSecret, JSON.stringify({ t: Date.now() }));
+      try {
+        await metrics.appendActivity(env, { icon: "🛠", text: "نصب اولیه پنل — رمز ادمین ثبت شد", time: Date.now() });
+      } catch { /* activity log must never block login */ }
+      const res = jsonResp({ ok: true, setup: true });
+      res.headers.set("set-cookie", `${auth.SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`);
+      return res;
     }
-    const ok = settings.adminPassHash === (await auth.sha256Hex(pass));
-    if (!ok) return jsonResp({ error: "wrong password" }, 401);
+
+    // Returning admin: verify the password.
+    if (settings.adminPassHash !== (await auth.sha256Hex(pass))) return jsonResp({ error: "wrong password" }, 401);
     const token = await auth.signSession(settings.sessionSecret, JSON.stringify({ t: Date.now() }));
-    await metrics.appendActivity(env, {
-      icon: firstRun ? "🛠" : "🔐",
-      text: firstRun ? "نصب اولیه پنل — رمز ادمین ثبت شد" : "ورود ادمین به پنل",
-      time: Date.now(),
-    });
-    const res = jsonResp({ ok: true, setup: firstRun });
+    try {
+      await metrics.appendActivity(env, { icon: "🔐", text: "ورود ادمین به پنل", time: Date.now() });
+    } catch { /* activity log must never block login */ }
+    const res = jsonResp({ ok: true, setup: false });
     res.headers.set("set-cookie", `${auth.SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`);
     return res;
   }
@@ -306,7 +315,7 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
     case "settings": {
       if (method === "GET") return jsonResp(settings);
       if (method === "POST") {
-        const b = (await req.json().catch(() => ({}))) as Partial<Settings>;
+        const b = (await req.json().catch(() => ({}))) as Partial<Settings> & { newpass?: string };
         const next: Settings = { ...settings };
         if (typeof b.title === "string") next.title = b.title;
         if (typeof b.host === "string") next.host = b.host;
@@ -320,9 +329,17 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
         if (typeof b.poolCountry === "string") next.poolCountry = b.poolCountry;
         if (typeof b.poolFlag === "string") next.poolFlag = b.poolFlag;
         if (b.protocols) next.protocols = { ...settings.protocols, ...b.protocols };
+        // change admin password (min 4 chars) — hashed, never stored in plain text
+        if (typeof b.newpass === "string" && b.newpass.trim()) {
+          const np = b.newpass.trim();
+          if (np.length < 4) return jsonResp({ error: "password too short" }, 400);
+          next.adminPassHash = await auth.sha256Hex(np);
+        }
         store.sanitizeSettings(next); // never persist a bad clean IP / fixed IP
         await store.saveSettings(env, next);
-        await metrics.appendActivity(env, { icon: "⚙️", text: "تنظیمات پنل به‌روزرسانی شد", time: Date.now() });
+        try {
+          await metrics.appendActivity(env, { icon: "⚙️", text: "تنظیمات پنل به‌روزرسانی شد", time: Date.now() });
+        } catch { /* ignore */ }
         return jsonResp({ ok: true });
       }
       break;

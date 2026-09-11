@@ -8,6 +8,7 @@ import * as ui from "./ui";
 import * as panel from "./panel";
 import * as fj from "./forcedjoin";
 import * as sup from "./support";
+import * as adm from "./admin";
 import * as bc from "./broadcast";
 import * as ex from "./extras";
 import { t, Lang } from "./i18n";
@@ -133,7 +134,7 @@ export async function broadcastAll(env: Env, text: string): Promise<{ sent: numb
 // دکمهٔ منوی ربات (کنار کادر نوشتن) → لیست دستورها + ثبت دستور /support — idempotent.
 export async function ensureMenuButton(env: Env): Promise<void> {
   try {
-    const flag = "commands-v1";
+    const flag = "commands-v2";
     const cur = (await env.BOT_KV.get("menuButton")) || "";
     if (cur !== flag) {
       await tg.setCommandsMenuButton(env);
@@ -141,6 +142,7 @@ export async function ensureMenuButton(env: Env): Promise<void> {
         { command: "start", description: "🏠 شروع / منوی اصلی" },
         { command: "menu", description: "📋 منوی اصلی" },
         { command: "support", description: "🎧 پشتیبانی و ثبت تیکت" },
+        { command: "admin", description: "👑 مدیریت ربات (مالک و ادمین‌ها)" },
         { command: "lang", description: "🌐 تغییر زبان / Change language" },
       ]);
       await env.BOT_KV.put("menuButton", flag).catch(() => {});
@@ -264,6 +266,13 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   // اطمینان از حضور کاربر در لیست کاربران پنل (حتی بدون /start)
   await st.ensureUser(env, chatId);
 
+  // 🚫 مسدودی — اولین گیت: کاربر مسدود فقط پیام «مسدودی» می‌گیرد
+  const banRec = await adm.getBan(env, chatId);
+  if (banRec) {
+    await adm.banGateNotice(env, chatId, banRec);
+    return;
+  }
+
   // عضویت اجباری — gate every message (owner + exempt always pass, and the
   // "await_fj_chat" setup state is allowed so the owner can configure it).
   const pre = await st.getState(env, chatId);
@@ -301,7 +310,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
         await tg.editMessage(env, chatId, msgId, `🎨 ${intro.slice(0, i)}▌`).catch(() => {});
         await sleep(70);
       }
-      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId));
+      const mm = ui.mainMenu(s, fname, await isOwner(env, chatId), await adm.isAdmin(env, chatId));
       await tg.editMessage(env, chatId, msgId, mm.text, mm.kb).catch(() => {});
     }
     return;
@@ -310,7 +319,7 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   if (text === "/menu") {
     const s = await st.getState(env, chatId);
     if (s.state === "await_support" || s.state === "await_reply") { s.state = "idle"; await st.saveState(env, chatId, s); }
-    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
+    const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId), await adm.isAdmin(env, chatId));
     return void (await tg.sendMessage(env, chatId, m.text, m.kb));
   }
 
@@ -395,13 +404,25 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     return void (await tg.sendMessage(env, chatId, t(L(s), "bc_done", { sent: r.sent, total: r.total })));
   }
 
+  if (text === "/admin" || text.toLowerCase() === "admin") {
+    const s = await st.getState(env, chatId);
+    if (!(await adm.isAdmin(env, chatId))) {
+      return void (await tg.sendMessage(env, chatId, t(L(s), "owner_only")));
+    }
+    if (s.state === "await_admin_id" || s.state === "await_ban_id" || s.state === "await_ban_reason") {
+      s.state = "idle";
+      await st.saveState(env, chatId, s);
+    }
+    return await showAdminMenu(env, chatId, s, msg.message_id);
+  }
+
   // quick reply keyboard labels
   const rl = ui.REPLY_LABELS[text];
   if (rl) {
     const s = await st.getState(env, chatId);
     if (s.state === "await_reply") { s.state = "idle"; await st.saveState(env, chatId, s).catch(() => {}); }
     if (rl === "menu") {
-      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId));
+      const m = ui.mainMenu(s, msg.from?.first_name, await isOwner(env, chatId), await adm.isAdmin(env, chatId));
       return void (await tg.sendMessage(env, chatId, m.text, m.kb));
     }
     if (rl === "panels") {
@@ -433,8 +454,15 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       return await inUexp(env, chatId, text);
     case "await_fj_chat":
       return await inFjChat(env, chatId, msg, text);
+    case "await_admin_id":
+      return await inAdminId(env, chatId, msg, text);
+    case "await_ban_id":
+      return await inBanId(env, chatId, msg, text);
+    case "await_ban_reason":
+      return await inBanReason(env, chatId, text);
     case "await_support":
       // پس از انتخاب دسته — پیام کاربر بدنهٔ تیکت می‌شود (حتی اگر مالک باشد)
+      if (!text) return; // استیکر/عکس/فایل بدون متن → تیکت خالی نساز
       return await supportText(env, chatId, msg, text, true);
     case "await_reply":
       // کاربر دکمهٔ «پاسخ دادن» را زده — همهٔ پیام‌های بعدی (حتی از مالک)
@@ -503,6 +531,106 @@ async function supportText(env: Env, chatId: number, msg: tg.TgMessage, text: st
 /* ---------------- owner helpers ---------------- */
 async function isOwner(env: Env, chatId: number): Promise<boolean> {
   return (await fj.ownerId(env)) === chatId;
+}
+
+/* ---------------- admin & ban management (owner + admins) ---------------- */
+
+// باز کردن منوی مدیریت ادمین‌ها و مسدودی‌ها
+async function showAdminMenu(env: Env, chatId: number, s: UserState, msgId?: number): Promise<void> {
+  const meta = await fj.botMeta(env);
+  const isOwnerFlag = await isOwner(env, chatId);
+  const [admins, bans] = await Promise.all([adm.listAdmins(env), adm.listBans(env)]);
+  const m = ui.adminMenu(s, meta, isOwnerFlag, admins.length, bans.length);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+// استخراج آیدی عددی هدف از متن یا پیام فورواردشده
+function targetUserId(msg: tg.TgMessage, text: string): number | null {
+  const fwd = msg as unknown as {
+    forward_origin?: { sender_user?: { id?: number } };
+    forward_from?: { id?: number };
+  };
+  const viaOrigin = fwd.forward_origin?.sender_user?.id;
+  const viaFrom = fwd.forward_from?.id;
+  if (Number.isInteger(viaOrigin) && viaOrigin! > 0) return viaOrigin!;
+  if (Number.isInteger(viaFrom) && viaFrom! > 0) return viaFrom!;
+  const m = /(-?\d{5,15})/.exec(text);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+async function inAdminId(env: Env, chatId: number, msg: tg.TgMessage, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  s.state = "idle";
+  const id = targetUserId(msg, text);
+  if (!id || !Number.isInteger(id) || id <= 0) {
+    await tg.sendMessage(env, chatId, "⚠️ آیدی عددی پیدا نشد — یک پیام را فوروارد کن یا آیدی را بفرست.").catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  const who = await adm.userLabel(env, id);
+  const r = await adm.addAdmin(env, id, chatId);
+  await st.saveState(env, chatId, s);
+  if (!r.ok) {
+    await tg.sendMessage(env, chatId, "⛔ " + (r.error || "خطا")).catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  if (!r.changed) {
+    await tg.sendMessage(env, chatId, ui.admAlready(s, who)).catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  await adm.notifyAdminAdded(env, id);
+  await tg.sendMessage(env, chatId, ui.adminAdded(s, who)).catch(() => {});
+  return void (await showAdminMenu(env, chatId, s, undefined));
+}
+
+async function inBanId(env: Env, chatId: number, msg: tg.TgMessage, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const id = targetUserId(msg, text);
+  if (!id || !Number.isInteger(id) || id <= 0) {
+    s.state = "idle";
+    await st.saveState(env, chatId, s);
+    await tg.sendMessage(env, chatId, "⚠️ آیدی عددی پیدا نشد — یک پیام را فوروارد کن یا آیدی را بفرست.").catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  // مالک و ادمین‌ها قابل مسدودسازی نیستند — زودتر جلویش را بگیر
+  if ((await adm.role(env, id)) !== "user") {
+    s.state = "idle";
+    await st.saveState(env, chatId, s);
+    await tg.sendMessage(env, chatId, "⛔ مالک و ادمین‌ها قابل مسدودسازی نیستند.").catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  const who = await adm.userLabel(env, id);
+  s.tmp.banId = id;
+  s.tmp.banName = who;
+  await st.saveState(env, chatId, s);
+  const m = ui.banAskDuration(s, who);
+  await tg.sendMessage(env, chatId, m.text, m.kb).catch(() => {});
+}
+
+async function inBanReason(env: Env, chatId: number, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const id = s.tmp.banId as number | undefined;
+  const who = (s.tmp.banName as string | undefined) || "?";
+  const until = Number(s.tmp.banUntil) || 0;
+  const durId = (s.tmp.banDurId as string | undefined) || "";
+  s.state = "idle";
+  delete s.tmp.banId; delete s.tmp.banName; delete s.tmp.banUntil; delete s.tmp.banDurId;
+  await st.saveState(env, chatId, s);
+  if (id === undefined || !Number.isInteger(id)) return;
+  const reason = text.trim();
+  if (!reason) {
+    await tg.sendMessage(env, chatId, "⚠️ دلیل اجباری است — دوباره شروع کن.").catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  const r = await adm.setBan(env, id, { by: chatId, byName: (await adm.userLabel(env, chatId)), reason, until });
+  if (!r.ok) {
+    await tg.sendMessage(env, chatId, "⛔ " + (r.error || "خطا")).catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  const ban = await adm.getBan(env, id);
+  if (ban) await adm.notifyBanned(env, id, ban);
+  const dur = adm.durationOf(durId) || (until ? { id: "", ms: until, fa: adm.untilLabel(until), en: adm.untilLabel(until) } : { id: "perm", ms: 0, fa: "دائمی", en: "Permanent" });
+  await tg.sendMessage(env, chatId, ui.banDone(s, who, L(s) === "fa" ? dur.fa : dur.en)).catch(() => {});
+  return void (await showAdminMenu(env, chatId, s, undefined));
 }
 
 /* ---------------- forced-join channel setup (owner) ---------------- */
@@ -1091,7 +1219,13 @@ async function navMenu(env: Env, chatId: number, msgId: number, name: string, fi
     case "settings": m = ui.settingsMenu(s); break;
     case "help": m = ui.helpMenu(s); break;
     case "support": m = ui.supportMenu(s); break;
-    case "owner": m = ui.ownerMenu(s, await fj.botMeta(env)); break;
+    case "owner":
+      if (!(await isOwner(env, chatId))) return;
+      m = ui.ownerMenu(s, await fj.botMeta(env));
+      break;
+    case "adm":
+      if (!(await adm.isAdmin(env, chatId))) return;
+      return await showAdminMenu(env, chatId, s, msgId);
     case "tools": m = ui.toolsMenu(s); break;
     case "texts": m = ui.textsMenu(s); break;
     case "promo": m = ui.promoMenu(s); break;
@@ -1110,7 +1244,7 @@ async function navMenu(env: Env, chatId: number, msgId: number, name: string, fi
     case "cf": return await cfEntry(env, chatId, msgId);
     case "mtx": return await mtxEntry(env, chatId, msgId);
     case "warp": return await warpEntry(env, chatId, msgId);
-    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
+    default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId), await adm.isAdmin(env, chatId));
   }
   await reply(env, chatId, msgId, m.text, m.kb);
 }
@@ -1120,6 +1254,15 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   const msgId = cq.message?.message_id;
   const data = cq.data || "";
   if (!chatId || !msgId) return;
+
+  // 🚫 مسدودی — کاربر مسدود هیچ دکمه‌ای را نمی‌تواند بزند
+  const cbBan = await adm.getBan(env, chatId);
+  if (cbBan) {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    await adm.banGateNotice(env, chatId, cbBan);
+    return;
+  }
+
   const s = await st.getState(env, chatId);
   const firstName = cq.from?.first_name;
 
@@ -1133,7 +1276,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     if (joined) {
       const wmsg = cfg.verifyMessage?.trim() || t(L(s), "fj_welcome");
       await tg.sendMessage(env, chatId, wmsg).catch(() => {});
-      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
+      const m = ui.mainMenu(s, firstName, await isOwner(env, chatId), await adm.isAdmin(env, chatId));
       await tg.sendMessage(env, chatId, m.text, m.kb);
     }
     return;
@@ -1160,6 +1303,102 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     const name = data.split(":")[1];
     await tg.answerCallback(env, cq.id).catch(() => {});
     return await navMenu(env, chatId, msgId, name, firstName);
+  }
+
+  /* ---------- مدیریت ادمین‌ها و مسدودی‌ها 👑🚫 ---------- */
+  if (data === "adm:add") {
+    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    s.state = "await_admin_id";
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await tg.sendMessage(env, chatId, ui.adminAskId(s)).catch(() => {}));
+  }
+  if (data === "adm:list") {
+    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const ids = await adm.listAdmins(env);
+    const items: Array<{ id: number; label: string }> = [];
+    for (const id of ids) items.push({ id, label: await adm.userLabel(env, id) });
+    const m = ui.adminList(s, items, await isOwner(env, chatId));
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+  if (data.startsWith("adm:del:")) {
+    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const id = parseInt(data.slice("adm:del:".length), 10);
+    const who = await adm.userLabel(env, id);
+    const r = await adm.removeAdmin(env, id, chatId);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    if (r.ok && r.changed) {
+      await adm.notifyAdminRemoved(env, id);
+      await reply(env, chatId, msgId, ui.adminRemoved(s, who)).catch(() => {});
+    } else if (!r.ok) {
+      await reply(env, chatId, msgId, "⛔ " + (r.error || "خطا")).catch(() => {});
+    }
+    const ids = await adm.listAdmins(env);
+    const items: Array<{ id: number; label: string }> = [];
+    for (const i2 of ids) items.push({ id: i2, label: await adm.userLabel(env, i2) });
+    const m = ui.adminList(s, items, true);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb).catch(() => {}));
+  }
+  if (data === "ban:new") {
+    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    s.state = "await_ban_id";
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await tg.sendMessage(env, chatId, ui.banAskId(s)).catch(() => {}));
+  }
+  if (data === "ban:list") {
+    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const bans = await adm.listBans(env);
+    const items: Array<{ id: number; label: string; reason: string; until: string }> = [];
+    for (const b of bans) {
+      items.push({
+        id: b.chatId,
+        label: await adm.userLabel(env, b.chatId),
+        reason: b.reason,
+        until: b.until ? adm.untilLabel(b.until) : (L(s) === "fa" ? "دائمی" : "Permanent"),
+      });
+    }
+    const m = ui.banList(s, items);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+  if (data.startsWith("ban:dur:")) {
+    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const dur = adm.durationOf(data.slice("ban:dur:".length));
+    if (!dur) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const who = (s.tmp.banName as string | undefined) || "?";
+    s.tmp.banUntil = dur.ms;
+    s.tmp.banDurId = dur.id;
+    s.state = "await_ban_reason";
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id, `📅 ${L(s) === "fa" ? dur.fa : dur.en}`).catch(() => {});
+    const prompt = ui.banAskReason(s, who, L(s) === "fa" ? dur.fa : dur.en);
+    const edited = await tg.editMessage(env, chatId, msgId, prompt, tg.kb([])).catch(() => null);
+    if (!edited || !edited.ok) await tg.sendMessage(env, chatId, prompt).catch(() => {});
+    return;
+  }
+  if (data.startsWith("ban:unban:")) {
+    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const id = parseInt(data.slice("ban:unban:".length), 10);
+    const who = await adm.userLabel(env, id);
+    const r = await adm.unban(env, id, chatId);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    if (r.ok && r.changed) await adm.notifyUnbanned(env, id);
+    if (r.ok) await reply(env, chatId, msgId, ui.unbanDone(s, who)).catch(() => {});
+    else await reply(env, chatId, msgId, "⛔ " + (r.error || "خطا")).catch(() => {});
+    const bans = await adm.listBans(env);
+    const items: Array<{ id: number; label: string; reason: string; until: string }> = [];
+    for (const b of bans) {
+      items.push({
+        id: b.chatId,
+        label: await adm.userLabel(env, b.chatId),
+        reason: b.reason,
+        until: b.until ? adm.untilLabel(b.until) : (L(s) === "fa" ? "دائمی" : "Permanent"),
+      });
+    }
+    const m = ui.banList(s, items);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb).catch(() => {}));
   }
 
   /* ---------- پشتیبانی: انتخاب دستهٔ تیکت ---------- */
@@ -1854,7 +2093,7 @@ async function tryPin(env: Env, chatId: number, pin: string): Promise<void> {
   s.state = "idle";
   await st.saveState(env, chatId, s);
   await tg.sendMessage(env, chatId, t(lang, "pin_unl", { m: String(Math.round(ex.PIN_TTL / 60)) }));
-  const m = ui.mainMenu(s, undefined, await isOwner(env, chatId));
+  const m = ui.mainMenu(s, undefined, await isOwner(env, chatId), await adm.isAdmin(env, chatId));
   await tg.sendMessage(env, chatId, m.text, m.kb);
 }
 

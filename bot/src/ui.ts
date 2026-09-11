@@ -2,6 +2,7 @@
 import { Kb, ReplyKb, kb, replyKb, Btn } from "./telegram";
 import { UserState, PanelRecord, TokenRecord, SkinId } from "./state";
 import { t, Lang } from "./i18n";
+import * as adm from "./admin";
 
 declare const NIKA_VERSION: string;
 export const VERSION = NIKA_VERSION || "0.4.0";
@@ -435,7 +436,7 @@ function closeReasonLabelFa(id?: string): string {
 
 /* ============================ main menu ⚡ ============================ */
 
-export function mainMenu(s: UserState, firstName?: string, isOwner = false): { text: string; kb: Kb } {
+export function mainMenu(s: UserState, firstName?: string, isOwner = false, isAdminFlag = false): { text: string; kb: Kb } {
   const lang = L(s);
   const name = firstName ? esc(firstName) : "دوست";
   const at = activeTok(s);
@@ -474,6 +475,9 @@ export function mainMenu(s: UserState, firstName?: string, isOwner = false): { t
   // مالک فقط — مدیریت بات (عضویت اجباری + ادمین کردن در کانال)
   if (isOwner) {
     rows.push([{ text: t(lang, "o_menu"), cb: "menu:owner", color: "danger", emoji: false }]);
+  } else if (isAdminFlag) {
+    // ادمین (غیرمالک) — مدیریت ادمین‌ها و مسدودی‌ها
+    rows.push([{ text: t(lang, "a_menu"), cb: "menu:adm", color: "danger", emoji: false }]);
   }
   return { text: makeText(t(lang, "main_title"), body, t(lang, "choose"), t(lang, "main_crumb"), "main"), kb: kb(rows) };
 }
@@ -603,10 +607,149 @@ export function ownerMenu(s: UserState, meta: BotMeta): { text: string; kb: Kb }
     }],
     [{ text: t(lang, "o_fj_set"), cb: "fj:setchat", color: "success", emoji: false }],
     [{ text: t(lang, "o_fj_status"), cb: "fj:status", color: "gray", emoji: false }],
+    [{ text: lang === "fa" ? "👑 مدیریت ادمین‌ها و مسدودی‌ها" : "👑 Admins & bans", cb: "menu:adm", color: "danger", emoji: false }],
     [{ text: t(lang, "o_panel"), url: `${meta.origin}/panel`, color: "primary", emoji: false }],
     [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
   ];
   return { text: makeText(t(lang, "o_title"), body, t(lang, "choose"), t(lang, "o_crumb"), "owner"), kb: kb(rows) };
+}
+
+/* ============================ مدیریت ادمین‌ها و مسدودی‌ها 👑🚫 ============================ */
+
+export function adminMenu(
+  s: UserState,
+  meta: BotMeta,
+  isOwnerFlag: boolean,
+  adminsCount: number,
+  bansCount: number
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = [
+    lang === "fa"
+      ? "مدیریت ادمین‌ها و مسدودی‌های ربات. هر تغییری داخل خودِ ربات به کاربر اطلاع داده می‌شود."
+      : "Manage bot admins and bans. Every change is notified to the user inside the bot.",
+    "",
+    card("👥 " + (lang === "fa" ? "ادمین‌ها" : "Admins"),
+      [lang === "fa" ? `تعداد: ${fa_num(adminsCount)} نفر` : `Count: ${adminsCount}`]),
+    "",
+    card("🚫 " + (lang === "fa" ? "مسدودی‌ها" : "Bans"),
+      [lang === "fa" ? `تعداد: ${fa_num(bansCount)} مسدود فعال` : `Count: ${bansCount} active`]),
+  ].join("\n");
+  const rows: Btn[][] = [];
+  if (isOwnerFlag) {
+    rows.push([{ text: lang === "fa" ? "👑 افزودن ادمین" : "👑 Add admin", cb: "adm:add", color: "success", emoji: false }]);
+  }
+  rows.push([{ text: lang === "fa" ? "👥 لیست ادمین‌ها" : "👥 Admin list", cb: "adm:list", color: "primary", emoji: false }]);
+  rows.push([{ text: lang === "fa" ? "🚫 مسدود کردن کاربر" : "🚫 Ban user", cb: "ban:new", color: "danger", emoji: false }]);
+  rows.push([{ text: lang === "fa" ? "📋 مسدودهای فعال" : "📋 Active bans", cb: "ban:list", color: "gray", emoji: false }]);
+  rows.push([{ text: lang === "fa" ? "⚙️ پنل مدیریت (وب)" : "⚙️ Admin panel (web)", url: `${meta.origin}/panel`, color: "primary", emoji: false }]);
+  rows.push([{ text: lang === "fa" ? "🔙 بازگشت" : "🔙 Back", cb: isOwnerFlag ? "menu:owner" : "menu:main", color: "gray", emoji: false }]);
+  return { text: makeText(lang === "fa" ? "مدیریت ربات" : "Bot admin", body, t(lang, "choose"), lang === "fa" ? "مدیریت" : "Admin", "danger"), kb: kb(rows) };
+}
+
+export const adminAskId = (s: UserState): string =>
+  L(s) === "fa"
+    ? "👑 <b>افزودن ادمین</b>\n\nپیام کاربر موردنظر را <b>فوروارد</b> کن، یا آیدی عددی‌اش را همین‌جا بفرست.\n\n⛔ ادمین‌ها به پنل مدیریت دسترسی می‌گیرند؛ پس فقط افراد مورداعتمادت را اضافه کن."
+    : "👑 <b>Add admin</b>\n\nForward a message from the target user, or send their numeric ID here.\n\n⛔ Admins get panel access — only add people you trust.";
+
+export const banAskId = (s: UserState): string =>
+  L(s) === "fa"
+    ? "🚫 <b>مسدود کردن کاربر</b>\n\nپیام کاربر را <b>فوروارد</b> کن، یا آیدی عددی‌اش را بفرست.\n\nبعد از آن مدت و دلیل را می‌پرسم."
+    : "🚫 <b>Ban user</b>\n\nForward a message from the user, or send their numeric ID.\n\nI'll then ask for the duration and reason.";
+
+export const banAskDuration = (s: UserState, who: string): { text: string; kb: Kb } => {
+  const lang = L(s);
+  const rows: Btn[][] = [];
+  for (let i = 0; i < adm.BAN_DURATIONS.length; i += 2) {
+    const a = adm.BAN_DURATIONS[i];
+    const b = adm.BAN_DURATIONS[i + 1];
+    const row: Btn[] = [{ text: lang === "fa" ? a.fa : a.en, cb: `ban:dur:${a.id}`, color: "danger", emoji: false }];
+    if (b) row.push({ text: lang === "fa" ? b.fa : b.en, cb: `ban:dur:${b.id}`, color: "danger", emoji: false });
+    rows.push(row);
+  }
+  rows.push([{ text: lang === "fa" ? "🔙 انصراف" : "🔙 Cancel", cb: "menu:adm", color: "gray", emoji: false }]);
+  return {
+    text: makeText(
+      lang === "fa" ? "مسدودسازی" : "Ban",
+      (lang === "fa" ? "👤 کاربر: " : "👤 User: ") + `<b>${esc(who)}</b>\n\n` +
+        (lang === "fa" ? "مدت مسدودی را انتخاب کن:" : "Pick the ban duration:"),
+      null, lang === "fa" ? "مدیریت" : "Admin", "danger"
+    ),
+    kb: kb(rows),
+  };
+};
+
+export const banAskReason = (s: UserState, who: string, durationLabel: string): string =>
+  L(s) === "fa"
+    ? `🚫 <b>مسدود کردن «${esc(who)}»</b>\n📅 مدت: ${esc(durationLabel)}\n\n<b>دلیل مسدودسازی را بنویس (اجباری):</b>`
+    : `🚫 <b>Ban “${esc(who)}”</b>\n📅 Duration: ${esc(durationLabel)}\n\n<b>Write the reason (required):</b>`;
+
+export const banDone = (s: UserState, who: string, durationLabel: string): string =>
+  L(s) === "fa"
+    ? `✅ <b>«${esc(who)}» مسدود شد.</b>\n📅 مدت: ${esc(durationLabel)}\n\nداخل ربات به خودش اطلاع داده شد.`
+    : `✅ <b>“${esc(who)}” banned.</b>\n📅 Duration: ${esc(durationLabel)}\n\nThey were notified inside the bot.`;
+
+export const unbanDone = (s: UserState, who: string): string =>
+  L(s) === "fa"
+    ? `✅ <b>مسدودی «${esc(who)}» برداشته شد.</b>\nداخل ربات به خودش اطلاع داده شد.`
+    : `✅ <b>“${esc(who)}” unbanned.</b>\nThey were notified inside the bot.`;
+
+export const adminAdded = (s: UserState, who: string): string =>
+  L(s) === "fa"
+    ? `👑 <b>«${esc(who)}» به‌عنوان ادمین اضافه شد.</b>\nداخل ربات به خودش اطلاع داده شد.`
+    : `👑 <b>“${esc(who)}” is now an admin.</b>\nThey were notified inside the bot.`;
+
+export const adminRemoved = (s: UserState, who: string): string =>
+  L(s) === "fa"
+    ? `🔔 <b>دسترسی ادمینِ «${esc(who)}» برداشته شد.</b>\nداخل ربات به خودش اطلاع داده شد.`
+    : `🔔 <b>“${esc(who)}” was removed from admins.</b>\nThey were notified inside the bot.`;
+
+export const admAlready = (s: UserState, who: string): string =>
+  L(s) === "fa"
+    ? `ℹ️ «${esc(who)}» از قبل ادمین است.`
+    : `ℹ️ “${esc(who)}” is already an admin.`;
+
+export function adminList(
+  s: UserState,
+  admins: Array<{ id: number; label: string }>,
+  isOwnerFlag: boolean
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = admins.length
+    ? admins.map((a, i) => `${lang === "fa" ? fa_num(i + 1) : i + 1}) <b>${esc(a.label)}</b> · <code>${a.id}</code>`).join("\n")
+    : (lang === "fa" ? "هنوز ادمینی اضافه نشده." : "No admins yet.");
+  const rows: Btn[][] = [];
+  if (isOwnerFlag) {
+    for (const a of admins) {
+      rows.push([{ text: (lang === "fa" ? "🔔 حذف " : "🔔 Remove ") + esc(a.label), cb: `adm:del:${a.id}`, color: "danger", emoji: false }]);
+    }
+  }
+  rows.push([{ text: lang === "fa" ? "🔙 بازگشت" : "🔙 Back", cb: "menu:adm", color: "gray", emoji: false }]);
+  return {
+    text: makeText(lang === "fa" ? "لیست ادمین‌ها" : "Admin list", body, t(lang, "choose"), lang === "fa" ? "مدیریت" : "Admin", "danger"),
+    kb: kb(rows),
+  };
+}
+
+export function banList(
+  s: UserState,
+  bans: Array<{ id: number; label: string; reason: string; until: string }>
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = bans.length
+    ? bans.map((b, i) =>
+        `${lang === "fa" ? fa_num(i + 1) : i + 1}) <b>${esc(b.label)}</b> · <code>${b.id}</code>\n   📌 ${esc(b.reason)}\n   📅 ${esc(b.until)}`
+      ).join("\n\n")
+    : (lang === "fa" ? "هیچ مسدود فعالی وجود ندارد." : "No active bans.");
+  const rows: Btn[][] = [];
+  for (const b of bans) {
+    rows.push([{ text: (lang === "fa" ? "✅ رفع مسدودی " : "✅ Unban ") + esc(b.label), cb: `ban:unban:${b.id}`, color: "success", emoji: false }]);
+  }
+  rows.push([{ text: lang === "fa" ? "🔙 بازگشت" : "🔙 Back", cb: "menu:adm", color: "gray", emoji: false }]);
+  return {
+    text: makeText(lang === "fa" ? "مسدودهای فعال" : "Active bans", body, t(lang, "choose"), lang === "fa" ? "مدیریت" : "Admin", "danger"),
+    kb: kb(rows),
+  };
 }
 
 export const fjAskChat = (s: UserState): string => t(L(s), "fj_ask");

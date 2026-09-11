@@ -13,6 +13,7 @@ import * as fj from "./forcedjoin";
 import * as sup from "./support";
 import * as ui from "./ui";
 import * as auth from "./auth";
+import * as adm from "./admin";
 import * as bc from "./broadcast";
 
 const PANEL_HTML = `<!doctype html>
@@ -445,9 +446,9 @@ const PANEL_HTML = `<!doctype html>
         <div class="row" style="display:flex;gap:10px;margin-top:18px">
           <button class="btn btn-p" id="lgGoPass" style="flex:1">🔑 ورود با رمز</button>
         </div>
-        <div class="hint" id="lgPassMsg" style="text-align:right">اگر رمز نداری، با «کد تلگرام» وارد شو و بعد از پنل رمز تنظیم کن.</div>
+        <div class="hint" id="lgPassMsg" style="text-align:right">مالک و ادمین‌ها با رمز عبور وارد می‌شوند. اگر رمز تنظیم نشده، مالک باید از پنل آن را بسازد.</div>
       </div>
-      <div class="hint" id="lgMsg">فقط <b>مالک ربات</b> می‌تواند وارد شود.</div>
+      <div class="hint" id="lgMsg">کد تلگرام فقط برای <b>مالک</b> است · ادمین‌ها با <b>رمز عبور</b> وارد می‌شوند.</div>
       <div class="olink-divider"><span>لینک‌های رسمی Nika Net</span></div><div class="olinks col"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
       <div class="ver">Nika Net Panel · v0.11.1</div>
     </div>
@@ -474,38 +475,30 @@ const PANEL_HTML = `<!doctype html>
   <div class="shell">
     <div class="nav">
       <button data-v="overview" class="on"><span class="ni">📊</span>داشبورد</button>
-      <button data-v="pm"><span class="ni">💬</span>پیام شخصی<span class="badge hide" id="pmBadge">0</span></button>
+      <button data-v="users"><span class="ni">👥</span>کاربران</button>
+      <button data-v="admins"><span class="ni">👑</span>ادمین‌ها</button>
+      <button data-v="bans"><span class="ni">🚫</span>مسدودی‌ها<span class="badge hide" id="banBadge">0</span></button>
       <button data-v="support"><span class="ni">🎧</span>پشتیبانی<span class="badge hide" id="supBadge">0</span></button>
+      <button data-v="pm"><span class="ni">💬</span>پیام شخصی<span class="badge hide" id="pmBadge">0</span></button>
+      <button data-v="forcedjoin" class="owner-only"><span class="ni">🔒</span>عضویت اجباری</button>
+      <button data-v="broadcast" class="owner-only"><span class="ni">📣</span>پیام همگانی</button>
+      <button data-v="settings" class="owner-only"><span class="ni">⚙️</span>تنظیمات</button>
     </div>
     <div id="view-overview">
     <!-- hero -->
     <div class="hero">
       <div class="hero-inner">
         <div>
-          <h1>سلام، مالک <span class="wave">👋</span></h1>
+          <h1 id="heroHi">سلام، مالک <span class="wave">👋</span></h1>
           <p id="heroDate">—</p>
         </div>
-        <div class="hero-right">
+        <div class="hero-right owner-only">
           <div class="hero-switch">
             <div class="lbl" id="heroFjLabel">عضویت اجباری</div>
             <div class="switch" id="heroFj"></div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>🔑 رمز عبور پنل <span class="mini">ورود بدون کد تلگرام</span></h2>
-      <div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap">
-        <input id="pwNew" type="password" placeholder="رمز عبور جدید (حداقل ۶ کاراکتر)" dir="ltr" style="flex:1;min-width:200px" autocomplete="new-password" />
-        <button class="btn btn-p" id="pwSet" style="flex:0 0 auto">ذخیره رمز</button>
-      </div>
-      <div class="hint" id="pwState" style="margin-top:10px">در حال بررسی…</div>
-    </div>
-
-    <div class="card">
-      <h2>🔗 دسترسی سریع <span class="mini">کانال‌های رسمی Nika Net</span></h2>
-      <div class="olinks"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
     </div>
 
     <!-- KPI -->
@@ -546,6 +539,76 @@ const PANEL_HTML = `<!doctype html>
       </div>
     </div>
 
+    <div class="card">
+      <h2>🔗 دسترسی سریع <span class="mini">کانال‌های رسمی Nika Net</span></h2>
+      <div class="olinks"><a class="olink" href="https://t.me/NikaNetLauncher_bot" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 24 L14.5 30 L17 36 L26.5 13.5 Z"/><path d="M17 36 L14.5 30"/><rect x="28" y="11" width="16" height="11" rx="4"/><line x1="36" y1="11" x2="36" y2="6.5"/><circle cx="36" cy="5.8" r="1.4"/><circle cx="32.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><circle cx="39.5" cy="16" r="1.2" fill="currentColor" stroke="none"/><rect x="28" y="24" width="16" height="12" rx="4"/><g class="wave-arm"><path d="M42 27 L46.5 20.5"/><circle cx="46.5" cy="19" r="1.8"/><path d="M46.5 19 l-1.6-1.4 M46.5 19 l.3-2 M46.5 19 l1.6-.6"/></g></svg></span><span class="olink-t"><b>ربات تلگرام Nika Net</b><i>@NikaNetLauncher_bot</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://t.me/NikaSociety" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 23.5 h12 l12 -7.5 v16 l-12 -7.5 h-12 z"/><line x1="8" y1="27.5" x2="8" y2="31.5"/><path d="M34 17.5 a6 6 0 0 1 0 13"/><path d="M37.5 14.5 a9.5 9.5 0 0 1 0 19"/></svg></span><span class="olink-t"><b>کانال تلگرام Nika Net</b><i>@NikaSociety</i></span><span class="olink-go">↗</span></a><a class="olink" href="https://nikanet.dpdns.org" target="_blank" rel="noopener"><span class="badge-ring"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="15.5"/><line x1="8.5" y1="24" x2="39.5" y2="24"/><ellipse cx="24" cy="24" rx="6.5" ry="15.5"/><path d="M12 15.5 Q24 8 36 15.5"/><path d="M12 32.5 Q24 40 36 32.5"/></svg></span><span class="olink-t"><b>وبسایت Nika Net</b><i>nikanet.dpdns.org</i></span><span class="olink-go">↗</span></a></div>
+    </div>
+
+    </div><!-- /view-overview -->
+
+    <div id="view-users" class="hidden">
+    <!-- users -->
+    <div class="card">
+      <h2>👥 کاربران <span class="mini" id="usrCount">—</span></h2>
+      <div class="usr-stats" id="usrStats"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="search" style="flex:1;min-width:200px"><input id="usrSearch" placeholder="جستجو: نام، آیدی یا یوزرنیم…" /></div>
+        <button class="btn btn-ghost" id="usrCsv">⬇ خروجی CSV</button>
+      </div>
+      <div style="max-height:440px;overflow:auto">
+        <table class="utable">
+          <thead><tr>
+            <th class="sortable" data-sort="name">کاربر <span class="sarr"></span></th>
+            <th class="sortable" data-sort="id">آیدی <span class="sarr"></span></th>
+            <th class="sortable" data-sort="status">وضعیت <span class="sarr"></span></th>
+            <th class="sortable" data-sort="lastSeen">آخرین بازدید <span class="sarr"></span></th>
+            <th></th>
+          </tr></thead>
+          <tbody id="usrBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state hidden" id="usrEmpty">کاربری یافت نشد</div>
+    </div>
+
+    </div><!-- /view-users -->
+
+    <div id="view-admins" class="hidden">
+      <div class="card">
+        <div class="card-h"><div class="ic">👑</div><h2>ادمین‌ها <span class="mini">مدیریت دسترسی پنل — هر تغییری به کاربر اطلاع داده می‌شود</span></h2></div>
+        <div class="toolbar owner-only" style="display:flex;gap:8px;padding:12px 14px 0">
+          <div class="search" style="flex:1"><input id="admAddId" placeholder="آیدی عددی کاربر برای افزودن ادمین…" dir="ltr" /></div>
+          <button class="btn btn-p btn-sm" id="admAddBtn">👑 افزودن ادمین</button>
+        </div>
+        <div class="hint" style="margin:10px 14px 0;display:none" id="admHint"></div>
+        <div style="max-height:420px;overflow:auto;padding:0 14px 14px">
+          <table class="utable">
+            <thead><tr><th>ادمین</th><th>آیدی</th><th></th></tr></thead>
+            <tbody id="admBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state hidden" id="admEmpty">ادمینی اضافه نشده است</div>
+      </div>
+    </div><!-- /view-admins -->
+
+    <div id="view-bans" class="hidden">
+      <div class="card">
+        <div class="card-h"><div class="ic">🚫</div><h2>مسدودی‌ها <span class="mini">مسدودسازی زمان‌دار با دلیل اجباری — به کاربر اطلاع داده می‌شود</span></h2></div>
+        <div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px 0">
+          <div class="search" style="flex:1;min-width:180px"><input id="banNewId" placeholder="آیدی عددی کاربر برای مسدودسازی…" dir="ltr" /></div>
+          <button class="btn btn-danger btn-sm" id="banNewBtn">🚫 مسدود کن</button>
+          <button class="btn btn-ghost btn-sm" id="banRefresh">🔄 بروزرسانی</button>
+        </div>
+        <div style="max-height:420px;overflow:auto;padding:0 14px 14px">
+          <table class="utable">
+            <thead><tr><th>کاربر</th><th>آیدی</th><th>دلیل</th><th>تا</th><th>توسط</th><th></th></tr></thead>
+            <tbody id="banBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state hidden" id="banEmpty">مسدودی فعالی وجود ندارد</div>
+      </div>
+    </div><!-- /view-bans -->
+
+    <div id="view-forcedjoin" class="hidden">
     <!-- forced join -->
     <div class="card">
       <h2>🔒 عضویت اجباری <span class="mini">غیرعضوها تا عضویت + تأیید، از ربات مسدودند</span></h2>
@@ -600,29 +663,9 @@ const PANEL_HTML = `<!doctype html>
       <div id="fjTestOut" style="margin-top:14px"></div>
     </div>
 
-    <!-- users -->
-    <div class="card">
-      <h2>👥 کاربران <span class="mini" id="usrCount">—</span></h2>
-      <div class="usr-stats" id="usrStats"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-        <div class="search" style="flex:1;min-width:200px"><input id="usrSearch" placeholder="جستجو: نام، آیدی یا یوزرنیم…" /></div>
-        <button class="btn btn-ghost" id="usrCsv">⬇ خروجی CSV</button>
-      </div>
-      <div style="max-height:440px;overflow:auto">
-        <table class="utable">
-          <thead><tr>
-            <th class="sortable" data-sort="name">کاربر <span class="sarr"></span></th>
-            <th class="sortable" data-sort="id">آیدی <span class="sarr"></span></th>
-            <th class="sortable" data-sort="status">وضعیت <span class="sarr"></span></th>
-            <th class="sortable" data-sort="lastSeen">آخرین بازدید <span class="sarr"></span></th>
-            <th></th>
-          </tr></thead>
-          <tbody id="usrBody"></tbody>
-        </table>
-      </div>
-      <div class="empty-state hidden" id="usrEmpty">کاربری یافت نشد</div>
-    </div>
+    </div><!-- /view-forcedjoin -->
 
+    <div id="view-broadcast" class="hidden">
     <!-- broadcast composer v2 -->
     <div class="card">
       <h2>📣 پیام همگانی <span class="mini">قالب برندشدهٔ Nika Net</span></h2>
@@ -663,6 +706,18 @@ const PANEL_HTML = `<!doctype html>
       </div>
     </div>
 
+    </div><!-- /view-broadcast -->
+
+    <div id="view-settings" class="hidden">
+    <div class="card owner-only">
+      <h2>🔑 رمز عبور پنل <span class="mini">ورود بدون کد تلگرام</span></h2>
+      <div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap">
+        <input id="pwNew" type="password" placeholder="رمز عبور جدید (حداقل ۶ کاراکتر)" dir="ltr" style="flex:1;min-width:200px" autocomplete="new-password" />
+        <button class="btn btn-p" id="pwSet" style="flex:0 0 auto">ذخیره رمز</button>
+      </div>
+      <div class="hint" id="pwState" style="margin-top:10px">در حال بررسی…</div>
+    </div>
+
     <!-- info -->
     <div class="card">
       <h2>⚙️ اطلاعات و دسترسی</h2>
@@ -675,7 +730,8 @@ const PANEL_HTML = `<!doctype html>
         <button class="btn btn-ghost btn-sm" id="copyPanel" style="margin-top:12px">📋 کپی آدرس پنل</button>
         <div class="hint">برای بررسی عضویت، ربات باید در کانال هدف <b>ادمین</b> باشد. با دکمهٔ بالا کانال را انتخاب کن تا خودکار اضافه شود.</div>
       </div>
-    </div><!-- /view-overview -->
+    </div><!-- /view-settings -->
+
 
     <div id="view-pm" class="hidden">
       <div class="card" style="padding:0;overflow:hidden">
@@ -756,6 +812,24 @@ const PANEL_HTML = `<!doctype html>
   </div>
 </div>
 
+
+<div class="modal-overlay hidden" id="banModal">
+  <div class="modal">
+    <div class="modal-h">🚫 مسدود کردن کاربر <button class="modal-x" id="banCancel">✕</button></div>
+    <div class="modal-b">
+      <div class="modal-lbl">کاربر</div>
+      <div id="banWho" style="font-size:14px;font-weight:800;margin-top:4px">—</div>
+      <div class="modal-lbl" style="margin-top:16px">مدت مسدودی</div>
+      <div class="reason-chips" id="banDurs" style="margin-top:6px"></div>
+      <div class="modal-lbl" style="margin-top:16px">دلیل <span class="mini">(اجباری)</span></div>
+      <textarea id="banReason" rows="2" placeholder="مثلاً: ارسال اسپم به کاربران…"></textarea>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" id="banCancel2">انصراف</button>
+      <button class="btn btn-danger" id="banGo">🚫 مسدود کن</button>
+    </div>
+  </div>
+</div>
 <script>
 (function () {
   "use strict";
@@ -916,7 +990,7 @@ const PANEL_HTML = `<!doctype html>
 
   // ===== ناوبری =====
   var setView = function (v) {
-    ["overview", "pm", "support"].forEach(function (x) {
+    ["overview", "users", "admins", "bans", "pm", "support", "forcedjoin", "broadcast", "settings"].forEach(function (x) {
       var el = $("#view-" + x);
       if (el) el.classList.toggle("hidden", x !== v);
     });
@@ -928,7 +1002,9 @@ const PANEL_HTML = `<!doctype html>
         var v = b.getAttribute("data-v");
         if (v === "pm") { setView("pm"); loadPmThreads(); }
         else if (v === "support") { setView("support"); loadTickets(); }
-        else setView("overview");
+        else if (v === "admins" || v === "bans") { setView(v); loadMgmt(); }
+        else if (v === "users") { setView("users"); loadUsers(); }
+        else setView(v);
       };
     });
   };
@@ -1352,12 +1428,16 @@ const PANEL_HTML = `<!doctype html>
     render();
     await Promise.all([loadStats(), loadUsers()]);
     bootSupport();
+    loadMgmt();
     loadBcHistory();
     updateBcPreview();
   }
 
   function render() {
     var f = state.fj, b = state.bot;
+    // نقش نشست: مالک همهٔ بخش‌ها را می‌بیند؛ ادمین فقط بخش‌های مدیریتی
+    $$(".owner-only").forEach(function (el) { el.classList.toggle("hidden", state.role !== "owner"); });
+    if ($("#heroHi")) $("#heroHi").innerHTML = state.role === "owner" ? 'سلام، مالک <span class="wave">👋</span>' : 'سلام، ادمین <span class="wave">👋</span>';
     $("#botName").textContent = "@" + b.username;
     $("#heroDate").textContent = new Date().toLocaleDateString("fa-IR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " · اینجا خلاصهٔ وضعیت رباتته";
     $("#botUname").textContent = "@" + b.username;
@@ -1539,6 +1619,8 @@ const PANEL_HTML = `<!doctype html>
 
   function statusBadge(u) {
     if (u.owner) return '<span class="pill info"><span class="d"></span>👑 مالک</span>';
+    if (u.banned) return '<span class="pill off"><span class="d"></span>🚫 مسدود</span>';
+    if (u.isAdmin) return '<span class="pill warn"><span class="d"></span>🛡 ادمین</span>';
     if (u.exempt) return '<span class="pill warn"><span class="d"></span>🛡 معاف</span>';
     if (!u.fjEnabled) return '<span class="pill mute"><span class="d"></span>آزاد</span>';
     if (u.joined) return '<span class="pill ok"><span class="d"></span>✓ عضو</span>';
@@ -1635,7 +1717,34 @@ const PANEL_HTML = `<!doctype html>
       pmBtn.textContent = "💬 پیام";
       pmBtn.onclick = function () { startPmFromUser(u.id); };
       acts.appendChild(pmBtn);
-      if (!u.owner) {
+      // 👑 ادمین کن / 🔔 حذف ادمین — فقط مالک
+      if (!u.owner && state && state.role === "owner") {
+        var ab = document.createElement("button");
+        ab.className = "btn btn-ghost btn-sm";
+        if (u.isAdmin) {
+          ab.textContent = "🔔 حذف ادمین";
+          ab.onclick = function () { setAdmin(u, false); };
+        } else {
+          ab.textContent = "👑 ادمین کن";
+          ab.onclick = function () { setAdmin(u, true); };
+        }
+        acts.appendChild(ab);
+      }
+      // 🚫 مسدود / ✅ رفع مسدودی — مالک و ادمین
+      if (!u.owner && !u.isAdmin) {
+        var bb = document.createElement("button");
+        bb.className = u.banned ? "btn btn-s btn-sm" : "btn btn-ghost btn-sm";
+        if (u.banned) {
+          bb.textContent = "✅ رفع مسدودی";
+          bb.onclick = function () { unbanUser(u.id); };
+        } else {
+          bb.textContent = "🚫 مسدود";
+          bb.onclick = function () { openBanModal(u); };
+        }
+        acts.appendChild(bb);
+      }
+      // 🛡 معاف — فقط مالک
+      if (!u.owner && state && state.role === "owner") {
         var b = document.createElement("button");
         b.className = "btn btn-ghost btn-sm";
         b.textContent = u.exempt ? "لغو معافیت" : "معاف کن";
@@ -1652,9 +1761,11 @@ const PANEL_HTML = `<!doctype html>
 
   function usrRank(u) {
     if (u.owner) return 0;
-    if (u.exempt) return 1;
-    if (!u.fjEnabled) return 4;
-    return u.joined ? 2 : 3;
+    if (u.banned) return 1;
+    if (u.isAdmin) return 2;
+    if (u.exempt) return 3;
+    if (!u.fjEnabled) return 6;
+    return u.joined ? 4 : 5;
   }
 
   function renderUsrStats() {
@@ -1864,6 +1975,177 @@ const PANEL_HTML = `<!doctype html>
     } else { o.innerHTML = "<b>⛔ " + ((r.j && r.j.error) || "خطا") + "</b>"; }
   };
 
+  /* ---------- admins & bans management 👑🚫 ---------- */
+  var mgmt = null;
+  var banTarget = null;
+  var banSelMs = 86400000;
+
+  var BAN_DURS = [
+    { id: "1h", ms: 3600000, fa: "۱ ساعت" },
+    { id: "6h", ms: 21600000, fa: "۶ ساعت" },
+    { id: "1d", ms: 86400000, fa: "۱ روز" },
+    { id: "3d", ms: 259200000, fa: "۳ روز" },
+    { id: "7d", ms: 604800000, fa: "۷ روز" },
+    { id: "30d", ms: 2592000000, fa: "۳۰ روز" },
+    { id: "perm", ms: 0, fa: "دائمی" }
+  ];
+
+  async function loadMgmt() {
+    var r = await api("/panel/api/admins");
+    if (r.ok && r.j) mgmt = r.j;
+    renderAdmins();
+    renderBans();
+  }
+
+  function renderAdmins() {
+    var body = $("#admBody"), empty = $("#admEmpty");
+    if (!body) return;
+    var list = (mgmt && mgmt.admins) || [];
+    body.innerHTML = "";
+    empty.classList.toggle("hidden", list.length > 0);
+    list.forEach(function (a) {
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td");
+      var usr = document.createElement("div"); usr.className = "usr";
+      var av = document.createElement("div"); av.className = "avatar"; av.textContent = (a.label || "؟").charAt(0);
+      var nm = document.createElement("div");
+      var nmn = document.createElement("div"); nmn.className = "uname"; nmn.textContent = a.label || "بدون نام";
+      nm.appendChild(nmn);
+      usr.appendChild(av); usr.appendChild(nm);
+      td1.appendChild(usr);
+      var td2 = document.createElement("td");
+      var idv = document.createElement("div"); idv.className = "umeta"; idv.dir = "ltr"; idv.textContent = a.id; idv.style.cursor = "pointer";
+      idv.onclick = function () { copyId(a.id); };
+      td2.appendChild(idv);
+      var td3 = document.createElement("td");
+      if (mgmt && mgmt.isOwner) {
+        var rb = document.createElement("button"); rb.className = "btn btn-danger btn-sm"; rb.textContent = "🔔 حذف ادمین";
+        rb.onclick = function () { setAdminById(a.id, false); };
+        td3.appendChild(rb);
+      }
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+      body.appendChild(tr);
+    });
+  }
+
+  function fmtUntil(until) {
+    if (!until) return "دائمی";
+    var d = new Date(until);
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function renderBans() {
+    var body = $("#banBody"), empty = $("#banEmpty");
+    if (!body) return;
+    var list = (mgmt && mgmt.bans) || [];
+    body.innerHTML = "";
+    empty.classList.toggle("hidden", list.length > 0);
+    var bb = $("#banBadge");
+    if (bb) { bb.textContent = list.length; bb.classList.toggle("hide", list.length === 0); }
+    list.forEach(function (b) {
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td");
+      var usr = document.createElement("div"); usr.className = "usr";
+      var av = document.createElement("div"); av.className = "avatar"; av.textContent = (b.label || "؟").charAt(0);
+      var nm = document.createElement("div");
+      var nmn = document.createElement("div"); nmn.className = "uname"; nmn.textContent = b.label || "بدون نام";
+      nm.appendChild(nmn);
+      usr.appendChild(av); usr.appendChild(nm);
+      td1.appendChild(usr);
+      var td2 = document.createElement("td");
+      var idv = document.createElement("div"); idv.className = "umeta"; idv.dir = "ltr"; idv.textContent = b.chatId; idv.style.cursor = "pointer";
+      idv.onclick = function () { copyId(b.chatId); };
+      td2.appendChild(idv);
+      var td3 = document.createElement("td");
+      var rs = document.createElement("div"); rs.className = "umeta"; rs.style.maxWidth = "200px"; rs.style.overflow = "hidden"; rs.style.textOverflow = "ellipsis"; rs.textContent = b.reason;
+      td3.appendChild(rs);
+      var td4 = document.createElement("td");
+      var tl = document.createElement("div"); tl.className = "umeta"; tl.textContent = fmtUntil(b.until);
+      td4.appendChild(tl);
+      var td5 = document.createElement("td");
+      var by = document.createElement("div"); by.className = "umeta"; by.textContent = (b.byName || b.by || "—");
+      td5.appendChild(by);
+      var td6 = document.createElement("td");
+      var ub = document.createElement("button"); ub.className = "btn btn-s btn-sm"; ub.textContent = "✅ رفع مسدودی";
+      ub.onclick = function () { unbanUser(b.chatId); };
+      td6.appendChild(ub);
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5); tr.appendChild(td6);
+      body.appendChild(tr);
+    });
+  }
+
+  async function setAdmin(u, on) {
+    var r = await api("/panel/api/admins", { method: "POST", body: { action: on ? "add" : "remove", id: u.id } });
+    if (r.ok) { await loadMgmt(); await loadUsers(); toast(on ? "ادمین اضافه شد ✓" : "ادمین حذف شد"); }
+    else toast(r.j.error || "خطا");
+  }
+
+  async function setAdminById(id, on) {
+    var r = await api("/panel/api/admins", { method: "POST", body: { action: on ? "add" : "remove", id: id } });
+    if (r.ok) { await loadMgmt(); await loadUsers(); toast(on ? "ادمین اضافه شد ✓" : "ادمین حذف شد"); }
+    else toast(r.j.error || "خطا");
+  }
+
+  function openBanModal(u) {
+    banTarget = { id: u.id, label: ((u.name || "") + " " + (u.lastName || "")).trim() || ("آیدی " + u.id) };
+    banSelMs = 86400000;
+    $("#banWho").textContent = banTarget.label;
+    renderBanDurs();
+    $("#banReason").value = "";
+    $("#banModal").classList.remove("hidden");
+  }
+
+  function renderBanDurs() {
+    var wrap = $("#banDurs");
+    wrap.innerHTML = "";
+    BAN_DURS.forEach(function (d) {
+      var chip = document.createElement("button");
+      chip.className = "rchip" + (d.ms === banSelMs ? " on" : "");
+      chip.textContent = d.fa;
+      chip.onclick = function () { banSelMs = d.ms; renderBanDurs(); };
+      wrap.appendChild(chip);
+    });
+  }
+
+  $("#banCancel").onclick = function () { $("#banModal").classList.add("hidden"); };
+  $("#banCancel2").onclick = function () { $("#banModal").classList.add("hidden"); };
+  $("#banGo").onclick = async function () {
+    var reason = $("#banReason").value.trim();
+    if (!reason) { toast("دلیل مسدودسازی اجباری است"); return; }
+    if (!banTarget) return;
+    var r = await api("/panel/api/ban", { method: "POST", body: { id: banTarget.id, until: banSelMs, reason: reason } });
+    if (r.ok) {
+      $("#banModal").classList.add("hidden");
+      await loadMgmt(); await loadUsers();
+      toast("کاربر مسدود شد — به او اطلاع داده شد ✓");
+    } else toast(r.j.error || "خطا");
+  };
+
+  async function unbanUser(id) {
+    var r = await api("/panel/api/unban", { method: "POST", body: { id: id } });
+    if (r.ok) { await loadMgmt(); await loadUsers(); toast("مسدودی برداشته شد — به او اطلاع داده شد ✓"); }
+    else toast(r.j.error || "خطا");
+  }
+
+  $("#admAddBtn").onclick = async function () {
+    var v = $("#admAddId").value.trim();
+    var id = parseInt(v, 10);
+    if (!Number.isInteger(id) || id <= 0) { toast("آیدی عددی معتبر وارد کن"); return; }
+    var r = await api("/panel/api/admins", { method: "POST", body: { action: "add", id: id } });
+    if (r.ok) { $("#admAddId").value = ""; await loadMgmt(); await loadUsers(); toast("ادمین اضافه شد ✓"); }
+    else toast(r.j.error || "خطا");
+  };
+
+  $("#banNewBtn").onclick = function () {
+    var v = $("#banNewId").value.trim();
+    var id = parseInt(v, 10);
+    if (!Number.isInteger(id) || id <= 0) { toast("آیدی عددی معتبر وارد کن"); return; }
+    var u = users.find(function (x) { return x.id === id; });
+    openBanModal(u || { id: id, name: "", lastName: "" });
+  };
+  $("#banRefresh").onclick = function () { loadMgmt(); };
+
   load();
 })();
 </script>
@@ -1905,7 +2187,14 @@ async function readJson(req: Request): Promise<Record<string, any>> {
 
 // Build one user row for the panel: full profile (name, username, photo)
 // cached in KV and refreshed from Telegram at most once a day.
-async function userRow(env: Env, id: number, owner: number, cfg: fj.FjConfig): Promise<Record<string, any>> {
+async function userRow(
+  env: Env,
+  id: number,
+  owner: number,
+  cfg: fj.FjConfig,
+  admins: number[],
+  bannedIds: Set<number>
+): Promise<Record<string, any>> {
   let meta = await st.getMeta(env, id);
   const now = Date.now();
   const staleName = !meta.nameAt || now - meta.nameAt > 24 * 3600_000 || !meta.firstName;
@@ -1933,6 +2222,8 @@ async function userRow(env: Env, id: number, owner: number, cfg: fj.FjConfig): P
     photo: !!meta.photoFileId,
     lastSeen: meta.at || 0,
     owner: id === owner,
+    isAdmin: admins.includes(id),
+    banned: bannedIds.has(id),
     exempt: cfg.exempt.includes(id),
     fjEnabled: cfg.enabled && cfg.chats.length > 0,
     joined,
@@ -2031,12 +2322,27 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     return res;
   }
 
-  /* ---- everything below requires a valid session ---- */
+  /* ---- everything below requires a valid session (owner or admin) ---- */
   const owner = await auth.sessionOwner(env, req.headers.get("cookie") || "");
   if (owner === null) return json({ error: "unauthorized" }, 401);
+  const panelRole: "owner" | "admin" = (await adm.role(env, owner)) === "owner" ? "owner" : "admin";
+  const isOwner = panelRole === "owner";
 
-  // تنظیم/تغییر رمز عبور پنل (نیازمند نشست)
+  // shared payload for the admins & bans management view
+  async function managementPayload(): Promise<Record<string, any>> {
+    const [admins, bans] = await Promise.all([adm.listAdmins(env), adm.listBans(env)]);
+    const aitems: Array<{ id: number; label: string }> = [];
+    for (const id of admins) aitems.push({ id, label: await adm.userLabel(env, id) });
+    const bitems: Array<Record<string, any>> = [];
+    for (const b of bans) {
+      bitems.push({ ...b, label: await adm.userLabel(env, b.chatId) });
+    }
+    return { owner, isOwner, admins: aitems, bans: bitems };
+  }
+
+  // تنظیم/تغییر رمز عبور پنل (فقط مالک)
   if (path === "/panel/api/setpassword" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک می‌تواند رمز عبور را تغییر دهد" }, 403);
     const b = await readJson(req);
     const ok = await auth.setPassword(env, owner, String(b.password || ""));
     if (!ok) return json({ ok: false, error: "رمز عبور باید حداقل ۶ کاراکتر باشد" }, 400);
@@ -2050,6 +2356,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const s = await fj.stats(env, 1);
     return json({
       ok: true,
+      role: panelRole,
       bot: {
         username: meta.username,
         origin: meta.origin,
@@ -2067,12 +2374,14 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
 
   if (path === "/panel/api/users" && req.method === "GET") {
     const cfg = await fj.getConfig(env);
+    const [admins, bans] = await Promise.all([adm.listAdmins(env), adm.listBans(env)]);
+    const bannedIds = new Set(bans.map((b) => b.chatId));
     const ids = (await tg.listUserChatIds(env)).slice(0, 300);
     const users: Record<string, any>[] = [];
     // chunked concurrency to avoid Telegram burst rate limits
     for (let i = 0; i < ids.length; i += 10) {
       const chunk = ids.slice(i, i + 10);
-      const part = await Promise.all(chunk.map((id) => userRow(env, id, owner, cfg)));
+      const part = await Promise.all(chunk.map((id) => userRow(env, id, owner, cfg, admins, bannedIds)));
       users.push(...part);
     }
     users.sort((a, b) => {
@@ -2082,6 +2391,53 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     return json({ ok: true, users });
   }
 
+  /* ---------- admins & bans management ---------- */
+
+  if (path === "/panel/api/admins" && req.method === "GET") {
+    return json({ ok: true, ...(await managementPayload()) });
+  }
+
+  if (path === "/panel/api/admins" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک می‌تواند ادمین اضافه/حذف کند" }, 403);
+    const b = await readJson(req);
+    const id = Number(b.id);
+    const action = String(b.action || "");
+    if (action === "add") {
+      const r = await adm.addAdmin(env, id, owner);
+      if (!r.ok) return json({ ok: false, error: r.error }, 400);
+      if (r.changed) await adm.notifyAdminAdded(env, id);
+    } else if (action === "remove") {
+      const r = await adm.removeAdmin(env, id, owner);
+      if (!r.ok) return json({ ok: false, error: r.error }, 400);
+      if (r.changed) await adm.notifyAdminRemoved(env, id);
+    } else {
+      return json({ ok: false, error: "action نامعتبر" }, 400);
+    }
+    return json({ ok: true, ...(await managementPayload()) });
+  }
+
+  if (path === "/panel/api/ban" && req.method === "POST") {
+    const b = await readJson(req);
+    const id = Number(b.id);
+    const until = Number(b.until) || 0;
+    const reason = String(b.reason || "").trim();
+    if (!reason) return json({ ok: false, error: "دلیل مسدودسازی اجباری است" }, 400);
+    const r = await adm.setBan(env, id, { by: owner, byName: await adm.userLabel(env, owner), reason, until });
+    if (!r.ok) return json({ ok: false, error: r.error }, 400);
+    const ban = await adm.getBan(env, id);
+    if (ban) await adm.notifyBanned(env, id, ban);
+    return json({ ok: true, ...(await managementPayload()) });
+  }
+
+  if (path === "/panel/api/unban" && req.method === "POST") {
+    const b = await readJson(req);
+    const id = Number(b.id);
+    const r = await adm.unban(env, id, owner);
+    if (!r.ok) return json({ ok: false, error: r.error }, 400);
+    if (r.changed) await adm.notifyUnbanned(env, id);
+    return json({ ok: true, ...(await managementPayload()) });
+  }
+
   if (path.startsWith("/panel/api/photo/") && req.method === "GET") {
     const uid = parseInt(path.replace("/panel/api/photo/", ""), 10);
     if (!Number.isInteger(uid) || uid <= 0) return json({ error: "bad id" }, 400);
@@ -2089,6 +2445,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/exempt" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک می‌تواند معافیت را تغییر دهد" }, 403);
     const b = await readJson(req);
     const id = Number(b.id);
     if (!Number.isInteger(id) || id === owner) {
@@ -2104,6 +2461,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/broadcast" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک می‌تواند پیام همگانی بفرستد" }, 403);
     const b = await readJson(req);
     const text = String(b.text || "").trim();
     if (!text) return json({ ok: false, error: "متن خالی است" }, 400);
@@ -2123,6 +2481,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/broadcast/test" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
     const b = await readJson(req);
     const text = String(b.text || "").trim();
     if (!text) return json({ ok: false, error: "متن خالی است" }, 400);
@@ -2137,10 +2496,12 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/broadcast/history" && req.method === "GET") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
     return json({ ok: true, history: await bc.history(env) });
   }
 
   if (path === "/panel/api/fj" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
     const b = await readJson(req);
     const cfg = await fj.getConfig(env);
     const patch: Partial<fj.FjConfig> = {};
@@ -2183,6 +2544,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/test" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
     const cfg = await fj.getConfig(env);
     const results = [];
     for (const ch of cfg.chats) {
@@ -2292,6 +2654,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/support/closeall" && req.method === "POST") {
+    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
     const { tickets } = await sup.listTickets(env, "tickets");
     const open = tickets.filter((t) => t.status === "open");
     let closed = 0;

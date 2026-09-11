@@ -39,6 +39,9 @@ export type StateName =
   | "await_fj_chat"
   | "await_support"
   | "await_reply"
+  | "await_admin_id"   // 👑 افزودن ادمین — آیدی عددی یا فوروارد
+  | "await_ban_id"     // 🚫 مسدودسازی — آیدی عددی یا فوروارد
+  | "await_ban_reason" // 🚫 مسدودسازی — دلیل اجباری
   | "await_wiz_sni"   // 🕵️ قایم‌سازی — قدم ۱: SNI جعلی
   | "await_wiz_ws"    // 🕵️ قدم ۲: مسیر WebSocket
   | "await_txt"       // ✍️ متن سفارشی
