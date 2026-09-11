@@ -382,7 +382,7 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
     case "update/apply": {
       if (method !== "POST") break;
       const b = (await req.json().catch(() => ({}))) as { token?: string };
-      const res = await applySelfUpdate(env, settings, b.token || "");
+      const res = await applySelfUpdate(env, settings, b.token || "", url.hostname);
       return jsonResp(res, res.ok ? 200 : 400);
     }
   }
@@ -487,7 +487,8 @@ function cmpVersion(a: string, b: string): number {
 async function applySelfUpdate(
   env: Env,
   settings: Settings,
-  token: string
+  token: string,
+  reqHost: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!token || token.length < 20) return { ok: false, error: "token required" };
 
@@ -498,7 +499,10 @@ async function applySelfUpdate(
   const accountId = a?.result?.[0]?.id;
   if (!accountId) return { ok: false, error: "اکانتی با این توکن پیدا نشد" };
 
-  const name = (settings.host || "").split(".")[0];
+  // Worker name: prefer a real *.workers.dev host from settings; otherwise the
+  // request hostname (this request can only reach the panel's own worker).
+  const host = (settings.host || "").trim();
+  const name = (host.includes(".workers.dev") ? host.split(".")[0] : "") || reqHost.split(".")[0];
   if (!name) return { ok: false, error: "ابتدا Host ورکر را در تنظیمات وارد کن" };
 
   const kvId = await cf.findKvId(token, accountId, [`nika-${name}-kv`, `${name}-kv`]);
@@ -507,7 +511,9 @@ async function applySelfUpdate(
   if (!bundle.ok) return { ok: false, error: "دریافت آخرین نسخه ممکن نشد" };
   const code = await bundle.text();
 
-  const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
+  // CRITICAL: keep D1 + NIKA_NS bindings. Redeploying with KV-only wipes the
+  // panel's D1 storage and lands it back on the exhausted KV write cap.
+  const bindings = await cf.panelBindings(token, accountId, name, kvId);
   const up = await cf.uploadWorker(token, accountId, name, code, bindings);
   if (!up.ok) return { ok: false, error: up.err };
 
