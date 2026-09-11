@@ -618,6 +618,11 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
       </div>
     </div>
 
+    <div id="connBanner" class="hidden" style="display:flex;align-items:center;gap:12px;justify-content:space-between;margin:0 0 16px;padding:10px 14px;border:1px dashed var(--border-strong);border-radius:10px;color:var(--muted);font-size:12.5px">
+      <span id="connBannerText">…</span>
+      <button class="btn btn-ghost" id="connRetry" style="padding:6px 12px;font-size:12px;flex-shrink:0">↻ <span data-i18n="common.retry">تلاش دوباره</span></button>
+    </div>
+
     <!-- داشبورد -->
     <section id="page-dashboard">
       <div class="grid stats">
@@ -978,6 +983,9 @@ const I18N = {
     "u.active": "فعال", "u.inactive": "غیرفعال", "u.expired": "منقضی", "u.openStatus": "باز کردن صفحه وضعیت کاربر", "u.del": "حذف",
     "set.general": "عمومی", "set.title": "عنوان پنل", "set.host": "دامنه / Host ورکر", "set.sni": "SNI / Host جعلی",
     "set.wsPath": "مسیر WebSocket", "set.security": "امنیت", "set.newpass": "رمز عبور جدید", "set.brute": "محافظت Brute-Force",
+    "set.ports": "پورت‌های اتصال", "set.portsD": "کانفیگ‌ها روی چند پورت ساخته می‌شوند — اگر ۴۴۳ بسته یا کند باشد، پورت‌های جایگزین کار می‌کنند",
+    "set.cfnote": "ℹ نکته: سایت‌هایی که پشتِ خودِ Cloudflare هستند (مثل dash.cloudflare.com یا whatismyipaddress.com) از هیچ پنل Workers رد نمی‌شوند — Cloudflare اتصال به شبکهٔ خودش را می‌بندد. بقیهٔ سایت‌ها (یوتیوب، تلگرام، اینستاگرام، ویکی‌پدیا و…) عادی کار می‌کنند.",
+    "set.fixedip": "IP ثابت (اختیاری)", "set.fixedipD": "وقتی ست شود، همهٔ کانفیگ‌ها با همین IP ساخته می‌شوند (بدون چرخش تصادفی). خالی = چرخش تصادفی بین IP های تمیز",
     "set.bruteD": "مسدودسازی موقت بعد از تلاش ناموفق", "set.cleanip": "IP های تمیز", "set.cleanipD": "هر خط یک IP", "set.save": "ذخیره تنظیمات",
     "m.addUser": "کاربر جدید", "m.name": "نام کاربر", "m.namePh": "مثلاً: علی", "m.quota": "سهمیه (GB)", "m.days": "مدت (روز)",
     "m.save": "ذخیره", "m.cancel": "انصراف",
@@ -985,6 +993,7 @@ const I18N = {
     "toast.toggled": "وضعیت تغییر کرد", "toast.preview": "در پیش‌نمایش، اتصال به سرور نیست",
     "toast.passChanged": "رمز عبور تغییر کرد ✓", "login.setupFail": "ثبت رمز ناموفق بود — دوباره امتحان کن",
     "common.error": "خطا در دریافت اطلاعات", "common.loading": "در حال بارگذاری…",
+    "common.retry": "تلاش دوباره", "common.retrying": "اتصال برقرار نشد — در حال تلاش مجدد…", "common.actionErr": "عملیات انجام نشد — دوباره تلاش کن",
     "page.dash": "داشبورد", "page.dashD": "نمای کلی وضعیت پنل", "page.users": "کاربران", "page.usersD": "Manage users & their status",
     "page.set": "تنظیمات", "page.setD": "پیکربندی پنل و امنیت",
   },
@@ -1011,6 +1020,9 @@ const I18N = {
     "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.openStatus": "Open user status page", "u.del": "Delete",
     "set.general": "General", "set.title": "Panel title", "set.host": "Worker domain / host", "set.sni": "Fake SNI / Host",
     "set.wsPath": "WebSocket path", "set.security": "Security", "set.newpass": "New password", "set.brute": "Brute-force protection",
+    "set.ports": "Connect ports", "set.portsD": "Configs are generated on several ports — if 443 is blocked or slow, the alternates still work",
+    "set.cfnote": "ℹ Note: sites hosted on Cloudflare itself (e.g. dash.cloudflare.com, whatismyipaddress.com) can't be reached through any Workers panel — Cloudflare closes connections into its own network. Everything else (YouTube, Telegram, Instagram, Wikipedia…) works normally.",
+    "set.fixedip": "Fixed IP (optional)", "set.fixedipD": "When set, every config is built with this IP (no random rotation). Empty = random pick from the clean IPs",
     "set.bruteD": "Temporary block after failed attempts", "set.cleanip": "Clean IPs", "set.cleanipD": "One IP per line", "set.save": "Save settings",
     "m.addUser": "New user", "m.name": "Name", "m.namePh": "e.g. Ali", "m.quota": "Quota (GB)", "m.days": "Days",
     "m.save": "Save", "m.cancel": "Cancel",
@@ -1018,6 +1030,7 @@ const I18N = {
     "toast.toggled": "Status changed", "toast.preview": "No server connection in preview mode",
     "toast.passChanged": "Password changed ✓", "login.setupFail": "Couldn't save the password — try again",
     "common.error": "Failed to load", "common.loading": "Loading…",
+    "common.retry": "Retry", "common.retrying": "Connection lost — retrying…", "common.actionErr": "Action failed — try again",
     "page.dash": "Dashboard", "page.dashD": "Panel status overview", "page.users": "Users", "page.usersD": "Manage users & subscriptions",
     "page.set": "Settings", "page.setD": "Panel config & security",
   },
@@ -1069,7 +1082,7 @@ async function checkUpdate() {
     const d = await res.json().catch(() => ({}));
     updState = d;
     renderUpdate();
-  } catch (e) { updState = { current: "—", latest: "—", upToDate: false, notes: t("common.error") }; renderUpdate(); }
+  } catch (e) { updState = { current: "—", latest: "—", upToDate: false, notes: t("upd.err") }; renderUpdate(); }
 }
 function renderUpdate() {
   $("#updCurrent").textContent = updState.current || "—";
@@ -1124,12 +1137,31 @@ const state = { status: null, users: [], settings: null };
 
 /* ---------- api ---------- */
 async function api(path, opts = {}) {
-  const init = { method: opts.method || "GET", headers: {} };
+  const method = (opts.method || "GET").toUpperCase();
+  const init = { method, headers: {} };
   if (opts.body !== undefined) {
     init.headers["content-type"] = "application/json";
     init.body = JSON.stringify(opts.body);
   }
-  return fetch(path, init); // same-origin: cookies included automatically
+  // One silent retry for idempotent GETs: a dropped packet or a momentary
+  // Cloudflare edge blip must never surface as an error toast. A 15s cap
+  // stops a hanging request from freezing the UI.
+  const tries = method === "GET" ? 2 : 1;
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const res = await fetch(path, { ...init, signal: ctrl.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+  throw lastErr;
 }
 
 /* ---------- toast ---------- */
@@ -1140,6 +1172,22 @@ function toast(msg) {
   el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+function bounceToLogin() {
+  state.status = null; state.users = []; state.settings = null;
+  $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
+  showLogin();
+}
+
+// Shared action helper: true when the request succeeded. On 401 (session
+// expired / secret rotated) it sends the admin back to the login screen
+// instead of showing a meaningless error; otherwise a short error toast.
+function actionOk(res) {
+  if (res.ok) return true;
+  if (res.status === 401) { bounceToLogin(); return false; }
+  toast(t("common.actionErr"));
+  return false;
 }
 
 /* ---------- github stars (live, graceful fallback) ---------- */
@@ -1183,8 +1231,8 @@ async function init() {
 async function checkSession() {
   const res = await api("/api/status");
   if (res.ok) {
-    await loadAll();
-    showApp();
+    const ok = await loadAll();
+    if (ok) showApp();
   } else {
     $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
     showLogin();
@@ -1205,8 +1253,7 @@ async function doLogin() {
     if (data.setup) SETUP = false;
     $("#loginPass").value = "";
     $("#loginError").textContent = "";
-    await loadAll();
-    showApp();
+    if (await loadAll()) showApp();
   } else {
     if (data.error === "password too short") $("#loginError").textContent = t("login.short");
     else if (SETUP) $("#loginError").textContent = t("login.setupFail");
@@ -1223,23 +1270,63 @@ $("#logoutBtn").onclick = async () => {
 };
 
 /* ---------- data ---------- */
-async function loadAll() {
-  try {
-    const [st, us, se] = await Promise.all([
-      api("/api/status").then((r) => r.json()),
-      api("/api/users").then((r) => r.json()),
-      api("/api/settings").then((r) => r.json()),
-    ]);
-    state.status = st;
-    state.users = Array.isArray(us) ? us : [];
-    state.settings = se;
-    if (se && se.protocols) proto = se.protocols;
-    renderDashboard();
-    renderUsers();
-  } catch (e) {
-    toast(t("common.error"));
-  }
+let loadRetries = 0;
+function showConnBanner() {
+  const b = $("#connBanner");
+  if (!b) return;
+  b.classList.remove("hidden");
+  $("#connBannerText").textContent = t("common.retrying");
 }
+function hideConnBanner() {
+  const b = $("#connBanner");
+  if (b) b.classList.add("hidden");
+}
+// Loads status + users + settings. Tolerates a partial failure (keeps last
+// good data), retries once on total failure, and only then shows a quiet
+// retry banner — never a scary error toast. Returns false if it bounced to
+// login (session expired), true otherwise.
+async function loadAll() {
+  const get = async (path) => {
+    try {
+      const r = await api(path);
+      if (r.status === 401) return { auth: false };
+      if (!r.ok) return { err: true };
+      const j = await r.json().catch(() => null);
+      return { data: j };
+    } catch (e) {
+      return { err: true };
+    }
+  };
+  const [st, us, se] = await Promise.all([get("/api/status"), get("/api/users"), get("/api/settings")]);
+  if (st.auth === false || us.auth === false || se.auth === false) {
+    state.status = null; state.users = []; state.settings = null;
+    $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
+    showLogin();
+    return false;
+  }
+  const okSt = st.data != null, okUs = us.data != null, okSe = se.data != null;
+  if (okSt) state.status = st.data;
+  if (okUs) state.users = Array.isArray(us.data) ? us.data : [];
+  if (okSe) {
+    state.settings = se.data;
+    if (se.data && se.data.protocols) proto = se.data.protocols;
+  }
+  if (!okSt && !okUs && !okSe) {
+    if (loadRetries < 1) {
+      loadRetries++;
+      await new Promise((r) => setTimeout(r, 700));
+      return loadAll();
+    }
+    showConnBanner();
+    return true;
+  }
+  loadRetries = 0;
+  hideConnBanner();
+  renderDashboard();
+  renderUsers();
+  return true;
+}
+$("#connRetry").onclick = () => { loadRetries = 0; hideConnBanner(); loadAll(); };
 
 /* ---------- navigation ---------- */
 const PAGES = { dashboard: "page.dash", users: "page.users", settings: "page.set", scanner: "page.scanner", update: "page.update" };
@@ -1332,15 +1419,13 @@ function renderUsers() {
 async function toggleUser(id) {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
   const res = await api("/api/users/toggle", { method: "POST", body: { id } });
-  if (res.ok) { toast(t("toast.toggled")); await loadAll(); }
-  else toast(t("common.error"));
+  if (actionOk(res)) { toast(t("toast.toggled")); await loadAll(); }
 }
 
 async function delUser(id) {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
   const res = await api("/api/users?id=" + encodeURIComponent(id), { method: "DELETE" });
-  if (res.ok) { toast(t("toast.deleted")); await loadAll(); }
-  else toast(t("common.error"));
+  if (actionOk(res)) { toast(t("toast.deleted")); await loadAll(); }
 }
 
 function userToken(u) {
@@ -1372,8 +1457,7 @@ function openAddUser() {
     const quota = +$("#mQuota").value || 50;
     const days = +$("#mDays").value || 30;
     const res = await api("/api/users", { method: "POST", body: { name, quota, days } });
-    if (res.ok) { toast(t("toast.saved")); $("#modalBack").classList.add("hidden"); await loadAll(); }
-    else toast(t("common.error"));
+    if (actionOk(res)) { toast(t("toast.saved")); $("#modalBack").classList.add("hidden"); await loadAll(); }
   };
 }
 $("#addUserBtn").onclick = openAddUser;
@@ -1386,6 +1470,8 @@ function fillSettingsForm() {
   $("#setSni").value = (state.settings && state.settings.sni) || "";
   $("#setWsPath").value = (state.settings && state.settings.wsPath) || "";
   $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("\n");
+  const ports = (state.settings && state.settings.cleanPorts) || [443, 2053, 2083, 2087, 2096, 8443];
+  $("#setPorts").value = ports.join(",");
   $("#setFixedIp").value = (state.settings && state.settings.fixedIp) || "";
 }
 $("#saveBtn").onclick = async () => {
@@ -1398,17 +1484,17 @@ $("#saveBtn").onclick = async () => {
     sni: $("#setSni").value,
     wsPath: $("#setWsPath").value || "/nika-ws",
     cleanIps: $("#setIps").value.split("\n").map((x) => x.trim()).filter(Boolean),
+    cleanPorts: $("#setPorts").value.split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isInteger(n) && n > 0),
     fixedIp: $("#setFixedIp").value.trim(),
     protocols: proto,
   };
   if (newpass) body.newpass = newpass;
   const res = await api("/api/settings", { method: "POST", body });
-  if (res.ok) {
+  if (actionOk(res)) {
     if (newpass) { $("#setPass").value = ""; toast(t("toast.passChanged")); }
     else toast(t("toast.saved"));
     await loadAll();
   }
-  else toast(t("common.error"));
 };
 
 $("#updCheck").onclick = checkUpdate;
@@ -1453,6 +1539,7 @@ I18N.fa["scan.lat"] = "تأخیر";
 I18N.fa["scan.port"] = "پورت";
 I18N.fa["scan.status"] = "وضعیت";
 I18N.fa["scan.apply"] = "⚡ اعمال به پنل";
+I18N.fa["scan.lock"] = "🔒 IP ثابت";
 I18N.fa["scan.applyD"] = "بهترین IP ها جایگزین لیست IP تمیز پنل می‌شوند";
 I18N.fa["scan.copy"] = "📋 کپی";
 I18N.fa["scan.export"] = "⬇ خروجی";
@@ -1531,6 +1618,7 @@ I18N.en["scan.lat"] = "Latency";
 I18N.en["scan.port"] = "Port";
 I18N.en["scan.status"] = "Status";
 I18N.en["scan.apply"] = "⚡ Apply to panel";
+I18N.en["scan.lock"] = "🔒 Fixed IP";
 I18N.en["scan.applyD"] = "Top IPs replace the panel's clean-IP list";
 I18N.en["scan.copy"] = "📋 Copy";
 I18N.en["scan.export"] = "⬇ Export";
@@ -2062,13 +2150,13 @@ const SCANNER = (() => {
     if (v4.length) body.cleanIps = v4;
     if (v6.length) body.cleanIpv6 = v6;
     const res = await api("/api/settings", { method: "POST", body });
-    if (res.ok) {
+    if (actionOk(res)) {
       toast(t("scan.applied"));
       if (state.settings) {
         if (v4.length) state.settings.cleanIps = v4;
         if (v6.length) state.settings.cleanIpv6 = v6;
       }
-    } else toast(t("common.error"));
+    }
   }
 
   function onOpen() {
@@ -2374,11 +2462,11 @@ const SCANNER = (() => {
     if (!R.best) { toast(t("relay.none")); return; }
     if (MODE !== "live") { if (!auto) toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { relayDomain: R.best.domain } });
-    if (res.ok) {
+    if (actionOk(res)) {
       toast(auto ? t("relay.autopicked") : t("relay.applied"));
       if (state.settings) state.settings.relayDomain = R.best.domain;
       renderRelayCurrent();
-    } else toast(t("common.error"));
+    }
   }
 
   return {
@@ -2769,17 +2857,17 @@ window.POOL = (() => {
       toast(t("pool.appliedOk").replace("{name}", name));
       if (!cfBest.length) setTimeout(() => toast(t("pool.nocfApply")), 2100);
       renderApplied();
-    } else toast(t("common.error"));
+    }
   }
 
   async function clearApplied() {
     if (MODE !== "live") { toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { poolIps: [], poolCountry: "", poolFlag: "" } });
-    if (res.ok) {
+    if (actionOk(res)) {
       if (state.settings) { state.settings.poolIps = []; state.settings.poolCountry = ""; state.settings.poolFlag = ""; }
       toast(t("pool.cleared"));
       renderApplied();
-    } else toast(t("common.error"));
+    }
   }
 
   function copyBest() {
@@ -2806,8 +2894,7 @@ window.POOL = (() => {
     // trusted=true → the caller already verified the IP server-side
     if (!trusted && !isCf(ip)) { toast(t("pool.nocflock")); return; }
     const res = await api("/api/settings", { method: "POST", body: { fixedIp: addr } });
-    if (res.ok) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
-    else toast(t("common.error"));
+    if (actionOk(res)) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
   }
 
   async function poolLock() {
@@ -2820,8 +2907,7 @@ window.POOL = (() => {
   async function unlock() {
     if (MODE !== "live") { toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { fixedIp: "" } });
-    if (res.ok) { if (state.settings) state.settings.fixedIp = ""; toast(t("pool.unlocked")); renderFixed(); }
-    else toast(t("common.error"));
+    if (actionOk(res)) { if (state.settings) state.settings.fixedIp = ""; toast(t("pool.unlocked")); renderFixed(); }
   }
 
   function renderFixed() {

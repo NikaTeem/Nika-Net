@@ -315,7 +315,12 @@ async function handleApi(req: Request, env: Env, settings: Settings, url: URL): 
     }
 
     case "settings": {
-      if (method === "GET") return jsonResp(settings);
+      if (method === "GET") {
+        // Never ship the admin password hash or the session-signing secret to
+        // the browser — the form only needs the config fields.
+        const { adminPassHash: _h, sessionSecret: _s, ...safe } = settings;
+        return jsonResp(safe);
+      }
       if (method === "POST") {
         const b = (await req.json().catch(() => ({}))) as Partial<Settings> & { newpass?: string };
         const next: Settings = { ...settings };

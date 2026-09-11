@@ -1085,6 +1085,11 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
       </div>
     </div>
 
+    <div id="connBanner" class="hidden" style="display:flex;align-items:center;gap:12px;justify-content:space-between;margin:0 0 16px;padding:10px 14px;border:1px dashed var(--border-strong);border-radius:10px;color:var(--muted);font-size:12.5px">
+      <span id="connBannerText">\u2026</span>
+      <button class="btn btn-ghost" id="connRetry" style="padding:6px 12px;font-size:12px;flex-shrink:0">\u21BB <span data-i18n="common.retry">\u062A\u0644\u0627\u0634 \u062F\u0648\u0628\u0627\u0631\u0647</span></button>
+    </div>
+
     <!-- \u062F\u0627\u0634\u0628\u0648\u0631\u062F -->
     <section id="page-dashboard">
       <div class="grid stats">
@@ -1445,6 +1450,9 @@ const I18N = {
     "u.active": "\u0641\u0639\u0627\u0644", "u.inactive": "\u063A\u06CC\u0631\u0641\u0639\u0627\u0644", "u.expired": "\u0645\u0646\u0642\u0636\u06CC", "u.openStatus": "\u0628\u0627\u0632 \u06A9\u0631\u062F\u0646 \u0635\u0641\u062D\u0647 \u0648\u0636\u0639\u06CC\u062A \u06A9\u0627\u0631\u0628\u0631", "u.del": "\u062D\u0630\u0641",
     "set.general": "\u0639\u0645\u0648\u0645\u06CC", "set.title": "\u0639\u0646\u0648\u0627\u0646 \u067E\u0646\u0644", "set.host": "\u062F\u0627\u0645\u0646\u0647 / Host \u0648\u0631\u06A9\u0631", "set.sni": "SNI / Host \u062C\u0639\u0644\u06CC",
     "set.wsPath": "\u0645\u0633\u06CC\u0631 WebSocket", "set.security": "\u0627\u0645\u0646\u06CC\u062A", "set.newpass": "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062C\u062F\u06CC\u062F", "set.brute": "\u0645\u062D\u0627\u0641\u0638\u062A Brute-Force",
+    "set.ports": "\u067E\u0648\u0631\u062A\u200C\u0647\u0627\u06CC \u0627\u062A\u0635\u0627\u0644", "set.portsD": "\u06A9\u0627\u0646\u0641\u06CC\u06AF\u200C\u0647\u0627 \u0631\u0648\u06CC \u0686\u0646\u062F \u067E\u0648\u0631\u062A \u0633\u0627\u062E\u062A\u0647 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F \u2014 \u0627\u06AF\u0631 \u06F4\u06F4\u06F3 \u0628\u0633\u062A\u0647 \u06CC\u0627 \u06A9\u0646\u062F \u0628\u0627\u0634\u062F\u060C \u067E\u0648\u0631\u062A\u200C\u0647\u0627\u06CC \u062C\u0627\u06CC\u06AF\u0632\u06CC\u0646 \u06A9\u0627\u0631 \u0645\u06CC\u200C\u06A9\u0646\u0646\u062F",
+    "set.cfnote": "\u2139 \u0646\u06A9\u062A\u0647: \u0633\u0627\u06CC\u062A\u200C\u0647\u0627\u06CC\u06CC \u06A9\u0647 \u067E\u0634\u062A\u0650 \u062E\u0648\u062F\u0650 Cloudflare \u0647\u0633\u062A\u0646\u062F (\u0645\u062B\u0644 dash.cloudflare.com \u06CC\u0627 whatismyipaddress.com) \u0627\u0632 \u0647\u06CC\u0686 \u067E\u0646\u0644 Workers \u0631\u062F \u0646\u0645\u06CC\u200C\u0634\u0648\u0646\u062F \u2014 Cloudflare \u0627\u062A\u0635\u0627\u0644 \u0628\u0647 \u0634\u0628\u06A9\u0647\u0654 \u062E\u0648\u062F\u0634 \u0631\u0627 \u0645\u06CC\u200C\u0628\u0646\u062F\u062F. \u0628\u0642\u06CC\u0647\u0654 \u0633\u0627\u06CC\u062A\u200C\u0647\u0627 (\u06CC\u0648\u062A\u06CC\u0648\u0628\u060C \u062A\u0644\u06AF\u0631\u0627\u0645\u060C \u0627\u06CC\u0646\u0633\u062A\u0627\u06AF\u0631\u0627\u0645\u060C \u0648\u06CC\u06A9\u06CC\u200C\u067E\u062F\u06CC\u0627 \u0648\u2026) \u0639\u0627\u062F\u06CC \u06A9\u0627\u0631 \u0645\u06CC\u200C\u06A9\u0646\u0646\u062F.",
+    "set.fixedip": "IP \u062B\u0627\u0628\u062A (\u0627\u062E\u062A\u06CC\u0627\u0631\u06CC)", "set.fixedipD": "\u0648\u0642\u062A\u06CC \u0633\u062A \u0634\u0648\u062F\u060C \u0647\u0645\u0647\u0654 \u06A9\u0627\u0646\u0641\u06CC\u06AF\u200C\u0647\u0627 \u0628\u0627 \u0647\u0645\u06CC\u0646 IP \u0633\u0627\u062E\u062A\u0647 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F (\u0628\u062F\u0648\u0646 \u0686\u0631\u062E\u0634 \u062A\u0635\u0627\u062F\u0641\u06CC). \u062E\u0627\u0644\u06CC = \u0686\u0631\u062E\u0634 \u062A\u0635\u0627\u062F\u0641\u06CC \u0628\u06CC\u0646 IP \u0647\u0627\u06CC \u062A\u0645\u06CC\u0632",
     "set.bruteD": "\u0645\u0633\u062F\u0648\u062F\u0633\u0627\u0632\u06CC \u0645\u0648\u0642\u062A \u0628\u0639\u062F \u0627\u0632 \u062A\u0644\u0627\u0634 \u0646\u0627\u0645\u0648\u0641\u0642", "set.cleanip": "IP \u0647\u0627\u06CC \u062A\u0645\u06CC\u0632", "set.cleanipD": "\u0647\u0631 \u062E\u0637 \u06CC\u06A9 IP", "set.save": "\u0630\u062E\u06CC\u0631\u0647 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A",
     "m.addUser": "\u06A9\u0627\u0631\u0628\u0631 \u062C\u062F\u06CC\u062F", "m.name": "\u0646\u0627\u0645 \u06A9\u0627\u0631\u0628\u0631", "m.namePh": "\u0645\u062B\u0644\u0627\u064B: \u0639\u0644\u06CC", "m.quota": "\u0633\u0647\u0645\u06CC\u0647 (GB)", "m.days": "\u0645\u062F\u062A (\u0631\u0648\u0632)",
     "m.save": "\u0630\u062E\u06CC\u0631\u0647", "m.cancel": "\u0627\u0646\u0635\u0631\u0627\u0641",
@@ -1452,6 +1460,7 @@ const I18N = {
     "toast.toggled": "\u0648\u0636\u0639\u06CC\u062A \u062A\u063A\u06CC\u06CC\u0631 \u06A9\u0631\u062F", "toast.preview": "\u062F\u0631 \u067E\u06CC\u0634\u200C\u0646\u0645\u0627\u06CC\u0634\u060C \u0627\u062A\u0635\u0627\u0644 \u0628\u0647 \u0633\u0631\u0648\u0631 \u0646\u06CC\u0633\u062A",
     "toast.passChanged": "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062A\u063A\u06CC\u06CC\u0631 \u06A9\u0631\u062F \u2713", "login.setupFail": "\u062B\u0628\u062A \u0631\u0645\u0632 \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062F \u2014 \u062F\u0648\u0628\u0627\u0631\u0647 \u0627\u0645\u062A\u062D\u0627\u0646 \u06A9\u0646",
     "common.error": "\u062E\u0637\u0627 \u062F\u0631 \u062F\u0631\u06CC\u0627\u0641\u062A \u0627\u0637\u0644\u0627\u0639\u0627\u062A", "common.loading": "\u062F\u0631 \u062D\u0627\u0644 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC\u2026",
+    "common.retry": "\u062A\u0644\u0627\u0634 \u062F\u0648\u0628\u0627\u0631\u0647", "common.retrying": "\u0627\u062A\u0635\u0627\u0644 \u0628\u0631\u0642\u0631\u0627\u0631 \u0646\u0634\u062F \u2014 \u062F\u0631 \u062D\u0627\u0644 \u062A\u0644\u0627\u0634 \u0645\u062C\u062F\u062F\u2026", "common.actionErr": "\u0639\u0645\u0644\u06CC\u0627\u062A \u0627\u0646\u062C\u0627\u0645 \u0646\u0634\u062F \u2014 \u062F\u0648\u0628\u0627\u0631\u0647 \u062A\u0644\u0627\u0634 \u06A9\u0646",
     "page.dash": "\u062F\u0627\u0634\u0628\u0648\u0631\u062F", "page.dashD": "\u0646\u0645\u0627\u06CC \u06A9\u0644\u06CC \u0648\u0636\u0639\u06CC\u062A \u067E\u0646\u0644", "page.users": "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646", "page.usersD": "Manage users & their status",
     "page.set": "\u062A\u0646\u0638\u06CC\u0645\u0627\u062A", "page.setD": "\u067E\u06CC\u06A9\u0631\u0628\u0646\u062F\u06CC \u067E\u0646\u0644 \u0648 \u0627\u0645\u0646\u06CC\u062A",
   },
@@ -1478,6 +1487,9 @@ const I18N = {
     "u.active": "Active", "u.inactive": "Inactive", "u.expired": "Expired", "u.openStatus": "Open user status page", "u.del": "Delete",
     "set.general": "General", "set.title": "Panel title", "set.host": "Worker domain / host", "set.sni": "Fake SNI / Host",
     "set.wsPath": "WebSocket path", "set.security": "Security", "set.newpass": "New password", "set.brute": "Brute-force protection",
+    "set.ports": "Connect ports", "set.portsD": "Configs are generated on several ports \u2014 if 443 is blocked or slow, the alternates still work",
+    "set.cfnote": "\u2139 Note: sites hosted on Cloudflare itself (e.g. dash.cloudflare.com, whatismyipaddress.com) can't be reached through any Workers panel \u2014 Cloudflare closes connections into its own network. Everything else (YouTube, Telegram, Instagram, Wikipedia\u2026) works normally.",
+    "set.fixedip": "Fixed IP (optional)", "set.fixedipD": "When set, every config is built with this IP (no random rotation). Empty = random pick from the clean IPs",
     "set.bruteD": "Temporary block after failed attempts", "set.cleanip": "Clean IPs", "set.cleanipD": "One IP per line", "set.save": "Save settings",
     "m.addUser": "New user", "m.name": "Name", "m.namePh": "e.g. Ali", "m.quota": "Quota (GB)", "m.days": "Days",
     "m.save": "Save", "m.cancel": "Cancel",
@@ -1485,6 +1497,7 @@ const I18N = {
     "toast.toggled": "Status changed", "toast.preview": "No server connection in preview mode",
     "toast.passChanged": "Password changed \u2713", "login.setupFail": "Couldn't save the password \u2014 try again",
     "common.error": "Failed to load", "common.loading": "Loading\u2026",
+    "common.retry": "Retry", "common.retrying": "Connection lost \u2014 retrying\u2026", "common.actionErr": "Action failed \u2014 try again",
     "page.dash": "Dashboard", "page.dashD": "Panel status overview", "page.users": "Users", "page.usersD": "Manage users & subscriptions",
     "page.set": "Settings", "page.setD": "Panel config & security",
   },
@@ -1536,7 +1549,7 @@ async function checkUpdate() {
     const d = await res.json().catch(() => ({}));
     updState = d;
     renderUpdate();
-  } catch (e) { updState = { current: "\u2014", latest: "\u2014", upToDate: false, notes: t("common.error") }; renderUpdate(); }
+  } catch (e) { updState = { current: "\u2014", latest: "\u2014", upToDate: false, notes: t("upd.err") }; renderUpdate(); }
 }
 function renderUpdate() {
   $("#updCurrent").textContent = updState.current || "\u2014";
@@ -1591,12 +1604,31 @@ const state = { status: null, users: [], settings: null };
 
 /* ---------- api ---------- */
 async function api(path, opts = {}) {
-  const init = { method: opts.method || "GET", headers: {} };
+  const method = (opts.method || "GET").toUpperCase();
+  const init = { method, headers: {} };
   if (opts.body !== undefined) {
     init.headers["content-type"] = "application/json";
     init.body = JSON.stringify(opts.body);
   }
-  return fetch(path, init); // same-origin: cookies included automatically
+  // One silent retry for idempotent GETs: a dropped packet or a momentary
+  // Cloudflare edge blip must never surface as an error toast. A 15s cap
+  // stops a hanging request from freezing the UI.
+  const tries = method === "GET" ? 2 : 1;
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const res = await fetch(path, { ...init, signal: ctrl.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+  throw lastErr;
 }
 
 /* ---------- toast ---------- */
@@ -1607,6 +1639,22 @@ function toast(msg) {
   el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+function bounceToLogin() {
+  state.status = null; state.users = []; state.settings = null;
+  $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
+  showLogin();
+}
+
+// Shared action helper: true when the request succeeded. On 401 (session
+// expired / secret rotated) it sends the admin back to the login screen
+// instead of showing a meaningless error; otherwise a short error toast.
+function actionOk(res) {
+  if (res.ok) return true;
+  if (res.status === 401) { bounceToLogin(); return false; }
+  toast(t("common.actionErr"));
+  return false;
 }
 
 /* ---------- github stars (live, graceful fallback) ---------- */
@@ -1650,8 +1698,8 @@ async function init() {
 async function checkSession() {
   const res = await api("/api/status");
   if (res.ok) {
-    await loadAll();
-    showApp();
+    const ok = await loadAll();
+    if (ok) showApp();
   } else {
     $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
     showLogin();
@@ -1672,8 +1720,7 @@ async function doLogin() {
     if (data.setup) SETUP = false;
     $("#loginPass").value = "";
     $("#loginError").textContent = "";
-    await loadAll();
-    showApp();
+    if (await loadAll()) showApp();
   } else {
     if (data.error === "password too short") $("#loginError").textContent = t("login.short");
     else if (SETUP) $("#loginError").textContent = t("login.setupFail");
@@ -1690,23 +1737,63 @@ $("#logoutBtn").onclick = async () => {
 };
 
 /* ---------- data ---------- */
-async function loadAll() {
-  try {
-    const [st, us, se] = await Promise.all([
-      api("/api/status").then((r) => r.json()),
-      api("/api/users").then((r) => r.json()),
-      api("/api/settings").then((r) => r.json()),
-    ]);
-    state.status = st;
-    state.users = Array.isArray(us) ? us : [];
-    state.settings = se;
-    if (se && se.protocols) proto = se.protocols;
-    renderDashboard();
-    renderUsers();
-  } catch (e) {
-    toast(t("common.error"));
-  }
+let loadRetries = 0;
+function showConnBanner() {
+  const b = $("#connBanner");
+  if (!b) return;
+  b.classList.remove("hidden");
+  $("#connBannerText").textContent = t("common.retrying");
 }
+function hideConnBanner() {
+  const b = $("#connBanner");
+  if (b) b.classList.add("hidden");
+}
+// Loads status + users + settings. Tolerates a partial failure (keeps last
+// good data), retries once on total failure, and only then shows a quiet
+// retry banner \u2014 never a scary error toast. Returns false if it bounced to
+// login (session expired), true otherwise.
+async function loadAll() {
+  const get = async (path) => {
+    try {
+      const r = await api(path);
+      if (r.status === 401) return { auth: false };
+      if (!r.ok) return { err: true };
+      const j = await r.json().catch(() => null);
+      return { data: j };
+    } catch (e) {
+      return { err: true };
+    }
+  };
+  const [st, us, se] = await Promise.all([get("/api/status"), get("/api/users"), get("/api/settings")]);
+  if (st.auth === false || us.auth === false || se.auth === false) {
+    state.status = null; state.users = []; state.settings = null;
+    $("#demoHint").textContent = SETUP ? t("login.hintFirst") : t("login.hintPass");
+    showLogin();
+    return false;
+  }
+  const okSt = st.data != null, okUs = us.data != null, okSe = se.data != null;
+  if (okSt) state.status = st.data;
+  if (okUs) state.users = Array.isArray(us.data) ? us.data : [];
+  if (okSe) {
+    state.settings = se.data;
+    if (se.data && se.data.protocols) proto = se.data.protocols;
+  }
+  if (!okSt && !okUs && !okSe) {
+    if (loadRetries < 1) {
+      loadRetries++;
+      await new Promise((r) => setTimeout(r, 700));
+      return loadAll();
+    }
+    showConnBanner();
+    return true;
+  }
+  loadRetries = 0;
+  hideConnBanner();
+  renderDashboard();
+  renderUsers();
+  return true;
+}
+$("#connRetry").onclick = () => { loadRetries = 0; hideConnBanner(); loadAll(); };
 
 /* ---------- navigation ---------- */
 const PAGES = { dashboard: "page.dash", users: "page.users", settings: "page.set", scanner: "page.scanner", update: "page.update" };
@@ -1799,15 +1886,13 @@ function renderUsers() {
 async function toggleUser(id) {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
   const res = await api("/api/users/toggle", { method: "POST", body: { id } });
-  if (res.ok) { toast(t("toast.toggled")); await loadAll(); }
-  else toast(t("common.error"));
+  if (actionOk(res)) { toast(t("toast.toggled")); await loadAll(); }
 }
 
 async function delUser(id) {
   if (MODE !== "live") { toast(t("toast.preview")); return; }
   const res = await api("/api/users?id=" + encodeURIComponent(id), { method: "DELETE" });
-  if (res.ok) { toast(t("toast.deleted")); await loadAll(); }
-  else toast(t("common.error"));
+  if (actionOk(res)) { toast(t("toast.deleted")); await loadAll(); }
 }
 
 function userToken(u) {
@@ -1839,8 +1924,7 @@ function openAddUser() {
     const quota = +$("#mQuota").value || 50;
     const days = +$("#mDays").value || 30;
     const res = await api("/api/users", { method: "POST", body: { name, quota, days } });
-    if (res.ok) { toast(t("toast.saved")); $("#modalBack").classList.add("hidden"); await loadAll(); }
-    else toast(t("common.error"));
+    if (actionOk(res)) { toast(t("toast.saved")); $("#modalBack").classList.add("hidden"); await loadAll(); }
   };
 }
 $("#addUserBtn").onclick = openAddUser;
@@ -1853,6 +1937,8 @@ function fillSettingsForm() {
   $("#setSni").value = (state.settings && state.settings.sni) || "";
   $("#setWsPath").value = (state.settings && state.settings.wsPath) || "";
   $("#setIps").value = ((state.settings && state.settings.cleanIps) || []).join("\\n");
+  const ports = (state.settings && state.settings.cleanPorts) || [443, 2053, 2083, 2087, 2096, 8443];
+  $("#setPorts").value = ports.join(",");
   $("#setFixedIp").value = (state.settings && state.settings.fixedIp) || "";
 }
 $("#saveBtn").onclick = async () => {
@@ -1865,17 +1951,17 @@ $("#saveBtn").onclick = async () => {
     sni: $("#setSni").value,
     wsPath: $("#setWsPath").value || "/nika-ws",
     cleanIps: $("#setIps").value.split("\\n").map((x) => x.trim()).filter(Boolean),
+    cleanPorts: $("#setPorts").value.split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isInteger(n) && n > 0),
     fixedIp: $("#setFixedIp").value.trim(),
     protocols: proto,
   };
   if (newpass) body.newpass = newpass;
   const res = await api("/api/settings", { method: "POST", body });
-  if (res.ok) {
+  if (actionOk(res)) {
     if (newpass) { $("#setPass").value = ""; toast(t("toast.passChanged")); }
     else toast(t("toast.saved"));
     await loadAll();
   }
-  else toast(t("common.error"));
 };
 
 $("#updCheck").onclick = checkUpdate;
@@ -1920,6 +2006,7 @@ I18N.fa["scan.lat"] = "\u062A\u0623\u062E\u06CC\u0631";
 I18N.fa["scan.port"] = "\u067E\u0648\u0631\u062A";
 I18N.fa["scan.status"] = "\u0648\u0636\u0639\u06CC\u062A";
 I18N.fa["scan.apply"] = "\u26A1 \u0627\u0639\u0645\u0627\u0644 \u0628\u0647 \u067E\u0646\u0644";
+I18N.fa["scan.lock"] = "\u{1F512} IP \u062B\u0627\u0628\u062A";
 I18N.fa["scan.applyD"] = "\u0628\u0647\u062A\u0631\u06CC\u0646 IP \u0647\u0627 \u062C\u0627\u06CC\u06AF\u0632\u06CC\u0646 \u0644\u06CC\u0633\u062A IP \u062A\u0645\u06CC\u0632 \u067E\u0646\u0644 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F";
 I18N.fa["scan.copy"] = "\u{1F4CB} \u06A9\u067E\u06CC";
 I18N.fa["scan.export"] = "\u2B07 \u062E\u0631\u0648\u062C\u06CC";
@@ -1998,6 +2085,7 @@ I18N.en["scan.lat"] = "Latency";
 I18N.en["scan.port"] = "Port";
 I18N.en["scan.status"] = "Status";
 I18N.en["scan.apply"] = "\u26A1 Apply to panel";
+I18N.en["scan.lock"] = "\u{1F512} Fixed IP";
 I18N.en["scan.applyD"] = "Top IPs replace the panel's clean-IP list";
 I18N.en["scan.copy"] = "\u{1F4CB} Copy";
 I18N.en["scan.export"] = "\u2B07 Export";
@@ -2529,13 +2617,13 @@ const SCANNER = (() => {
     if (v4.length) body.cleanIps = v4;
     if (v6.length) body.cleanIpv6 = v6;
     const res = await api("/api/settings", { method: "POST", body });
-    if (res.ok) {
+    if (actionOk(res)) {
       toast(t("scan.applied"));
       if (state.settings) {
         if (v4.length) state.settings.cleanIps = v4;
         if (v6.length) state.settings.cleanIpv6 = v6;
       }
-    } else toast(t("common.error"));
+    }
   }
 
   function onOpen() {
@@ -2841,11 +2929,11 @@ const SCANNER = (() => {
     if (!R.best) { toast(t("relay.none")); return; }
     if (MODE !== "live") { if (!auto) toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { relayDomain: R.best.domain } });
-    if (res.ok) {
+    if (actionOk(res)) {
       toast(auto ? t("relay.autopicked") : t("relay.applied"));
       if (state.settings) state.settings.relayDomain = R.best.domain;
       renderRelayCurrent();
-    } else toast(t("common.error"));
+    }
   }
 
   return {
@@ -3236,17 +3324,17 @@ window.POOL = (() => {
       toast(t("pool.appliedOk").replace("{name}", name));
       if (!cfBest.length) setTimeout(() => toast(t("pool.nocfApply")), 2100);
       renderApplied();
-    } else toast(t("common.error"));
+    }
   }
 
   async function clearApplied() {
     if (MODE !== "live") { toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { poolIps: [], poolCountry: "", poolFlag: "" } });
-    if (res.ok) {
+    if (actionOk(res)) {
       if (state.settings) { state.settings.poolIps = []; state.settings.poolCountry = ""; state.settings.poolFlag = ""; }
       toast(t("pool.cleared"));
       renderApplied();
-    } else toast(t("common.error"));
+    }
   }
 
   function copyBest() {
@@ -3273,8 +3361,7 @@ window.POOL = (() => {
     // trusted=true \u2192 the caller already verified the IP server-side
     if (!trusted && !isCf(ip)) { toast(t("pool.nocflock")); return; }
     const res = await api("/api/settings", { method: "POST", body: { fixedIp: addr } });
-    if (res.ok) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
-    else toast(t("common.error"));
+    if (actionOk(res)) { if (state.settings) state.settings.fixedIp = addr; toast(t("pool.locked")); renderFixed(); }
   }
 
   async function poolLock() {
@@ -3287,8 +3374,7 @@ window.POOL = (() => {
   async function unlock() {
     if (MODE !== "live") { toast(t("toast.preview")); return; }
     const res = await api("/api/settings", { method: "POST", body: { fixedIp: "" } });
-    if (res.ok) { if (state.settings) state.settings.fixedIp = ""; toast(t("pool.unlocked")); renderFixed(); }
-    else toast(t("common.error"));
+    if (actionOk(res)) { if (state.settings) state.settings.fixedIp = ""; toast(t("pool.unlocked")); renderFixed(); }
   }
 
   function renderFixed() {
@@ -3344,4 +3430,4 @@ window.POOL = (() => {
 
 </body>
 </html>
-`,p="0.13.9",at=["https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt","https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt"],It=/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g,O=null;async function nt(){if(O&&Date.now()-O.at<10*6e4)return O.ips;let A=new Set,B=i=>Promise.race([fetch(i),new Promise((g,Q)=>setTimeout(()=>Q(new Error("timeout")),8e3))]);for(let i of at)try{let Q=await(await B(i)).text(),e,o=0;for(;(e=It.exec(Q))&&o<4e3;){let s=e[1];s.split(".").map(Number).every(a=>a>=0&&a<=255)&&!s.startsWith("0.")&&(A.add(s),o++)}}catch{}let t=[...A];return O={ips:t,at:Date.now()},t}var AB=(A,B=200)=>new Response(A,{status:B,headers:{"content-type":"text/html; charset=utf-8"}});function rt(A){return A.headers.set("access-control-allow-origin","*"),A}var Zt={async fetch(A,B,t){try{JA(),t.waitUntil(zA(B,t));let i=new URL(A.url),g=i.pathname,Q=await hA(B);if((A.headers.get("Upgrade")||"").toLowerCase()==="websocket")return Yt(A,B,Q);if(g==="/admin"||g==="/admin/")return AB(_A);if(g.startsWith("/api/"))return rt(await ct(A,B,Q,i));if(g.startsWith("/sub/"))return Ct(A,B,Q,g);let e=g.match(/^\/([0-9a-fA-F-]{36})\/?$/);return e?Mt(A,B,Q,e[1]):g==="/health"?w({ok:!0,name:Q.title}):Q.host===D.host?AB(_A):Response.redirect("https://www.cloudflare.com",302)}catch(i){return w({error:String(i)},500)}}};function wt(A){let B=new WebSocketPair,[t,i]=Object.values(B);i.accept();let g=JSON.stringify({ok:!0,panel:"nika",v:p});try{i.send(g)}catch{}return setTimeout(()=>{try{i.close()}catch{}},2e3),new Response(null,{status:101,webSocket:t})}async function Yt(A,B,t){let i=new URL(A.url);if(i.searchParams.get("probe")==="nika")return wt(A);let g=(i.searchParams.get("proto")||A.headers.get("x-nika-proto")||"").toLowerCase(),Q=await l(B),e=i.searchParams.get("uuid")||"";if(e){let o=Q.find(s=>s.uuid.toLowerCase()===e.toLowerCase());return o?o.active?g==="trojan"?EA(A,Q,t,B):sA(A,Q,t,B):w({error:"user inactive"},403):w({error:"no user for this uuid"},403)}return g==="trojan"?EA(A,Q,t,B):sA(A,Q,t,B)}async function ct(A,B,t,i){let g=i.pathname.replace("/api/",""),Q=A.method.toUpperCase();if(g==="info")return w({name:t.title,setup:!t.adminPassHash,protocols:t.protocols,version:p});if(g==="update/check"){let e=await Ut();return w({current:p,latest:e.version,notes:e.notes||"",upToDate:ht(p,e.version)>=0})}if(g==="ips"){let e=await nt();return w({ips:e,count:e.length})}if(g==="speedtest"){let e=i.searchParams.get("bytes")||"4194304",o=Math.min(8*1024*1024,Math.max(64*1024,parseInt(e,10)||4*1024*1024)),s=new Uint8Array(64*1024);crypto.getRandomValues(s);let E=0,a=new ReadableStream({pull(n){let r=o-E;if(r<=0){n.close();return}let c=Math.min(s.length,r);n.enqueue(c===s.length?s:s.slice(0,c)),E+=c}});return new Response(a,{headers:{"content-type":"application/octet-stream","content-length":String(o),"cache-control":"no-store, no-cache, must-revalidate"}})}if(g==="login"&&Q==="POST"){let e=await A.json().catch(()=>({})),o=typeof e.password=="string"?e.password:"";if(!t.adminPassHash){if(o.length<4)return w({error:"password too short"},400);t.adminPassHash=await f(o);try{await BA(B,t)}catch{}let a=await x(t.sessionSecret,JSON.stringify({t:Date.now()}));try{await N(B,{icon:"\u{1F6E0}",text:"\u0646\u0635\u0628 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0646\u0644 \u2014 \u0631\u0645\u0632 \u0627\u062F\u0645\u06CC\u0646 \u062B\u0628\u062A \u0634\u062F",time:Date.now()})}catch{}let n=w({ok:!0,setup:!0});return n.headers.set("set-cookie",`${W}=${encodeURIComponent(a)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),n}if(t.adminPassHash!==await f(o))return w({error:"wrong password"},401);let s=await x(t.sessionSecret,JSON.stringify({t:Date.now()}));try{await N(B,{icon:"\u{1F510}",text:"\u0648\u0631\u0648\u062F \u0627\u062F\u0645\u06CC\u0646 \u0628\u0647 \u067E\u0646\u0644",time:Date.now()})}catch{}let E=w({ok:!0,setup:!1});return E.headers.set("set-cookie",`${W}=${encodeURIComponent(s)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),E}if(g==="logout"){let e=w({ok:!0});return e.headers.set("set-cookie",`${W}=; HttpOnly; Path=/; Max-Age=0`),e}if(!await DA(A,t))return w({error:"unauthorized"},401);switch(g){case"status":{let e=await l(B);return w({title:t.title,setup:!1,users:e.length,active:e.filter(o=>o.active).length,usedGb:Math.round(e.reduce((o,s)=>o+(s.used||0),0)*100)/100,requestsToday:await uA(B),requestsTotal:await HA(B),protocols:t.protocols,activity:await fA(B),traffic7d:await LA(B)})}case"users":{let e=await l(B);if(Q==="GET")return w(e);if(Q==="POST"){let o=await A.json().catch(()=>({})),s={id:crypto.randomUUID(),name:o.name||"\u06A9\u0627\u0631\u0628\u0631",uuid:crypto.randomUUID(),password:FA(),quota:Number(o.quota)||50,used:0,days:Number(o.days)||30,active:!0,createdAt:Date.now()};return e.push(s),await m(B,e),await N(B,{icon:"\u{1F464}",text:`\u06A9\u0627\u0631\u0628\u0631 \u0633\u0627\u062E\u062A\u0647 \u0634\u062F \u2014 ${s.name}`,time:Date.now()}),w(s)}if(Q==="DELETE"){let o=i.searchParams.get("id"),s=e.find(a=>a.id===o),E=e.filter(a=>a.id!==o);return await m(B,E),await N(B,{icon:"\u{1F5D1}",text:`\u06A9\u0627\u0631\u0628\u0631 \u062D\u0630\u0641 \u0634\u062F \u2014 ${s?.name||o}`,time:Date.now()}),w({ok:!0})}break}case"users/toggle":{if(Q!=="POST")break;let e=await A.json().catch(()=>({})),o=await l(B),s=o.find(E=>E.id===e.id);return s?(s.active=!s.active,await m(B,o),await N(B,{icon:s.active?"\u{1F7E2}":"\u26D4",text:`${s.name} ${s.active?"\u0641\u0639\u0627\u0644":"\u063A\u06CC\u0631\u0641\u0639\u0627\u0644"} \u0634\u062F`,time:Date.now()}),w({ok:!0,active:s.active})):w({error:"not found"},404)}case"settings":{if(Q==="GET")return w(t);if(Q==="POST"){let e=await A.json().catch(()=>({})),o={...t};if(typeof e.title=="string"&&(o.title=e.title),typeof e.host=="string"&&(o.host=e.host),typeof e.sni=="string"&&(o.sni=e.sni),typeof e.wsPath=="string"&&(o.wsPath=e.wsPath),Array.isArray(e.cleanIps)&&(o.cleanIps=e.cleanIps),Array.isArray(e.cleanIpv6)&&(o.cleanIpv6=e.cleanIpv6),Array.isArray(e.cleanPorts)&&(o.cleanPorts=e.cleanPorts.map(s=>Number(s))),typeof e.fixedIp=="string"&&(o.fixedIp=e.fixedIp.trim()),typeof e.relayDomain=="string"&&(o.relayDomain=e.relayDomain.trim()),Array.isArray(e.poolIps)&&(o.poolIps=e.poolIps),typeof e.poolCountry=="string"&&(o.poolCountry=e.poolCountry),typeof e.poolFlag=="string"&&(o.poolFlag=e.poolFlag),e.protocols&&(o.protocols={...t.protocols,...e.protocols}),typeof e.newpass=="string"&&e.newpass.trim()){let s=e.newpass.trim();if(s.length<4)return w({error:"password too short"},400);o.adminPassHash=await f(s)}AA(o),await BA(B,o);try{await N(B,{icon:"\u2699\uFE0F",text:"\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()})}catch{}return w({ok:!0})}break}case"pooltest":{if(Q!=="POST")break;let e=await A.json().catch(()=>({})),o=Array.isArray(e.list)?e.list.filter(n=>typeof n=="string"):[];if(!o.length)return w({results:[],elapsed:0});let s=Date.now(),a=(await WA(o)).map(n=>{let r=(n.addr||"").split(":")[0];return{...n,verified:k(r)}});return w({results:a,elapsed:Date.now()-s})}case"gen":{let e=i.searchParams.get("id"),s=(await l(B)).find(a=>a.id===e);if(!s)return w({error:"user not found"},404);let E={...t,host:nA(A,t)};return w({user:{id:s.id,name:s.name,quota:s.quota,used:Math.round((s.used||0)*100)/100,days:s.days,active:s.active},base64:b(s,E),clash:iA(s,E),singbox:eA(s,E),warp:t.protocols.warp?mA(s):null})}case"update/apply":{if(Q!=="POST")break;let e=await A.json().catch(()=>({})),o=await lt(B,t,e.token||"",i.hostname);return w(o,o.ok?200:400)}}return w({error:"not found"},404)}function nA(A,B){let t=(B.host||"").trim();return t&&t!==D.host?t:new URL(A.url).hostname}async function Ct(A,B,t,i){let g=i.replace("/sub/",""),Q=g.split("/")[0].split(".")[0],e=g.split(".").pop()?.toLowerCase()||"",s=(await l(B)).find(Y=>Y.password===Q||Y.uuid.replace(/-/g,"").slice(0,12)===Q);if(!s)return w({error:"invalid token"},404);let E=A.headers.get("Accept")||"",a=A.headers.get("Sec-Fetch-Dest")||"",n=A.headers.get("Sec-Fetch-Mode")||"",r=a==="document"||n==="navigate";if(E.includes("text/html")&&r){let Y=new URL(A.url).origin;return new Response($A({name:s.name,active:!!s.active,quota:Number(s.quota)||0,used:Math.round((s.used||0)*100)/100,days:Number(s.days)||0,origin:Y,token:Q,version:p,protocols:t.protocols}),{headers:{"content-type":"text/html; charset=utf-8"}})}let c=e==="yaml"||e==="yml",M=e==="json",C={...t,host:nA(A,t)},U=c?iA(s,C):M?eA(s,C):b(s,C);return new Response(U,{headers:{"content-type":c?"text/yaml":M?"application/json":"text/plain"}})}async function Mt(A,B,t,i){let Q=(await l(B)).find(s=>s.uuid.toLowerCase()===i.toLowerCase());if(!Q)return w({error:"unknown uuid"},404);let e={...t,host:nA(A,t)},o=b(Q,e);return new Response(o,{headers:{"content-type":"text/plain"}})}var tB="https://raw.githubusercontent.com/NikaTeem/Nika-Net/main",IA=null,BB=0;async function Ut(){if(IA&&Date.now()-BB<3e5)return IA;try{let A=await fetch(`${tB}/version.json`,{cf:{cacheTtl:300}});if(!A.ok)throw new Error("fetch failed");let B=await A.json();return IA=B,BB=Date.now(),B}catch{return{version:p,notes:""}}}function ht(A,B){let t=A.split(".").map(g=>parseInt(g,10)||0),i=B.split(".").map(g=>parseInt(g,10)||0);for(let g=0;g<3;g++){let Q=(t[g]||0)-(i[g]||0);if(Q!==0)return Q}return 0}async function lt(A,B,t,i){if(!t||t.length<20)return{ok:!1,error:"token required"};let g=await d(t,"/user/tokens/verify");if(!g?.success)return{ok:!1,error:g?.errors?.[0]?.message||"\u062A\u0648\u06A9\u0646 \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A"};let e=(await d(t,"/accounts?per_page=50"))?.result?.[0]?.id;if(!e)return{ok:!1,error:"\u0627\u06A9\u0627\u0646\u062A\u06CC \u0628\u0627 \u0627\u06CC\u0646 \u062A\u0648\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F"};let o=(B.host||"").trim(),s=(o.includes(".workers.dev")?o.split(".")[0]:"")||i.split(".")[0];if(!s)return{ok:!1,error:"\u0627\u0628\u062A\u062F\u0627 Host \u0648\u0631\u06A9\u0631 \u0631\u0627 \u062F\u0631 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0648\u0627\u0631\u062F \u06A9\u0646"};let E=await bA(t,e,[`nika-${s}-kv`,`${s}-kv`]),a=await fetch(`${tB}/dist/worker.js`);if(!a.ok)return{ok:!1,error:"\u062F\u0631\u06CC\u0627\u0641\u062A \u0622\u062E\u0631\u06CC\u0646 \u0646\u0633\u062E\u0647 \u0645\u0645\u06A9\u0646 \u0646\u0634\u062F"};let n=await a.text(),r=await VA(t,e,s,E),c=await TA(t,e,s,n,r);return c.ok?(await PA(t,e,s),await N(A,{icon:"\u{1F504}",text:"\u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),{ok:!0}):{ok:!1,error:c.err}}export{Zt as default};
+`,p="0.13.10",at=["https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt","https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt"],It=/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g,O=null;async function nt(){if(O&&Date.now()-O.at<10*6e4)return O.ips;let A=new Set,B=i=>Promise.race([fetch(i),new Promise((g,Q)=>setTimeout(()=>Q(new Error("timeout")),8e3))]);for(let i of at)try{let Q=await(await B(i)).text(),e,o=0;for(;(e=It.exec(Q))&&o<4e3;){let s=e[1];s.split(".").map(Number).every(a=>a>=0&&a<=255)&&!s.startsWith("0.")&&(A.add(s),o++)}}catch{}let t=[...A];return O={ips:t,at:Date.now()},t}var AB=(A,B=200)=>new Response(A,{status:B,headers:{"content-type":"text/html; charset=utf-8"}});function rt(A){return A.headers.set("access-control-allow-origin","*"),A}var Zt={async fetch(A,B,t){try{JA(),t.waitUntil(zA(B,t));let i=new URL(A.url),g=i.pathname,Q=await hA(B);if((A.headers.get("Upgrade")||"").toLowerCase()==="websocket")return Yt(A,B,Q);if(g==="/admin"||g==="/admin/")return AB(_A);if(g.startsWith("/api/"))return rt(await ct(A,B,Q,i));if(g.startsWith("/sub/"))return Ct(A,B,Q,g);let e=g.match(/^\/([0-9a-fA-F-]{36})\/?$/);return e?Mt(A,B,Q,e[1]):g==="/health"?w({ok:!0,name:Q.title}):Q.host===D.host?AB(_A):Response.redirect("https://www.cloudflare.com",302)}catch(i){return w({error:String(i)},500)}}};function wt(A){let B=new WebSocketPair,[t,i]=Object.values(B);i.accept();let g=JSON.stringify({ok:!0,panel:"nika",v:p});try{i.send(g)}catch{}return setTimeout(()=>{try{i.close()}catch{}},2e3),new Response(null,{status:101,webSocket:t})}async function Yt(A,B,t){let i=new URL(A.url);if(i.searchParams.get("probe")==="nika")return wt(A);let g=(i.searchParams.get("proto")||A.headers.get("x-nika-proto")||"").toLowerCase(),Q=await l(B),e=i.searchParams.get("uuid")||"";if(e){let o=Q.find(s=>s.uuid.toLowerCase()===e.toLowerCase());return o?o.active?g==="trojan"?EA(A,Q,t,B):sA(A,Q,t,B):w({error:"user inactive"},403):w({error:"no user for this uuid"},403)}return g==="trojan"?EA(A,Q,t,B):sA(A,Q,t,B)}async function ct(A,B,t,i){let g=i.pathname.replace("/api/",""),Q=A.method.toUpperCase();if(g==="info")return w({name:t.title,setup:!t.adminPassHash,protocols:t.protocols,version:p});if(g==="update/check"){let e=await Ut();return w({current:p,latest:e.version,notes:e.notes||"",upToDate:ht(p,e.version)>=0})}if(g==="ips"){let e=await nt();return w({ips:e,count:e.length})}if(g==="speedtest"){let e=i.searchParams.get("bytes")||"4194304",o=Math.min(8*1024*1024,Math.max(64*1024,parseInt(e,10)||4*1024*1024)),s=new Uint8Array(64*1024);crypto.getRandomValues(s);let E=0,a=new ReadableStream({pull(n){let r=o-E;if(r<=0){n.close();return}let c=Math.min(s.length,r);n.enqueue(c===s.length?s:s.slice(0,c)),E+=c}});return new Response(a,{headers:{"content-type":"application/octet-stream","content-length":String(o),"cache-control":"no-store, no-cache, must-revalidate"}})}if(g==="login"&&Q==="POST"){let e=await A.json().catch(()=>({})),o=typeof e.password=="string"?e.password:"";if(!t.adminPassHash){if(o.length<4)return w({error:"password too short"},400);t.adminPassHash=await f(o);try{await BA(B,t)}catch{}let a=await x(t.sessionSecret,JSON.stringify({t:Date.now()}));try{await N(B,{icon:"\u{1F6E0}",text:"\u0646\u0635\u0628 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0646\u0644 \u2014 \u0631\u0645\u0632 \u0627\u062F\u0645\u06CC\u0646 \u062B\u0628\u062A \u0634\u062F",time:Date.now()})}catch{}let n=w({ok:!0,setup:!0});return n.headers.set("set-cookie",`${W}=${encodeURIComponent(a)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),n}if(t.adminPassHash!==await f(o))return w({error:"wrong password"},401);let s=await x(t.sessionSecret,JSON.stringify({t:Date.now()}));try{await N(B,{icon:"\u{1F510}",text:"\u0648\u0631\u0648\u062F \u0627\u062F\u0645\u06CC\u0646 \u0628\u0647 \u067E\u0646\u0644",time:Date.now()})}catch{}let E=w({ok:!0,setup:!1});return E.headers.set("set-cookie",`${W}=${encodeURIComponent(s)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`),E}if(g==="logout"){let e=w({ok:!0});return e.headers.set("set-cookie",`${W}=; HttpOnly; Path=/; Max-Age=0`),e}if(!await DA(A,t))return w({error:"unauthorized"},401);switch(g){case"status":{let e=await l(B);return w({title:t.title,setup:!1,users:e.length,active:e.filter(o=>o.active).length,usedGb:Math.round(e.reduce((o,s)=>o+(s.used||0),0)*100)/100,requestsToday:await uA(B),requestsTotal:await HA(B),protocols:t.protocols,activity:await fA(B),traffic7d:await LA(B)})}case"users":{let e=await l(B);if(Q==="GET")return w(e);if(Q==="POST"){let o=await A.json().catch(()=>({})),s={id:crypto.randomUUID(),name:o.name||"\u06A9\u0627\u0631\u0628\u0631",uuid:crypto.randomUUID(),password:FA(),quota:Number(o.quota)||50,used:0,days:Number(o.days)||30,active:!0,createdAt:Date.now()};return e.push(s),await m(B,e),await N(B,{icon:"\u{1F464}",text:`\u06A9\u0627\u0631\u0628\u0631 \u0633\u0627\u062E\u062A\u0647 \u0634\u062F \u2014 ${s.name}`,time:Date.now()}),w(s)}if(Q==="DELETE"){let o=i.searchParams.get("id"),s=e.find(a=>a.id===o),E=e.filter(a=>a.id!==o);return await m(B,E),await N(B,{icon:"\u{1F5D1}",text:`\u06A9\u0627\u0631\u0628\u0631 \u062D\u0630\u0641 \u0634\u062F \u2014 ${s?.name||o}`,time:Date.now()}),w({ok:!0})}break}case"users/toggle":{if(Q!=="POST")break;let e=await A.json().catch(()=>({})),o=await l(B),s=o.find(E=>E.id===e.id);return s?(s.active=!s.active,await m(B,o),await N(B,{icon:s.active?"\u{1F7E2}":"\u26D4",text:`${s.name} ${s.active?"\u0641\u0639\u0627\u0644":"\u063A\u06CC\u0631\u0641\u0639\u0627\u0644"} \u0634\u062F`,time:Date.now()}),w({ok:!0,active:s.active})):w({error:"not found"},404)}case"settings":{if(Q==="GET"){let{adminPassHash:e,sessionSecret:o,...s}=t;return w(s)}if(Q==="POST"){let e=await A.json().catch(()=>({})),o={...t};if(typeof e.title=="string"&&(o.title=e.title),typeof e.host=="string"&&(o.host=e.host),typeof e.sni=="string"&&(o.sni=e.sni),typeof e.wsPath=="string"&&(o.wsPath=e.wsPath),Array.isArray(e.cleanIps)&&(o.cleanIps=e.cleanIps),Array.isArray(e.cleanIpv6)&&(o.cleanIpv6=e.cleanIpv6),Array.isArray(e.cleanPorts)&&(o.cleanPorts=e.cleanPorts.map(s=>Number(s))),typeof e.fixedIp=="string"&&(o.fixedIp=e.fixedIp.trim()),typeof e.relayDomain=="string"&&(o.relayDomain=e.relayDomain.trim()),Array.isArray(e.poolIps)&&(o.poolIps=e.poolIps),typeof e.poolCountry=="string"&&(o.poolCountry=e.poolCountry),typeof e.poolFlag=="string"&&(o.poolFlag=e.poolFlag),e.protocols&&(o.protocols={...t.protocols,...e.protocols}),typeof e.newpass=="string"&&e.newpass.trim()){let s=e.newpass.trim();if(s.length<4)return w({error:"password too short"},400);o.adminPassHash=await f(s)}AA(o),await BA(B,o);try{await N(B,{icon:"\u2699\uFE0F",text:"\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()})}catch{}return w({ok:!0})}break}case"pooltest":{if(Q!=="POST")break;let e=await A.json().catch(()=>({})),o=Array.isArray(e.list)?e.list.filter(n=>typeof n=="string"):[];if(!o.length)return w({results:[],elapsed:0});let s=Date.now(),a=(await WA(o)).map(n=>{let r=(n.addr||"").split(":")[0];return{...n,verified:k(r)}});return w({results:a,elapsed:Date.now()-s})}case"gen":{let e=i.searchParams.get("id"),s=(await l(B)).find(a=>a.id===e);if(!s)return w({error:"user not found"},404);let E={...t,host:nA(A,t)};return w({user:{id:s.id,name:s.name,quota:s.quota,used:Math.round((s.used||0)*100)/100,days:s.days,active:s.active},base64:b(s,E),clash:iA(s,E),singbox:eA(s,E),warp:t.protocols.warp?mA(s):null})}case"update/apply":{if(Q!=="POST")break;let e=await A.json().catch(()=>({})),o=await lt(B,t,e.token||"",i.hostname);return w(o,o.ok?200:400)}}return w({error:"not found"},404)}function nA(A,B){let t=(B.host||"").trim();return t&&t!==D.host?t:new URL(A.url).hostname}async function Ct(A,B,t,i){let g=i.replace("/sub/",""),Q=g.split("/")[0].split(".")[0],e=g.split(".").pop()?.toLowerCase()||"",s=(await l(B)).find(Y=>Y.password===Q||Y.uuid.replace(/-/g,"").slice(0,12)===Q);if(!s)return w({error:"invalid token"},404);let E=A.headers.get("Accept")||"",a=A.headers.get("Sec-Fetch-Dest")||"",n=A.headers.get("Sec-Fetch-Mode")||"",r=a==="document"||n==="navigate";if(E.includes("text/html")&&r){let Y=new URL(A.url).origin;return new Response($A({name:s.name,active:!!s.active,quota:Number(s.quota)||0,used:Math.round((s.used||0)*100)/100,days:Number(s.days)||0,origin:Y,token:Q,version:p,protocols:t.protocols}),{headers:{"content-type":"text/html; charset=utf-8"}})}let c=e==="yaml"||e==="yml",M=e==="json",C={...t,host:nA(A,t)},U=c?iA(s,C):M?eA(s,C):b(s,C);return new Response(U,{headers:{"content-type":c?"text/yaml":M?"application/json":"text/plain"}})}async function Mt(A,B,t,i){let Q=(await l(B)).find(s=>s.uuid.toLowerCase()===i.toLowerCase());if(!Q)return w({error:"unknown uuid"},404);let e={...t,host:nA(A,t)},o=b(Q,e);return new Response(o,{headers:{"content-type":"text/plain"}})}var tB="https://raw.githubusercontent.com/NikaTeem/Nika-Net/main",IA=null,BB=0;async function Ut(){if(IA&&Date.now()-BB<3e5)return IA;try{let A=await fetch(`${tB}/version.json`,{cf:{cacheTtl:300}});if(!A.ok)throw new Error("fetch failed");let B=await A.json();return IA=B,BB=Date.now(),B}catch{return{version:p,notes:""}}}function ht(A,B){let t=A.split(".").map(g=>parseInt(g,10)||0),i=B.split(".").map(g=>parseInt(g,10)||0);for(let g=0;g<3;g++){let Q=(t[g]||0)-(i[g]||0);if(Q!==0)return Q}return 0}async function lt(A,B,t,i){if(!t||t.length<20)return{ok:!1,error:"token required"};let g=await d(t,"/user/tokens/verify");if(!g?.success)return{ok:!1,error:g?.errors?.[0]?.message||"\u062A\u0648\u06A9\u0646 \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A"};let e=(await d(t,"/accounts?per_page=50"))?.result?.[0]?.id;if(!e)return{ok:!1,error:"\u0627\u06A9\u0627\u0646\u062A\u06CC \u0628\u0627 \u0627\u06CC\u0646 \u062A\u0648\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F"};let o=(B.host||"").trim(),s=(o.includes(".workers.dev")?o.split(".")[0]:"")||i.split(".")[0];if(!s)return{ok:!1,error:"\u0627\u0628\u062A\u062F\u0627 Host \u0648\u0631\u06A9\u0631 \u0631\u0627 \u062F\u0631 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0648\u0627\u0631\u062F \u06A9\u0646"};let E=await bA(t,e,[`nika-${s}-kv`,`${s}-kv`]),a=await fetch(`${tB}/dist/worker.js`);if(!a.ok)return{ok:!1,error:"\u062F\u0631\u06CC\u0627\u0641\u062A \u0622\u062E\u0631\u06CC\u0646 \u0646\u0633\u062E\u0647 \u0645\u0645\u06A9\u0646 \u0646\u0634\u062F"};let n=await a.text(),r=await VA(t,e,s,E),c=await TA(t,e,s,n,r);return c.ok?(await PA(t,e,s),await N(A,{icon:"\u{1F504}",text:"\u067E\u0646\u0644 \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F",time:Date.now()}),{ok:!0}):{ok:!1,error:c.err}}export{Zt as default};
