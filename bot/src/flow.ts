@@ -9,6 +9,7 @@ import * as panel from "./panel";
 import * as fj from "./forcedjoin";
 import * as sup from "./support";
 import * as bc from "./broadcast";
+import * as ex from "./extras";
 import { t, Lang } from "./i18n";
 import { encryptText, decryptText } from "./crypto";
 import { UserState, TokenRecord } from "./state";
@@ -270,6 +271,12 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     if (!(await fj.gateUser(env, chatId, L(pre)))) return;
   }
 
+  // 🔐 قفل لانچر — همهچیز بهجز /unlock وقتی قفل باشد مسدود میشود
+  if (/^\/unlock(?:\s|$)/i.test(text)) return await cmdUnlock(env, chatId, msg.message_id, text);
+  if (pinLocked(pre)) {
+    return void (await tg.sendMessage(env, chatId, ui.makeText("🔐", t(L(pre), "pin_locked"), null, null, "danger")));
+  }
+
   const startMatch = /^\/start(?:\s+(.+))?$/i.exec(text);
   if (text === "/start" || text.toLowerCase() === "start" || startMatch) {
     const payload = (startMatch?.[1] || "").trim().toLowerCase();
@@ -333,6 +340,46 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     return;
   }
 
+  if (/^\/wiz(?:\s|$)/i.test(text)) {
+    const s = await st.getState(env, chatId);
+    s.state = "await_wiz_sni";
+    await st.saveState(env, chatId, s);
+    const m = ui.wizAsk(s, 0);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
+  if (/^\/txt(?:\s|$)/i.test(text)) {
+    const s = await st.getState(env, chatId);
+    const m = ui.textsMenu(s);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
+  if (/^\/promo(?:\s|$)/i.test(text)) {
+    const s = await st.getState(env, chatId);
+    const m = ui.promoMenu(s);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
+  if (/^\/pin(?:\s|$)/i.test(text)) {
+    const s = await st.getState(env, chatId);
+    const m = ui.pinMenu(s);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
+  if (/^\/tools(?:\s|$)/i.test(text)) {
+    const s = await st.getState(env, chatId);
+    const m = ui.toolsMenu(s);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
+  if (/^\/road(?:\s|$)/i.test(text)) {
+    return await roadEntry(env, chatId, undefined);
+  }
+
+  if (/^\/queen$/i.test(text)) {
+    return void (await tg.sendMessage(env, chatId, ui.queen()));
+  }
+
   if (text.startsWith("/broadcast")) {
     const owner = await st.getOwner(env);
     const s = await st.getState(env, chatId);
@@ -394,6 +441,22 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
       // به همان گفتگو/تیکت اضافه می‌شود تا وقتی خودش منو را باز کند.
       if (!text) return; // استیکر/عکس بدون متن → نادیده
       return await supportText(env, chatId, msg, text, false);
+    case "await_wiz_sni":
+      return await inWizSni(env, chatId, msg.message_id, text);
+    case "await_wiz_ws":
+      return await inWizWs(env, chatId, msg.message_id, text);
+    case "await_txt":
+      return await inTxt(env, chatId, text);
+    case "await_promo":
+      return await inPromo(env, chatId, text);
+    case "await_sublink":
+      return await inSubLink(env, chatId, text);
+    case "await_pin1":
+      return await inPin1(env, chatId, text);
+    case "await_pin2":
+      return await inPin2(env, chatId, text);
+    case "await_unlock":
+      return await inUnlock(env, chatId, text);
     default: {
       // مالک → منوی اصلی · کاربر عادی → پیام آزاد = تیکت پشتیبانی
       if (await isOwner(env, chatId)) {
@@ -1029,6 +1092,24 @@ async function navMenu(env: Env, chatId: number, msgId: number, name: string, fi
     case "help": m = ui.helpMenu(s); break;
     case "support": m = ui.supportMenu(s); break;
     case "owner": m = ui.ownerMenu(s, await fj.botMeta(env)); break;
+    case "tools": m = ui.toolsMenu(s); break;
+    case "texts": m = ui.textsMenu(s); break;
+    case "promo": m = ui.promoMenu(s); break;
+    case "pin": m = ui.pinMenu(s); break;
+    case "doh": m = ui.dohMenu(s); break;
+    case "frag": m = ui.fragMenu(s); break;
+    case "isp": m = ui.ispMenu(s); break;
+    case "tour": m = ui.tourMenu(s, 0); break;
+    case "wiz":
+      s.state = "await_wiz_sni";
+      await st.saveState(env, chatId, s);
+      m = ui.wizAsk(s, 0);
+      break;
+    case "road": return await roadEntry(env, chatId, msgId);
+    case "voice": return await voiceEntry(env, chatId, msgId);
+    case "cf": return await cfEntry(env, chatId, msgId);
+    case "mtx": return await mtxEntry(env, chatId, msgId);
+    case "warp": return await warpEntry(env, chatId, msgId);
     default: m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
   }
   await reply(env, chatId, msgId, m.text, m.kb);
@@ -1055,6 +1136,12 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
       const m = ui.mainMenu(s, firstName, await isOwner(env, chatId));
       await tg.sendMessage(env, chatId, m.text, m.kb);
     }
+    return;
+  }
+
+  // 🔐 قفل لانچر — وقتی قفل باشد هیچ دکمه‌ای کار نمی‌کند (جز تأیید عضویت اجباری)
+  if (pinLocked(s)) {
+    await tg.answerCallback(env, cq.id, t(L(s), "pin_locked"), true).catch(() => {});
     return;
   }
 
@@ -1369,5 +1456,432 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     return await usersEntry(env, chatId, msgId, pname || "", 0);
   }
 
+  /* ---------- HYPER ✨ tools ---------- */
+
+  // 🎙 voice — read a panel's live status
+  if (data.startsWith("voice:")) {
+    const pname = data.slice(6);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return await voiceEntry(env, chatId, msgId, pname);
+  }
+
+  // ⛓ warp — pick a user / toggle protocol
+  if (data.startsWith("warp:g:")) {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return await warpGet(env, chatId, msgId, data.slice(7));
+  }
+  if (data.startsWith("warp:en:")) {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return await warpToggle(env, chatId, msgId, data.slice(8));
+  }
+  if (data.startsWith("warp:")) {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return await warpEntry(env, chatId, msgId, data.slice(5) || undefined);
+  }
+
+  // 📡 isp — apply an operator preset SNI to the panel
+  if (data.startsWith("isp:")) {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return await ispApply(env, chatId, msgId, data.slice(4));
+  }
+
+  // 🎓 tour — next/prev step
+  if (data.startsWith("tour:")) {
+    const step = Math.max(0, parseInt(data.slice(5), 10) || 0);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    const m = ui.tourMenu(s, step);
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+
+  // ✍️ texts — pick which text to override / clear all
+  if (data.startsWith("txt:")) {
+    const key = data.slice(4);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    if (key === "clear") {
+      const c = s.cfg || {};
+      delete c.hello; delete c.desc; delete c.tip;
+      s.cfg = c;
+      await st.saveState(env, chatId, s);
+      const m = ui.textsMenu(s);
+      return void (await reply(env, chatId, msgId, m.text, m.kb));
+    }
+    if (key === "hello" || key === "desc" || key === "tip") {
+      s.state = "await_txt";
+      s.tmp.txtKey = key;
+      await st.saveState(env, chatId, s);
+      return void (await reply(env, chatId, msgId, t(L(s), "txt_ask"), tg.kb([[{ text: t(L(s), "cancel"), cb: "menu:texts", color: "gray", emoji: false }]])));
+    }
+    return;
+  }
+
+  // 📣 promo — edit / delete the channel post
+  if (data.startsWith("promo:")) {
+    const act = data.slice(6);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    if (act === "edit") {
+      s.state = "await_promo";
+      await st.saveState(env, chatId, s);
+      return void (await reply(env, chatId, msgId, t(L(s), "promo_ask"), tg.kb([[{ text: t(L(s), "cancel"), cb: "menu:promo", color: "gray", emoji: false }]])));
+    }
+    if (act === "del") {
+      const c = s.cfg || {};
+      delete c.promo;
+      s.cfg = c;
+      await st.saveState(env, chatId, s);
+      const m = ui.promoMenu(s);
+      return void (await reply(env, chatId, msgId, m.text, m.kb));
+    }
+    return;
+  }
+
+  // 🔐 pin — set / remove
+  if (data === "pin:set") {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    s.state = "await_pin1";
+    await st.saveState(env, chatId, s);
+    return void (await reply(env, chatId, msgId, t(L(s), "pin_ask"), tg.kb([[{ text: t(L(s), "cancel"), cb: "menu:pin", color: "gray", emoji: false }]])));
+  }
+  if (data === "pin:off") {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    const c = s.cfg || {};
+    delete c.pin; delete c.unlockedAt; delete c.fails;
+    s.cfg = c;
+    s.state = "idle";
+    await st.saveState(env, chatId, s);
+    await tg.sendMessage(env, chatId, t(L(s), "pin_removed")).catch(() => {});
+    const m = ui.pinMenu(s);
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+
+  // 📟 subscription status
+  if (data === "sub:ask") {
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    s.state = "await_sublink";
+    await st.saveState(env, chatId, s);
+    const m = ui.subAskMenu(s);
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+
   await tg.answerCallback(env, cq.id).catch(() => {});
+}
+
+/* ================================ HYPER ✨ tools ================================ */
+/* Everything below reads REAL panel/API data — ported from nika_launcher_pro.    */
+
+function pinLocked(s: UserState): boolean {
+  if (!s.cfg?.pin) return false;
+  const u = Number(s.cfg.unlockedAt) || 0;
+  return Date.now() - u > ex.PIN_TTL * 1000;
+}
+
+/* ---------- 🎙 voice ---------- */
+async function voiceEntry(env: Env, chatId: number, msgId: number | undefined, pname?: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  if (pname) {
+    const sess = await ex.panelSession(env, s, pname);
+    const back = tg.kb([[{ text: t(L(s), "back"), cb: "menu:voice", color: "gray", emoji: false }]]);
+    if (!sess.ok) {
+      return void (await reply(env, chatId, msgId, ui.makeText("🎙", t(L(s), "no_pass"), null, null, "danger"), back));
+    }
+    const st2 = await ex.statusOf(sess.base, sess.cookie);
+    if (!st2) {
+      return void (await reply(env, chatId, msgId, ui.makeText("🎙", t(L(s), "voice_noauth"), null, null, "danger"), back));
+    }
+    return void (await reply(env, chatId, msgId, ui.voiceResult(s, pname, st2 as unknown as Record<string, unknown>), back));
+  }
+  const authed = s.panels.filter((p) => s.panelAuth[p.name]).map((p) => p.name);
+  const m = ui.voiceMenu(s, authed);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+/* ---------- 📊 cf quota ---------- */
+async function cfEntry(env: Env, chatId: number, msgId: number | undefined): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const authed = s.panels.filter((p) => s.panelAuth[p.name]);
+  if (!authed.length) {
+    const m = ui.cfMenu(s, []);
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+  const entries: { name: string; r: number | null }[] = [];
+  for (const p of authed) {
+    const sess = await ex.panelSession(env, s, p.name);
+    if (!sess.ok) { entries.push({ name: p.name, r: null }); continue; }
+    const st2 = await ex.statusOf(sess.base, sess.cookie);
+    entries.push({ name: p.name, r: st2 ? Number(st2.requestsToday) || 0 : null });
+  }
+  const m = ui.cfMenu(s, entries);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+/* ---------- 🧮 matrix ---------- */
+async function mtxEntry(env: Env, chatId: number, msgId: number | undefined): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const authed = s.panels.filter((p) => s.panelAuth[p.name]);
+  if (!authed.length) {
+    const m = ui.mtxMenu(s, []);
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+  const entries: { name: string; users: number; active: number; r: number | null }[] = [];
+  for (const p of authed) {
+    const sess = await ex.panelSession(env, s, p.name);
+    if (!sess.ok) { entries.push({ name: p.name, users: 0, active: 0, r: null }); continue; }
+    const [us, st2] = await Promise.all([ex.usersOf(sess.base, sess.cookie), ex.statusOf(sess.base, sess.cookie)]);
+    entries.push({
+      name: p.name,
+      users: us ? us.length : 0,
+      active: us ? us.filter((u) => !!u.active).length : 0,
+      r: st2 ? Number(st2.requestsToday) || 0 : null,
+    });
+  }
+  const m = ui.mtxMenu(s, entries);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+/* ---------- ⛓ warp ---------- */
+async function warpEntry(env: Env, chatId: number, msgId: number | undefined, pname?: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const p =
+    (pname && s.panels.find((x) => x.name === pname)) ||
+    (s.tmp.upanel && s.panels.find((x) => x.name === s.tmp.upanel)) ||
+    s.panels.find((x) => s.panelAuth[x.name]) ||
+    s.panels[0];
+  if (!p) {
+    return void (await reply(env, chatId, msgId, ui.makeText(t(L(s), "warp_t"), t(L(s), "mtx_none"), null, null, "danger"), tg.kb([[{ text: t(L(s), "back"), cb: "menu:tools", color: "gray", emoji: false }]])));
+  }
+  const sess = await ex.panelSession(env, s, p.name);
+  if (!sess.ok) {
+    return void (await reply(env, chatId, msgId, ui.makeText("⛓", t(L(s), "no_pass"), null, null, "danger"), tg.kb([[{ text: t(L(s), "back"), cb: "menu:tools", color: "gray", emoji: false }]])));
+  }
+  const [cfg, us] = await Promise.all([ex.settingsOf(sess.base, sess.cookie), ex.usersOf(sess.base, sess.cookie)]);
+  const warpOn = !!(cfg?.protocols && (cfg.protocols as Record<string, boolean>).warp);
+  const m = ui.warpMenu(s, p.name, us || [], warpOn);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+async function warpGet(env: Env, chatId: number, msgId: number, spec: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const [pname, uid] = [spec.split(":")[0], spec.split(":").slice(1).join(":")];
+  const sess = await ex.panelSession(env, s, pname);
+  if (!sess.ok) {
+    return void (await reply(env, chatId, msgId, ui.makeText("⛓", t(L(s), "no_pass"), null, null, "danger")));
+  }
+  const us = await ex.usersOf(sess.base, sess.cookie);
+  const x = (us || []).find((i) => i.id === uid);
+  if (!x) return;
+  const conf = ex.warpConfig({ uuid: x.uuid, password: x.password });
+  const m = ui.warpConf(s, pname, x.name || uid.slice(0, 8), conf);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+async function warpToggle(env: Env, chatId: number, msgId: number, pname: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const sess = await ex.panelSession(env, s, pname);
+  if (!sess.ok) {
+    return void (await reply(env, chatId, msgId, ui.makeText("⛓", t(L(s), "no_pass"), null, null, "danger")));
+  }
+  const cfg = await ex.settingsOf(sess.base, sess.cookie);
+  const prot = (cfg?.protocols && typeof cfg.protocols === "object" ? { ...(cfg.protocols as Record<string, boolean>) } : {}) as Record<string, boolean>;
+  const nowOn = !prot.warp;
+  prot.warp = nowOn;
+  const r = await ex.patchSettings(sess.base, sess.cookie, { protocols: prot });
+  if (!r.ok) {
+    return void (await reply(env, chatId, msgId, ui.makeText("⛓", r.err, null, null, "danger")));
+  }
+  const us = await ex.usersOf(sess.base, sess.cookie);
+  const m = ui.warpMenu(s, pname, us || [], nowOn);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+/* ---------- 📡 isp ---------- */
+async function ispApply(env: Env, chatId: number, msgId: number | undefined, key: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const preset = ex.ISP_PRESETS[key];
+  if (!preset) return;
+  const p =
+    (s.tmp.upanel && s.panels.find((x) => x.name === s.tmp.upanel)) ||
+    s.panels.find((x) => s.panelAuth[x.name]) ||
+    s.panels[0];
+  if (!p) {
+    return void (await reply(env, chatId, msgId, ui.ispNop(s), tg.kb([[{ text: t(L(s), "back"), cb: "menu:isp", color: "gray", emoji: false }]])));
+  }
+  const sess = await ex.panelSession(env, s, p.name);
+  if (!sess.ok) {
+    return void (await reply(env, chatId, msgId, ui.makeText(t(L(s), "isp_t"), t(L(s), "no_pass"), null, null, "danger"), tg.kb([[{ text: t(L(s), "back"), cb: "menu:isp", color: "gray", emoji: false }]])));
+  }
+  const r = await ex.patchSettings(sess.base, sess.cookie, { sni: preset.sni[0] });
+  const txt = r.ok ? ui.ispApplied(s, p.name, preset.sni[0]) : ui.makeText(t(L(s), "isp_t"), t(L(s), "wiz_fail", { e: ui.esc(r.err) }), null, null, "danger");
+  await reply(env, chatId, msgId, txt, tg.kb([[{ text: t(L(s), "back"), cb: "menu:isp", color: "gray", emoji: false }]]));
+}
+
+/* ---------- 🗺 roadmap ---------- */
+async function roadEntry(env: Env, chatId: number, msgId: number | undefined): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const body = await ex.fetchRoadmap();
+  const m = ui.roadMenu(s, body || "");
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+/* ---------- 🕵️ wiz ---------- */
+async function inWizSni(env: Env, chatId: number, msgId: number | undefined, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const sni = text.trim();
+  const ok = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i.test(sni);
+  if (!ok) return void (await tg.sendMessage(env, chatId, t(L(s), "wiz_bad_sni")));
+  s.tmp.wizSni = sni;
+  s.state = "await_wiz_ws";
+  await st.saveState(env, chatId, s);
+  const m = ui.wizAsk(s, 1);
+  await tg.sendMessage(env, chatId, m.text, m.kb);
+}
+
+async function inWizWs(env: Env, chatId: number, msgId: number | undefined, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const ws = text.trim();
+  if (!/^\/([a-zA-Z0-9\-_/]{0,64})$/.test(ws)) return void (await tg.sendMessage(env, chatId, t(L(s), "wiz_bad_ws")));
+  const sni = (s.tmp.wizSni as string) || "";
+  const p =
+    (s.tmp.upanel && s.panels.find((x) => x.name === s.tmp.upanel)) ||
+    s.panels.find((x) => s.panelAuth[x.name]) ||
+    s.panels[0];
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  if (!p) return void (await tg.sendMessage(env, chatId, ui.wizFail(s, t(L(s), "isp_nop"))));
+  const sess = await ex.panelSession(env, s, p.name);
+  if (!sess.ok) return void (await tg.sendMessage(env, chatId, ui.wizFail(s, t(L(s), "no_pass"))));
+  const r = await ex.patchSettings(sess.base, sess.cookie, { sni, wsPath: ws });
+  await tg.sendMessage(env, chatId, r.ok ? ui.wizDone(s) : ui.wizFail(s, r.err));
+}
+
+/* ---------- ✍️ texts ---------- */
+async function inTxt(env: Env, chatId: number, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const key = (s.tmp.txtKey as string) || "tip";
+  const def = /^\/default$/i.test(text.trim());
+  const c = s.cfg || {};
+  if (def) delete c[key];
+  else c[key] = text.trim().slice(0, 300);
+  s.cfg = c;
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  await tg.sendMessage(env, chatId, def ? t(L(s), "txt_cleared") : t(L(s), "txt_saved"));
+  const m = ui.textsMenu(s);
+  await tg.sendMessage(env, chatId, m.text, m.kb);
+}
+
+/* ---------- 📣 promo ---------- */
+async function inPromo(env: Env, chatId: number, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const def = /^\/default$/i.test(text.trim());
+  const c = s.cfg || {};
+  if (def) delete c.promo;
+  else c.promo = text.trim().slice(0, 1000);
+  s.cfg = c;
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  await tg.sendMessage(env, chatId, t(L(s), "promo_saved"));
+  const m = ui.promoMenu(s);
+  await tg.sendMessage(env, chatId, m.text, m.kb);
+}
+
+/* ---------- 📟 subscription status ---------- */
+async function inSubLink(env: Env, chatId: number, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  const link = text.trim();
+  let good = false;
+  try {
+    const u = new URL(link);
+    good = u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    good = false;
+  }
+  if (!good) return void (await tg.sendMessage(env, chatId, ui.subResult(s, false, { error: "badurl" })));
+  const r = await ex.subStatus(link);
+  await tg.sendMessage(env, chatId, ui.subResult(s, r.ok, r));
+}
+
+/* ---------- 🔐 pin ---------- */
+async function cmdUnlock(env: Env, chatId: number, msgId: number | undefined, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  if (!s.cfg?.pin) return void (await tg.sendMessage(env, chatId, t(L(s), "pin_no")));
+  const pin = text.replace(/^\/unlock\s*/i, "").trim();
+  if (!/^\d{4,8}$/.test(pin)) {
+    s.state = "await_unlock";
+    await st.saveState(env, chatId, s);
+    return void (await tg.sendMessage(env, chatId, t(L(s), "pin_ask")));
+  }
+  return await tryPin(env, chatId, pin);
+}
+
+async function inUnlock(env: Env, chatId: number, text: string): Promise<void> {
+  if (!/^\d{4,8}$/.test(text.trim())) {
+    const s = await st.getState(env, chatId);
+    return void (await tg.sendMessage(env, chatId, t(L(s), "pin_ask")));
+  }
+  return await tryPin(env, chatId, text.trim());
+}
+
+async function tryPin(env: Env, chatId: number, pin: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  const lang = L(s);
+  if (!s.cfg?.pin) {
+    s.state = "idle";
+    await st.saveState(env, chatId, s);
+    return void (await tg.sendMessage(env, chatId, t(lang, "pin_no")));
+  }
+  const cool = Number(s.cfg.coolAt) || 0;
+  if (Date.now() < cool) {
+    const left = Math.ceil((cool - Date.now()) / 1000);
+    return void (await tg.sendMessage(env, chatId, t(lang, "pin_cool", { s: String(left) })));
+  }
+  const h = await ex.pinHash(env, pin);
+  if (h !== s.cfg.pin) {
+    let fails = Number(s.cfg.fails) || 0;
+    fails += 1;
+    if (fails >= 3) {
+      s.cfg.fails = 0;
+      s.cfg.coolAt = Date.now() + 30_000;
+      await st.saveState(env, chatId, s);
+      return void (await tg.sendMessage(env, chatId, t(lang, "pin_cool", { s: "30" })));
+    }
+    s.cfg.fails = fails;
+    await st.saveState(env, chatId, s);
+    return void (await tg.sendMessage(env, chatId, t(lang, "pin_wrong", { n: String(3 - fails) })));
+  }
+  s.cfg.unlockedAt = Date.now();
+  s.cfg.fails = 0;
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  await tg.sendMessage(env, chatId, t(lang, "pin_unl", { m: String(Math.round(ex.PIN_TTL / 60)) }));
+  const m = ui.mainMenu(s, undefined, await isOwner(env, chatId));
+  await tg.sendMessage(env, chatId, m.text, m.kb);
+}
+
+async function inPin1(env: Env, chatId: number, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  if (!/^\d{4,8}$/.test(text.trim())) return void (await tg.sendMessage(env, chatId, t(L(s), "pin_ask")));
+  s.tmp.pin1 = text.trim();
+  s.state = "await_pin2";
+  await st.saveState(env, chatId, s);
+  await tg.sendMessage(env, chatId, t(L(s), "pin_again"));
+}
+
+async function inPin2(env: Env, chatId: number, text: string): Promise<void> {
+  const s = await st.getState(env, chatId);
+  if (text.trim() !== (s.tmp.pin1 as string)) {
+    s.state = "await_pin1";
+    await st.saveState(env, chatId, s);
+    return void (await tg.sendMessage(env, chatId, t(L(s), "pin_mismatch")));
+  }
+  const c = s.cfg || {};
+  c.pin = await ex.pinHash(env, text.trim());
+  c.unlockedAt = Date.now();
+  c.fails = 0;
+  s.cfg = c;
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  await tg.sendMessage(env, chatId, t(L(s), "pin_set_ok"));
+  const m = ui.pinMenu(s);
+  await tg.sendMessage(env, chatId, m.text, m.kb);
 }

@@ -440,13 +440,17 @@ export function mainMenu(s: UserState, firstName?: string, isOwner = false): { t
   const name = firstName ? esc(firstName) : "دوست";
   const at = activeTok(s);
   const atv = at ? `${esc(at.name)} (…${esc(at.tail)})` : t(lang, "tok_none");
-  const dash = card(`📊 ${t(lang, "main_hello", { name: `<b>${name}</b>` })}`, [
+  const c = s.cfg || {};
+  const hello = typeof c.hello === "string" && c.hello.trim() ? (c.hello as string).trim() : t(lang, "main_hello", { name: `<b>${name}</b>` });
+  const dash = card(`📊 ${hello}`, [
     `${t(lang, "main_tok")}: <b>${atv}</b>`,
     `${t(lang, "main_panels")}: <b>${n(s, s.panels.length)}</b>`,
     `${t(lang, "main_ver")}: <b><code>${VERSION}</code></b>`,
     `${t(lang, "main_today")}: ${todayStr(lang)}`,
   ]);
-  const body = [t(lang, "main_desc"), "", dash, "", card(`${t(lang, "main_tip")} 💡`, [tip(lang)])].join("\n");
+  const customTip = typeof c.tip === "string" && c.tip.trim() ? (c.tip as string).trim() : tip(lang);
+  const desc = typeof c.desc === "string" && c.desc.trim() ? (c.desc as string).trim() : t(lang, "main_desc");
+  const body = [desc, "", dash, "", card(`${t(lang, "main_tip")} 💡`, [customTip])].join("\n");
   const rows: Btn[][] = [
     [{ text: t(lang, "b_new"), cb: "do:build", color: "success", emoji: false }],
     [
@@ -458,6 +462,10 @@ export function mainMenu(s: UserState, firstName?: string, isOwner = false): { t
       { text: t(lang, "b_settings"), cb: "menu:settings", color: "gray", emoji: false },
     ],
     [{ text: t(lang, "upd_all"), cb: "upd:all", color: "primary", emoji: false }],
+    [
+      { text: t(lang, "tools_btn"), cb: "menu:tools", color: "primary", emoji: false },
+      { text: t(lang, "road_btn"), cb: "menu:road", color: "gray", emoji: false },
+    ],
     [
       { text: t(lang, "b_help"), cb: "menu:help", color: "gray", emoji: false },
       { text: lang === "fa" ? "🎧 پشتیبانی" : "🎧 Support", cb: "menu:support", color: "primary", emoji: false },
@@ -524,6 +532,12 @@ export function settingsMenu(s: UserState): { text: string; kb: Kb } {
     [{ text: t(lang, "set_lang"), cb: "do:lang", color: "primary", emoji: false }],
     [{ text: t(lang, "set_skin"), cb: "do:skin", color: "success", emoji: false }],
     [{ text: t(lang, "set_bundle_get"), cb: "do:getbundle", color: "gray", emoji: false }],
+    [{ text: t(lang, "tools_btn"), cb: "menu:tools", color: "primary", emoji: false }],
+    [
+      { text: t(lang, "txt_btn"), cb: "menu:texts", color: "gray", emoji: false },
+      { text: t(lang, "promo_btn"), cb: "menu:promo", color: "gray", emoji: false },
+    ],
+    [{ text: t(lang, "pin_btn"), cb: "menu:pin", color: "danger", emoji: false }],
     [{ text: t(lang, "back"), cb: "menu:main", color: "gray", emoji: false }],
   ];
   return { text: makeText(t(lang, "set_title"), body, t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
@@ -905,3 +919,270 @@ export function updateAnnouncement(version: string, notes: string): string {
     `با مهر، تیم Nika Net 💜`
   );
 }
+
+/* ============================ HYPER ✨ tools 🧰 ============================ */
+/* Ported from nika_launcher_pro — every tool reads REAL panel/API data.   */
+
+export function toolsMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const body = [t(lang, "tools_desc"), ""].join("\n");
+  const rows: Btn[][] = [
+    [
+      { text: t(lang, "voice_btn"), cb: "menu:voice", color: "primary", emoji: false },
+      { text: t(lang, "cf_btn"), cb: "menu:cf", color: "success", emoji: false },
+    ],
+    [
+      { text: t(lang, "mtx_btn"), cb: "menu:mtx", color: "primary", emoji: false },
+      { text: t(lang, "warp_btn"), cb: "menu:warp", color: "success", emoji: false },
+    ],
+    [
+      { text: t(lang, "wiz_btn"), cb: "menu:wiz", color: "danger", emoji: false },
+      { text: t(lang, "isp_btn"), cb: "menu:isp", color: "gray", emoji: false },
+    ],
+    [
+      { text: t(lang, "doh_btn"), cb: "menu:doh", color: "gray", emoji: false },
+      { text: t(lang, "frag_btn"), cb: "menu:frag", color: "gray", emoji: false },
+    ],
+    [
+      { text: t(lang, "sub_btn"), cb: "sub:ask", color: "gray", emoji: false },
+      { text: t(lang, "tour_btn"), cb: "tour:0", color: "primary", emoji: false },
+    ],
+    [{ text: t(lang, "back"), cb: "menu:settings", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "tools_t"), body, t(lang, "choose"), t(lang, "tools_crumb"), "settings"), kb: kb(rows) };
+}
+
+/* 🎙 voice — read a panel's live status (login + GET /api/status) */
+export function voiceMenu(s: UserState, authed: string[]): { text: string; kb: Kb } {
+  const lang = L(s);
+  if (!s.panels.length) {
+    return { text: makeText(t(lang, "voice_t"), t(lang, "mtx_none"), t(lang, "choose"), t(lang, "tools_crumb"), "danger"), kb: kb([[{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]]) };
+  }
+  const lines: string[] = [];
+  const rows: Btn[][] = [];
+  for (const p of s.panels) {
+    const ok = authed.includes(p.name);
+    lines.push(`• ${ok ? "🎙" : "🔒"} ${esc(p.name)}`);
+    rows.push([{ text: `${ok ? "🎙 " : "🔒 "}${esc(p.name)}`, cb: ok ? `voice:${p.name}` : `panel:${p.name}`, color: ok ? "primary" : "gray", emoji: false }]);
+  }
+  rows.push([{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]);
+  return { text: makeText(t(lang, "voice_t"), [t(lang, "voice_pick"), "", lines.join("\n")], t(lang, "choose"), t(lang, "tools_crumb"), "main"), kb: kb(rows) };
+}
+
+export function voiceResult(s: UserState, pname: string, st: Record<string, unknown>): string {
+  const lang = L(s);
+  const nv = (v: unknown) => n(s, Number(v) || 0);
+  const protos = (st.protocols && typeof st.protocols === "object" ? Object.entries(st.protocols as Record<string, boolean>).filter(([, on]) => on).map(([k]) => k.toUpperCase()).join(" · ") : "—");
+  const body = [
+    `${t(lang, "voice_ver")}: <b><code>${esc(st.version || "?")}</code></b>`,
+    `${t(lang, "voice_users")}: <b>${nv(st.users)}</b> (${t(lang, "voice_ok")})`,
+    `${t(lang, "voice_req")}: <b>${nv(st.requestsToday)}</b>`,
+    `${t(lang, "voice_used")}: <b>${nv(st.usedGb)} GB</b>`,
+    `${t(lang, "voice_proto")}: <b>${esc(protos)}</b>`,
+  ].join("\n");
+  return makeText(`🎙 ${t(lang, "voice_t")} · ${esc(pname)}`, body, t(lang, "choose"), t(lang, "tools_crumb"), "ok");
+}
+
+/* 📊 cf quota — sum of requestsToday across authed panels vs 100k free cap */
+export function cfMenu(s: UserState, entries: { name: string; r: number | null }[]): { text: string; kb: Kb } {
+  const lang = L(s);
+  if (!entries.length) {
+    return { text: makeText(t(lang, "cf_t"), t(lang, "cf_none"), t(lang, "choose"), t(lang, "tools_crumb"), "danger"), kb: kb([[{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]]) };
+  }
+  const CF_LIMIT = 100_000, CF_WARN = 0.8;
+  const total = entries.reduce((a, e) => a + (e.r || 0), 0);
+  const pct = Math.min(100, Math.round((total / CF_LIMIT) * 100));
+  const lines: string[] = [];
+  for (const e of entries) {
+    lines.push(t(lang, "cf_line", { dot: e.r === null ? "🔒" : "🎯", n: esc(e.name), v: n(s, e.r || 0) }));
+  }
+  lines.push("", meter(pct, 10));
+  lines.push(pct >= CF_WARN * 100 ? t(lang, "cf_warn", { pc: n(s, pct) }) : t(lang, "cf_ok"));
+  return { text: makeText(t(lang, "cf_t"), lines, t(lang, "choose"), t(lang, "tools_crumb"), "main"), kb: kb([[{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]]) };
+}
+
+/* 🧮 matrix — users/active/requests across panels */
+export function mtxMenu(s: UserState, entries: { name: string; users: number; active: number; r: number | null }[]): { text: string; kb: Kb } {
+  const lang = L(s);
+  if (!entries.length) {
+    return { text: makeText(t(lang, "mtx_t"), t(lang, "mtx_none"), t(lang, "choose"), t(lang, "tools_crumb"), "danger"), kb: kb([[{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]]) };
+  }
+  const uTot = entries.reduce((a, e) => a + e.users, 0);
+  const aTot = entries.reduce((a, e) => a + e.active, 0);
+  const rTot = entries.reduce((a, e) => a + (e.r || 0), 0);
+  const lines = entries.map((e) => t(lang, "mtx_line", { dot: e.r === null ? "🔒" : "🎯", n: esc(e.name), u: n(s, e.users), a: n(s, e.active), r: n(s, e.r || 0) }));
+  lines.push("", t(lang, "mtx_tot", { u: n(s, uTot), g: n(s, 0), r: n(s, rTot) }));
+  return { text: makeText(t(lang, "mtx_t"), lines, t(lang, "choose"), t(lang, "tools_crumb"), "main"), kb: kb([[{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]]) };
+}
+
+/* ⛓ warp — list users of a panel + toggle the protocol */
+export function warpMenu(s: UserState, pname: string, users: any[], warpOn: boolean): { text: string; kb: Kb } {
+  const lang = L(s);
+  const lines = [warpOn ? t(lang, "warp_on") : t(lang, "warp_off"), "", t(lang, "warp_pick", { n: esc(pname) })];
+  const rows: Btn[][] = [];
+  for (const u of users.slice(0, 10)) {
+    rows.push([{ text: `${warpOn ? "⛓" : "🔒"} ${esc(u.name || u.id || "?")}`, cb: `warp:g:${pname}:${u.id}`, color: warpOn ? "primary" : "gray", emoji: false }]);
+  }
+  rows.push([{ text: warpOn ? t(lang, "warp_off_btn") : t(lang, "warp_on_btn"), cb: `warp:en:${pname}`, color: warpOn ? "gray" : "success", emoji: false }]);
+  rows.push([{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]);
+  return { text: makeText(t(lang, "warp_t"), lines, t(lang, "warp_cap"), t(lang, "tools_crumb"), "main"), kb: kb(rows) };
+}
+
+export function warpConf(s: UserState, pname: string, uname: string, conf: string): { text: string; kb: Kb } {
+  const lang = L(s);
+  return {
+    text: makeText(`⛓ WARP · ${esc(uname)}`, `<code>${esc(conf)}</code>`, t(lang, "warp_cap"), t(lang, "tools_crumb"), "ok"),
+    kb: kb([
+      [{ text: "📋", copy: conf, color: "primary", emoji: false }, { text: t(lang, "back"), cb: `warp:${pname}`, color: "gray", emoji: false }],
+    ]),
+  };
+}
+
+/* 🕵️ wiz — camouflage SNI + WS path */
+export function wizAsk(s: UserState, step: 0 | 1): { text: string; kb: Kb } {
+  const lang = L(s);
+  const q = step === 0 ? t(lang, "wiz_ask_sni") : t(lang, "wiz_ask_ws");
+  return {
+    text: makeText(t(lang, "wiz_t"), q, null, t(lang, "tools_crumb"), "danger"),
+    kb: kb([[{ text: t(lang, "cancel"), cb: "menu:tools", color: "gray", emoji: false }]]),
+  };
+}
+
+export const wizDone = (s: UserState): string => makeText(t(L(s), "wiz_t"), t(L(s), "wiz_done"), t(L(s), "choose"), t(L(s), "tools_crumb"), "ok");
+export const wizFail = (s: UserState, err: string): string => makeText(t(L(s), "wiz_t"), t(L(s), "wiz_fail", { e: esc(err) }), null, t(L(s), "tools_crumb"), "danger");
+
+/* 📡 isp — operator presets */
+export function ispMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const rows: Btn[][] = [];
+  const PRESETS: Record<string, { fa: string; en: string; flag: string; sni: string[] }> = {
+    mci: { fa: "همراه اول", en: "MCI", flag: "🟢", sni: ["www.speedtest.net", "api.telegram.org", "ftp.mci.ir"] },
+    irancell: { fa: "ایرانسل", en: "Irancell", flag: "🟣", sni: ["www.speedtest.net", "t.me", "mtnirancell.ir"] },
+    rightel: { fa: "رایتل", en: "Rightel", flag: "🔵", sni: ["www.speedtest.net", "rightel.ir", "t.me"] },
+    tci: { fa: "اسیاتک/مخابرات", en: "TCI", flag: "🟠", sni: ["www.speedtest.net", "tci.ir", "ftp.tci.ir"] },
+  };
+  const lines: string[] = [t(lang, "isp_hint"), ""];
+  for (const [key, p] of Object.entries(PRESETS)) {
+    lines.push(`${p.flag} ${lang === "fa" ? p.fa : p.en} → <code>${esc(p.sni[0])}</code>`);
+    rows.push([{ text: `${p.flag} ${lang === "fa" ? p.fa : p.en}`, cb: `isp:${key}`, color: "primary", emoji: false }]);
+  }
+  rows.push([{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]);
+  return { text: makeText(t(lang, "isp_t"), lines, t(lang, "choose"), t(lang, "tools_crumb"), "main"), kb: kb(rows) };
+}
+
+export const ispApplied = (s: UserState, pname: string, sni: string): string =>
+  makeText(t(L(s), "isp_t"), t(L(s), "isp_applied", { p: esc(pname), v: esc(sni) }), t(L(s), "choose"), t(L(s), "tools_crumb"), "ok");
+export const ispNop = (s: UserState): string =>
+  makeText(t(L(s), "isp_t"), t(L(s), "isp_nop"), t(L(s), "choose"), t(L(s), "tools_crumb"), "danger");
+
+/* 🛡 doh — private DNS hosts */
+export function dohMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const hosts = [["AdGuard", "dns.adguard-dns.com"], ["NextDNS", "dns.nextdns.io"], ["ControlD", "freedns.controld.com/p2"]];
+  const rows: Btn[][] = hosts.map(([label, host]) => [
+    { text: `🛡 ${label}`, copy: host, color: "primary", emoji: false },
+  ]);
+  rows.push([{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }]);
+  return { text: makeText(t(lang, "doh_t"), t(lang, "doh_hint"), t(lang, "choose"), t(lang, "tools_crumb"), "main"), kb: kb(rows) };
+}
+
+/* 🧩 fragment preset */
+export function fragMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  return {
+    text: makeText(t(lang, "frag_t"), t(lang, "frag_b"), t(lang, "choose"), t(lang, "tools_crumb"), "main"),
+    kb: kb([
+      [{ text: t(lang, "frag_ok"), copy: "v2rayNG → Settings → TLS → Fragment:\npackets=tlshello\nlength=100-200\ninterval=10-20\n\nsing-box outbounds:\n'fragment': {\"packets\": \"tlshello\", \"length\": \"100-200\", \"interval\": \"10-20\"}", color: "primary", emoji: false }],
+      [{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }],
+    ]),
+  };
+}
+
+/* 🗺 roadmap (live) */
+export function roadMenu(s: UserState, body: string): { text: string; kb: Kb } {
+  const lang = L(s);
+  return {
+    text: makeText(t(lang, "road_t"), body || t(lang, "road_fail"), null, null, "art"),
+    kb: kb([
+      [{ text: t(lang, "road_btn"), url: "https://github.com/NikaTeem/Nika-Net/blob/main/ROADMAP.md", color: "primary", emoji: false }],
+      [{ text: t(lang, "back"), cb: "menu:tools", color: "gray", emoji: false }],
+    ]),
+  };
+}
+
+/* 🎓 tour */
+export function tourMenu(s: UserState, step: number): { text: string; kb: Kb } {
+  const lang = L(s);
+  const steps = [t(lang, "tour_0"), t(lang, "tour_1"), t(lang, "tour_2")];
+  const last = step >= steps.length - 1;
+  const body = steps[Math.min(step, steps.length - 1)];
+  const rows: Btn[][] = [[
+    last
+      ? { text: t(lang, "back"), cb: "menu:tools", color: "success", emoji: false }
+      : { text: t(lang, "next"), cb: `tour:${step + 1}`, color: "primary", emoji: false },
+    { text: `${n(s, Math.min(step, steps.length - 1) + 1)}/${n(s, steps.length)}`, cb: "noop", color: "gray", emoji: false },
+  ]];
+  if (step > 0 && !last) rows[0].unshift({ text: t(lang, "prev"), cb: `tour:${step - 1}`, color: "gray", emoji: false });
+  return { text: makeText(t(lang, "tour_title"), body, t(lang, "choose"), t(lang, "tools_crumb"), "help"), kb: kb(rows) };
+}
+
+/* ✍️ texts (personal overrides) */
+export function textsMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const c = s.cfg || {};
+  const has = (k: string) => typeof c[k] === "string" && (c[k] as string).trim() !== "";
+  const mk = (k: string) => (has(k) ? t(lang, "txt_mine") : t(lang, "txt_def"));
+  const rows: Btn[][] = [
+    [{ text: `${t(lang, "txt_w")} (${mk("hello")})`, cb: "txt:hello", color: has("hello") ? "success" : "gray", emoji: false }],
+    [{ text: `${t(lang, "txt_menu")} (${mk("desc")})`, cb: "txt:desc", color: has("desc") ? "success" : "gray", emoji: false }],
+    [{ text: `${t(lang, "txt_tip")} (${mk("tip")})`, cb: "txt:tip", color: has("tip") ? "success" : "gray", emoji: false }],
+    [{ text: t(lang, "txt_clear"), cb: "txt:clear", color: "danger", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:settings", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "txt_t"), t(lang, "txt_ask"), t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
+}
+
+/* 📣 promo (channel post after /start) */
+export function promoMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const cur = (s.cfg?.promo as string) || "";
+  const body = cur ? [t(lang, "promo_saved"), "", cur].join("\n") : t(lang, "promo_ask");
+  const rows: Btn[][] = [
+    [{ text: "✏️", cb: "promo:edit", color: "primary", emoji: false }],
+    [{ text: "🗑", cb: "promo:del", color: "danger", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:settings", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "promo_t"), body, t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
+}
+
+/* 🔐 pin */
+export function pinMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  const on = !!s.cfg?.pin;
+  const body = [t(lang, "pin_status", { s: on ? t(lang, "pin_on") : t(lang, "pin_off") })];
+  const rows: Btn[][] = [
+    [{ text: on ? t(lang, "pin_off_btn") : t(lang, "pin_set_btn"), cb: on ? "pin:off" : "pin:set", color: on ? "danger" : "success", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:settings", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "pin_t"), body, t(lang, "choose"), t(lang, "set_crumb"), "settings"), kb: kb(rows) };
+}
+
+/* 📟 subscription status */
+export function subAskMenu(s: UserState): { text: string; kb: Kb } {
+  const lang = L(s);
+  return {
+    text: makeText(t(lang, "sub_t"), t(lang, "sub_ask"), t(lang, "sub_hint"), t(lang, "tools_crumb"), "main"),
+    kb: kb([[{ text: t(lang, "cancel"), cb: "menu:tools", color: "gray", emoji: false }]]),
+  };
+}
+
+export function subResult(s: UserState, ok: boolean, data: { name?: string; proto?: string; error?: string }): string {
+  const lang = L(s);
+  if (!ok) return makeText(t(lang, "sub_t"), t(lang, "sub_nokey"), data.error ? `(${esc(data.error)})` : null, t(lang, "tools_crumb"), "danger");
+  const lines = [t(lang, "sub_line", { n: esc(data.name || "—"), proto: esc(data.proto || "base64") })];
+  return makeText(t(lang, "sub_t"), lines, t(lang, "sub_hint"), t(lang, "tools_crumb"), "ok");
+}
+
+/* 👑 easter egg */
+export const queen = (): string =>
+  `👑 ${t("fa", "easter")}`;

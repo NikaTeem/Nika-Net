@@ -38,7 +38,15 @@ export type StateName =
   | "await_uexp"
   | "await_fj_chat"
   | "await_support"
-  | "await_reply";
+  | "await_reply"
+  | "await_wiz_sni"   // 🕵️ قایم‌سازی — قدم ۱: SNI جعلی
+  | "await_wiz_ws"    // 🕵️ قدم ۲: مسیر WebSocket
+  | "await_txt"       // ✍️ متن سفارشی
+  | "await_promo"     // 📣 پست کانال
+  | "await_sublink"   // 📟 وضعیت اشتراک (لینک ساب)
+  | "await_pin1"      // 🔐 پین — بار اول
+  | "await_pin2"      // 🔐 پین — تأیید
+  | "await_unlock";   // 🔐 بازکردن قفل
 
 export type SkinId = "graphite" | "neon" | "paper";
 
@@ -53,6 +61,7 @@ export interface UserState {
   lastBuild: number;
   builds: number;
   tmp: Record<string, any>; // flow scratchpad (suggest, name, sub, upanel, …)
+  cfg?: Record<string, any>; // per-user settings: pin, promo, custom texts
 }
 
 const PREFIX = "u:";
@@ -68,6 +77,7 @@ const DEFAULT: UserState = {
   lastBuild: 0,
   builds: 0,
   tmp: {},
+  cfg: {},
 };
 
 /* migrate v0 state (single token + flat panels) into the new shape */
@@ -77,6 +87,7 @@ function normalize(raw: Partial<any>): UserState {
   if (!s.panels) s.panels = [];
   if (!s.panelAuth) s.panelAuth = {};
   if (!s.tmp) s.tmp = {};
+  if (!s.cfg) s.cfg = {};
 
   // legacy single-token → tokens map
   if (raw.tokenEnc && Object.keys(s.tokens).length === 0) {
