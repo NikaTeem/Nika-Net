@@ -865,9 +865,8 @@ async function doBuild(env: Env, chatId: number, msgId: number): Promise<void> {
       await step(0, true);
 
       await step(1);
-      const up = await cf.uploadWorker(tok, accountId, name, await fetchLatestBundle(), [
-        { type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId },
-      ]);
+      const bindings = await cf.panelBindings(tok, accountId, name, kvId);
+      const up = await cf.uploadWorker(tok, accountId, name, await fetchLatestBundle(), bindings);
       if (!up.ok) throw new Error(up.err || "upload failed");
       await cf.enableWorkersDev(tok, accountId, name);
       await step(1, true);
@@ -926,7 +925,7 @@ async function updateAll(env: Env, chatId: number, msgId?: number): Promise<void
   for (const p of s.panels) {
     try {
       const kvId = p.kvId || (await cf.findKvId(tok, p.account, [`nika-${p.name}-kv`, `${p.name}-kv`]));
-      const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
+      const bindings = await cf.panelBindings(tok, p.account, p.name, kvId);
       const up = await cf.uploadWorker(tok, p.account, p.name, await fetchLatestBundle(), bindings);
       if (!up.ok) {
         results.push({ name: p.name, ok: false });
@@ -971,7 +970,7 @@ async function panelUpdate(env: Env, chatId: number, msgId: number, name: string
     await staged(env, chatId, msgId, `🔄 «${name}»`, stages, async (step) => {
       await step(0);
       const kvId = p.kvId || (await cf.findKvId(token, p.account, [`nika-${name}-kv`, `${name}-kv`]));
-      const bindings = kvId ? [{ type: "kv_namespace", name: "NIKA_KV", namespace_id: kvId }] : [];
+      const bindings = await cf.panelBindings(token, p.account, p.name, kvId);
       const up = await cf.uploadWorker(token, p.account, p.name, await fetchLatestBundle(), bindings);
       if (!up.ok) throw new Error(up.err || "upload failed");
       await cf.enableWorkersDev(token, p.account, p.name);

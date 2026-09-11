@@ -66,11 +66,26 @@ function budgetAllow(): boolean {
 }
 
 async function rawGet(env: Env, key: string): Promise<string | null> {
+  const orig = key;
   key = nskey(env, key);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL) return hit.v;
   let v: string | null = null;
-  if (env.NIKA_DB) v = await d1get(env, key);
+  if (env.NIKA_DB) {
+    v = await d1get(env, key);
+    // One-time migration: panels that lived on KV-only (no NIKA_NS) keep their
+    // data under the UNPREFIXED key. When a panel is later moved onto a shared
+    // D1 database, copy any legacy KV value into D1 so nothing is lost.
+    if (v === null && env.NIKA_KV) {
+      try {
+        const legacy = await env.NIKA_KV.get(orig, { cacheTtl: 30 });
+        if (legacy !== null) {
+          v = legacy;
+          await d1put(env, key, legacy);
+        }
+      } catch { /* migration is best-effort */ }
+    }
+  }
   // cacheTtl:30 is the KV minimum — shrinks the edge-cache staleness window
   // (default is 60 s) so settings changes like the fixed-IP lock propagate
   // quickly across isolates.

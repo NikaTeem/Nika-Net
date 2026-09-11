@@ -182,6 +182,31 @@ check("/api/ips: returns ips list", Array.isArray(ips.ips) && ips.ips.length > 0
   check("D1: settings stored under prefixed key", d1.data.has("d1test:settings"));
 }
 
+// 14) KV→D1 migration: a panel moved from KV-only to D1 keeps its data.
+{
+  const legacyKv = {
+    data: new Map([["settings", JSON.stringify({ title: "Nika Net", adminPassHash: "abc", sessionSecret: "legacy-secret" })]]),
+    async get(key) { return this.data.get(key) ?? null; },
+    async put(key, value) { this.data.set(key, value); },
+  };
+  const d1 = {
+    data: new Map(),
+    prepare(sql) {
+      return {
+        bind: (...params) => ({
+          first: async () => (d1.data.has(params[0]) ? { value: d1.data.get(params[0]) } : null),
+          run: async () => { d1.data.set(params[0], params[1]); return { success: true }; },
+        }),
+      };
+    },
+  };
+  const envMig = { NIKA_DB: d1, NIKA_KV: legacyKv, NIKA_NS: "mig" };
+  const q = await req("/api/info", {}, null, envMig);
+  const info = await q.json();
+  check("KV→D1 migration: legacy settings surfaced (setup=false)", info.setup === false);
+  check("KV→D1 migration: value copied into D1 under prefix", d1.data.has("mig:settings"));
+}
+
 rmSync(OUT, { recursive: true, force: true });
 console.log(failed ? `\n${failed} FAILED ❌` : "\nALL SMOKE PASSED ✅");
 process.exit(failed ? 1 : 0);
