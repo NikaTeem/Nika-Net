@@ -475,13 +475,13 @@ const PANEL_HTML = `<!doctype html>
   <div class="shell">
     <div class="nav">
       <button data-v="overview" class="on"><span class="ni">📊</span>داشبورد</button>
-      <button data-v="users"><span class="ni">👥</span>کاربران</button>
-      <button data-v="admins"><span class="ni">👑</span>ادمین‌ها</button>
-      <button data-v="bans"><span class="ni">🚫</span>مسدودی‌ها<span class="badge hide" id="banBadge">0</span></button>
-      <button data-v="support"><span class="ni">🎧</span>پشتیبانی<span class="badge hide" id="supBadge">0</span></button>
-      <button data-v="pm"><span class="ni">💬</span>پیام شخصی<span class="badge hide" id="pmBadge">0</span></button>
-      <button data-v="forcedjoin" class="owner-only"><span class="ni">🔒</span>عضویت اجباری</button>
-      <button data-v="broadcast" class="owner-only"><span class="ni">📣</span>پیام همگانی</button>
+      <button data-v="users" data-scope="users"><span class="ni">👥</span>کاربران</button>
+      <button data-v="admins" data-scope="admins"><span class="ni">👑</span>ادمین‌ها</button>
+      <button data-v="bans" data-scope="bans"><span class="ni">🚫</span>مسدودی‌ها<span class="badge hide" id="banBadge">0</span></button>
+      <button data-v="support" data-scope="support"><span class="ni">🎧</span>پشتیبانی<span class="badge hide" id="supBadge">0</span></button>
+      <button data-v="pm" data-scope="support"><span class="ni">💬</span>پیام شخصی<span class="badge hide" id="pmBadge">0</span></button>
+      <button data-v="forcedjoin" data-scope="forcedjoin"><span class="ni">🔒</span>عضویت اجباری</button>
+      <button data-v="broadcast" data-scope="broadcast"><span class="ni">📣</span>پیام همگانی</button>
       <button data-v="settings" class="owner-only"><span class="ni">⚙️</span>تنظیمات</button>
     </div>
     <div id="view-overview">
@@ -583,7 +583,7 @@ const PANEL_HTML = `<!doctype html>
         <div class="hint" style="margin:10px 14px 0;display:none" id="admHint"></div>
         <div style="max-height:420px;overflow:auto;padding:0 14px 14px">
           <table class="utable">
-            <thead><tr><th>ادمین</th><th>آیدی</th><th></th></tr></thead>
+            <thead><tr><th>ادمین</th><th>آیدی</th><th>دسترسی‌ها</th><th></th></tr></thead>
             <tbody id="admBody"></tbody>
           </table>
         </div>
@@ -1427,17 +1427,24 @@ const PANEL_HTML = `<!doctype html>
     $("#loginView").classList.add("hidden");
     $("#appView").classList.remove("hidden");
     render();
-    await Promise.all([loadStats(), loadUsers()]);
-    bootSupport();
+    await Promise.all([loadStats(), hasScope("users") ? loadUsers() : Promise.resolve()]);
+    if (hasScope("support")) bootSupport();
     loadMgmt();
-    loadBcHistory();
-    updateBcPreview();
+    if (hasScope("broadcast")) { loadBcHistory(); updateBcPreview(); }
+  }
+
+  function hasScope(sc) {
+    if (!state) return false;
+    return state.role === "owner" || (state.scopes || []).indexOf(sc) >= 0;
   }
 
   function render() {
     var f = state.fj, b = state.bot;
-    // نقش نشست: مالک همهٔ بخش‌ها را می‌بیند؛ ادمین فقط بخش‌های مدیریتی
+    // نقش نشست: مالک همهٔ بخش‌ها را می‌بیند؛ ادمین فقط بخش‌های مجاز
     $$(".owner-only").forEach(function (el) { el.classList.toggle("hidden", state.role !== "owner"); });
+    $$("[data-scope]").forEach(function (el) {
+      el.classList.toggle("hidden", !hasScope(el.getAttribute("data-scope")));
+    });
     if ($("#heroHi")) $("#heroHi").innerHTML = state.role === "owner" ? 'سلام، مالک <span class="wave">👋</span>' : 'سلام، ادمین <span class="wave">👋</span>';
     $("#botName").textContent = "@" + b.username;
     $("#heroDate").textContent = new Date().toLocaleDateString("fa-IR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " · اینجا خلاصهٔ وضعیت رباتته";
@@ -1722,13 +1729,15 @@ const PANEL_HTML = `<!doctype html>
         link.onclick = function () { window.open("https://t.me/" + u.username, "_blank"); };
         acts.appendChild(link);
       }
-      var pmBtn = document.createElement("button");
-      pmBtn.className = "btn btn-p btn-sm";
-      pmBtn.textContent = "💬 پیام";
-      pmBtn.onclick = function () { startPmFromUser(u.id); };
-      acts.appendChild(pmBtn);
-      // 👑 ادمین کن / 🔔 حذف ادمین — فقط مالک
-      if (!u.owner && state && state.role === "owner") {
+      if (hasScope("support")) {
+        var pmBtn = document.createElement("button");
+        pmBtn.className = "btn btn-p btn-sm";
+        pmBtn.textContent = "💬 پیام";
+        pmBtn.onclick = function () { startPmFromUser(u.id); };
+        acts.appendChild(pmBtn);
+      }
+      // 👑 ادمین کن / 🔔 حذف ادمین — مالک یا ابرادمین
+      if (!u.owner && state && hasScope("admins")) {
         var ab = document.createElement("button");
         ab.className = "btn btn-ghost btn-sm";
         if (u.isAdmin) {
@@ -1740,8 +1749,8 @@ const PANEL_HTML = `<!doctype html>
         }
         acts.appendChild(ab);
       }
-      // 🚫 مسدود / ✅ رفع مسدودی — مالک و ادمین
-      if (!u.owner && !u.isAdmin) {
+      // 🚫 مسدود / ✅ رفع مسدودی — دارای دسترسی مسدودسازی
+      if (!u.owner && !u.isAdmin && hasScope("bans")) {
         var bb = document.createElement("button");
         bb.className = u.banned ? "btn btn-s btn-sm" : "btn btn-ghost btn-sm";
         if (u.banned) {
@@ -2001,6 +2010,7 @@ const PANEL_HTML = `<!doctype html>
   ];
 
   async function loadMgmt() {
+    if (!hasScope("admins") && !hasScope("bans")) return;
     var r = await api("/panel/api/admins");
     if (r.ok && r.j) mgmt = r.j;
     renderAdmins();
@@ -2028,12 +2038,16 @@ const PANEL_HTML = `<!doctype html>
       idv.onclick = function () { copyId(a.id); };
       td2.appendChild(idv);
       var td3 = document.createElement("td");
-      if (mgmt && mgmt.isOwner) {
+      var sc = document.createElement("div"); sc.className = "umeta";
+      sc.textContent = (a.scopes || []).length ? "🎛 " + a.scopes.join(" · ") : "🎛 —";
+      td3.appendChild(sc);
+      var td4 = document.createElement("td");
+      if (hasScope("admins")) {
         var rb = document.createElement("button"); rb.className = "btn btn-danger btn-sm"; rb.textContent = "🔔 حذف ادمین";
         rb.onclick = function () { setAdminById(a.id, false); };
-        td3.appendChild(rb);
+        td4.appendChild(rb);
       }
-      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
       body.appendChild(tr);
     });
   }
@@ -2335,14 +2349,19 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   /* ---- everything below requires a valid session (owner or admin) ---- */
   const owner = await auth.sessionOwner(env, req.headers.get("cookie") || "");
   if (owner === null) return json({ error: "unauthorized" }, 401);
-  const panelRole: "owner" | "admin" = (await adm.role(env, owner)) === "owner" ? "owner" : "admin";
+  const role = await adm.role(env, owner);
+  if (role === "user") return json({ error: "unauthorized" }, 401);
+  if (role === "admin" && !(await adm.can(env, owner, "panel"))) return json({ error: "forbidden", code: "no-panel" }, 403);
+  const panelRole: "owner" | "admin" = role;
   const isOwner = panelRole === "owner";
+  const sessionScopes = await adm.scopesOf(env, owner);
+  const pCan = (sc: adm.Scope) => isOwner || sessionScopes.includes(sc);
 
   // shared payload for the admins & bans management view
   async function managementPayload(): Promise<Record<string, any>> {
     const [admins, bans] = await Promise.all([adm.listAdmins(env), adm.listBans(env)]);
-    const aitems: Array<{ id: number; label: string }> = [];
-    for (const id of admins) aitems.push({ id, label: await adm.userLabel(env, id) });
+    const aitems: Array<{ id: number; label: string; scopes: string[] }> = [];
+    for (const id of admins) aitems.push({ id, label: await adm.userLabel(env, id), scopes: await adm.scopesOf(env, id) });
     const bitems: Array<Record<string, any>> = [];
     for (const b of bans) {
       bitems.push({ ...b, label: await adm.userLabel(env, b.chatId) });
@@ -2367,6 +2386,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     return json({
       ok: true,
       role: panelRole,
+      scopes: sessionScopes,
       bot: {
         username: meta.username,
         origin: meta.origin,
@@ -2383,6 +2403,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/users" && req.method === "GET") {
+    if (!pCan("users")) return json({ ok: false, error: "دسترسی به لیست کاربران نداری" }, 403);
     const cfg = await fj.getConfig(env);
     const [admins, bans] = await Promise.all([adm.listAdmins(env), adm.listBans(env)]);
     const bannedIds = new Set(bans.map((b) => b.chatId));
@@ -2404,11 +2425,12 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   /* ---------- admins & bans management ---------- */
 
   if (path === "/panel/api/admins" && req.method === "GET") {
+    if (!pCan("admins")) return json({ ok: false, error: "دسترسی مدیریت ادمین‌ها را نداری" }, 403);
     return json({ ok: true, ...(await managementPayload()) });
   }
 
   if (path === "/panel/api/admins" && req.method === "POST") {
-    if (!isOwner) return json({ ok: false, error: "فقط مالک می‌تواند ادمین اضافه/حذف کند" }, 403);
+    if (!pCan("admins")) return json({ ok: false, error: "دسترسی مدیریت ادمین‌ها را نداری" }, 403);
     const b = await readJson(req);
     const id = Number(b.id);
     const action = String(b.action || "");
@@ -2427,6 +2449,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/ban" && req.method === "POST") {
+    if (!pCan("bans")) return json({ ok: false, error: "دسترسی مسدودسازی را نداری" }, 403);
     const b = await readJson(req);
     const id = Number(b.id);
     const until = Number(b.until) || 0;
@@ -2440,6 +2463,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/unban" && req.method === "POST") {
+    if (!pCan("bans")) return json({ ok: false, error: "دسترسی مسدودسازی را نداری" }, 403);
     const b = await readJson(req);
     const id = Number(b.id);
     const r = await adm.unban(env, id, owner);
@@ -2471,7 +2495,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/broadcast" && req.method === "POST") {
-    if (!isOwner) return json({ ok: false, error: "فقط مالک می‌تواند پیام همگانی بفرستد" }, 403);
+    if (!pCan("broadcast")) return json({ ok: false, error: "دسترسی پیام همگانی را نداری" }, 403);
     const b = await readJson(req);
     const text = String(b.text || "").trim();
     if (!text) return json({ ok: false, error: "متن خالی است" }, 400);
@@ -2491,7 +2515,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/broadcast/test" && req.method === "POST") {
-    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
+    if (!pCan("broadcast")) return json({ ok: false, error: "دسترسی پیام همگانی را نداری" }, 403);
     const b = await readJson(req);
     const text = String(b.text || "").trim();
     if (!text) return json({ ok: false, error: "متن خالی است" }, 400);
@@ -2506,12 +2530,12 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
   }
 
   if (path === "/panel/api/broadcast/history" && req.method === "GET") {
-    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
+    if (!pCan("broadcast")) return json({ ok: false, error: "دسترسی پیام همگانی را نداری" }, 403);
     return json({ ok: true, history: await bc.history(env) });
   }
 
   if (path === "/panel/api/fj" && req.method === "POST") {
-    if (!isOwner) return json({ ok: false, error: "فقط مالک" }, 403);
+    if (!pCan("forcedjoin")) return json({ ok: false, error: "دسترسی مدیریت عضویت اجباری را نداری" }, 403);
     const b = await readJson(req);
     const cfg = await fj.getConfig(env);
     const patch: Partial<fj.FjConfig> = {};
@@ -2569,6 +2593,12 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
 
 
   /* ---------- پیام شخصی + پشتیبانی (Support v2) ---------- */
+
+  if (!pCan("support")) {
+    if (path.startsWith("/panel/api/pm") || path.startsWith("/panel/api/support")) {
+      return json({ ok: false, error: "دسترسی پشتیبانی را نداری" }, 403);
+    }
+  }
 
   if (path === "/panel/api/pm/list" && req.method === "GET") {
     // فقط گفتگوهای شخصیِ آغازشده توسط مالک

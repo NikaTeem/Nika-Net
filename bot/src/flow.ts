@@ -390,9 +390,8 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
   }
 
   if (text.startsWith("/broadcast")) {
-    const owner = await st.getOwner(env);
     const s = await st.getState(env, chatId);
-    if (owner !== chatId) {
+    if (!(await adm.can(env, chatId, "broadcast"))) {
       return void (await tg.sendMessage(env, chatId, t(L(s), "owner_only")));
     }
     const payload = text.replace(/^\/broadcast\s*/, "").trim();
@@ -550,8 +549,20 @@ async function isOwner(env: Env, chatId: number): Promise<boolean> {
 async function showAdminMenu(env: Env, chatId: number, s: UserState, msgId?: number): Promise<void> {
   const meta = await fj.botMeta(env);
   const isOwnerFlag = await isOwner(env, chatId);
-  const [admins, bans] = await Promise.all([adm.listAdmins(env), adm.listBans(env)]);
-  const m = ui.adminMenu(s, meta, isOwnerFlag, admins.length, bans.length);
+  const [admins, bans, scopes] = await Promise.all([
+    adm.listAdmins(env), adm.listBans(env), adm.scopesOf(env, chatId),
+  ]);
+  const m = ui.adminMenu(s, meta, isOwnerFlag, scopes, admins.length, bans.length);
+  await reply(env, chatId, msgId, m.text, m.kb);
+}
+
+// باز کردن پیچ دسترسی برای افزودن/ویرایش ادمین
+async function showScopePicker(env: Env, chatId: number, s: UserState, draft: { id: number; name: string; scopes: string[]; isNew: boolean }, msgId?: number): Promise<void> {
+  const grantable = await adm.grantableScopes(env, chatId);
+  s.tmp.admDraft = { ...draft, grantable };
+  s.state = "idle";
+  await st.saveState(env, chatId, s);
+  const m = ui.scopePicker(s, { name: draft.name, scopes: draft.scopes, isNew: draft.isNew, grantable });
   await reply(env, chatId, msgId, m.text, m.kb);
 }
 
@@ -577,20 +588,19 @@ async function inAdminId(env: Env, chatId: number, msg: tg.TgMessage, text: stri
     await tg.sendMessage(env, chatId, "⚠️ آیدی عددی پیدا نشد — یک پیام را فوروارد کن یا آیدی را بفرست.").catch(() => {});
     return void (await showAdminMenu(env, chatId, s, undefined));
   }
+  if (!(await adm.can(env, chatId, "admins"))) {
+    await tg.sendMessage(env, chatId, "⛔ فقط مالک (یا ابرادمین) می‌تواند ادمین اضافه کند.").catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
+  if (id === (await fj.ownerId(env))) {
+    await tg.sendMessage(env, chatId, "⛔ مالک از قبل بالاترین دسترسی را دارد.").catch(() => {});
+    return void (await showAdminMenu(env, chatId, s, undefined));
+  }
   const who = await adm.userLabel(env, id);
-  const r = await adm.addAdmin(env, id, chatId);
-  await st.saveState(env, chatId, s);
-  if (!r.ok) {
-    await tg.sendMessage(env, chatId, "⛔ " + (r.error || "خطا")).catch(() => {});
-    return void (await showAdminMenu(env, chatId, s, undefined));
-  }
-  if (!r.changed) {
-    await tg.sendMessage(env, chatId, ui.admAlready(s, who)).catch(() => {});
-    return void (await showAdminMenu(env, chatId, s, undefined));
-  }
-  await adm.notifyAdminAdded(env, id);
-  await tg.sendMessage(env, chatId, ui.adminAdded(s, who)).catch(() => {});
-  return void (await showAdminMenu(env, chatId, s, undefined));
+  // دسترسی‌های فعلی اگر ادمین است؛ وگرنه پیش‌فرض «مدیر کامل»
+  const meta = await adm.adminMeta(env, id);
+  const scopes = meta ? meta.scopes : [...adm.FULL_ADMIN_SCOPES];
+  await showScopePicker(env, chatId, s, { id, name: who, scopes, isNew: !meta });
 }
 
 async function inBanId(env: Env, chatId: number, msg: tg.TgMessage, text: string): Promise<void> {
@@ -1317,23 +1327,23 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
 
   /* ---------- مدیریت ادمین‌ها و مسدودی‌ها 👑🚫 ---------- */
   if (data === "adm:add") {
-    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     s.state = "await_admin_id";
     await st.saveState(env, chatId, s);
     await tg.answerCallback(env, cq.id).catch(() => {});
     return void (await tg.sendMessage(env, chatId, ui.adminAskId(s)).catch(() => {}));
   }
   if (data === "adm:list") {
-    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     const ids = await adm.listAdmins(env);
-    const items: Array<{ id: number; label: string }> = [];
-    for (const id of ids) items.push({ id, label: await adm.userLabel(env, id) });
-    const m = ui.adminList(s, items, await isOwner(env, chatId));
+    const items: Array<{ id: number; label: string; scopes: string[] }> = [];
+    for (const id of ids) items.push({ id, label: await adm.userLabel(env, id), scopes: await adm.scopesOf(env, id) });
+    const m = ui.adminList(s, items, true);
     await tg.answerCallback(env, cq.id).catch(() => {});
     return void (await reply(env, chatId, msgId, m.text, m.kb));
   }
   if (data.startsWith("adm:del:")) {
-    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     const id = parseInt(data.slice("adm:del:".length), 10);
     const who = await adm.userLabel(env, id);
     const r = await adm.removeAdmin(env, id, chatId);
@@ -1345,20 +1355,99 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
       await reply(env, chatId, msgId, "⛔ " + (r.error || "خطا")).catch(() => {});
     }
     const ids = await adm.listAdmins(env);
-    const items: Array<{ id: number; label: string }> = [];
-    for (const i2 of ids) items.push({ id: i2, label: await adm.userLabel(env, i2) });
+    const items: Array<{ id: number; label: string; scopes: string[] }> = [];
+    for (const i2 of ids) items.push({ id: i2, label: await adm.userLabel(env, i2), scopes: await adm.scopesOf(env, i2) });
     const m = ui.adminList(s, items, true);
     return void (await tg.sendMessage(env, chatId, m.text, m.kb).catch(() => {}));
   }
+
+  /* ---------- 🎛 scope picker (افزودن/ویرایش دسترسی ادمین) ---------- */
+  if (data.startsWith("ar:toggle:")) {
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const scope = data.slice("ar:toggle:".length);
+    if (!adm.scopeOf(scope)) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const draft = s.tmp.admDraft as { id: number; name: string; scopes: string[]; isNew: boolean; grantable?: string[] } | undefined;
+    if (!draft || !draft.id) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const set = new Set(draft.scopes);
+    if (set.has(scope)) set.delete(scope); else set.add(scope);
+    draft.scopes = Array.from(set);
+    s.tmp.admDraft = draft;
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    const m = ui.scopePicker(s, { name: draft.name, scopes: draft.scopes, isNew: draft.isNew, grantable: draft.grantable });
+    return void (await tg.editMessage(env, chatId, msgId, m.text, m.kb).catch(async () => {
+      await reply(env, chatId, msgId, m.text, m.kb);
+    }));
+  }
+  if (data.startsWith("ar:preset:")) {
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const preset = adm.presetOf(data.slice("ar:preset:".length));
+    if (!preset) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const draft = s.tmp.admDraft as { id: number; name: string; scopes: string[]; isNew: boolean; grantable?: string[] } | undefined;
+    if (!draft || !draft.id) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    draft.scopes = [...preset.scopes];
+    s.tmp.admDraft = draft;
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id, preset.fa).catch(() => {});
+    const m = ui.scopePicker(s, { name: draft.name, scopes: draft.scopes, isNew: draft.isNew, grantable: draft.grantable });
+    return void (await tg.editMessage(env, chatId, msgId, m.text, m.kb).catch(async () => {
+      await reply(env, chatId, msgId, m.text, m.kb);
+    }));
+  }
+  if (data === "ar:confirm") {
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const draft = s.tmp.admDraft as { id: number; name: string; scopes: string[]; isNew: boolean; grantable?: string[] } | undefined;
+    if (!draft || !draft.id) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    delete s.tmp.admDraft;
+    await st.saveState(env, chatId, s);
+    const id = draft.id;
+    const scopes = draft.scopes as adm.Scope[];
+    const who = draft.name || (await adm.userLabel(env, id));
+    const r = draft.isNew
+      ? await adm.addAdmin(env, id, chatId, scopes)
+      : await adm.setAdminScopes(env, id, chatId, scopes);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    if (!r.ok) {
+      await reply(env, chatId, msgId, "⛔ " + (r.error || "خطا")).catch(() => {});
+    } else if (draft.isNew) {
+      await adm.notifyAdminAdded(env, id, await adm.scopesOf(env, id));
+      await reply(env, chatId, msgId, ui.adminScopesSaved(s, who, await adm.scopesOf(env, id))).catch(() => {});
+    } else {
+      await reply(env, chatId, msgId, ui.adminScopesSaved(s, who, await adm.scopesOf(env, id))).catch(() => {});
+    }
+    const ids = await adm.listAdmins(env);
+    const items: Array<{ id: number; label: string; scopes: string[] }> = [];
+    for (const i2 of ids) items.push({ id: i2, label: await adm.userLabel(env, i2), scopes: await adm.scopesOf(env, i2) });
+    const m = ui.adminList(s, items, true);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb).catch(() => {}));
+  }
+  if (data === "ar:cancel") {
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    delete s.tmp.admDraft;
+    await st.saveState(env, chatId, s);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await reply(env, chatId, msgId, ui.adminScopesCanceled(s)).catch(() => {}));
+  }
+  if (data.startsWith("ar:edit:")) {
+    if (!(await adm.can(env, chatId, "admins"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    const id = parseInt(data.slice("ar:edit:".length), 10);
+    if (!Number.isInteger(id) || id <= 0) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const who = await adm.userLabel(env, id);
+    const scopes = await adm.scopesOf(env, id);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    await showScopePicker(env, chatId, s, { id, name: who, scopes, isNew: false }, msgId);
+    return;
+  }
+
   if (data === "ban:new") {
-    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "bans"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     s.state = "await_ban_id";
     await st.saveState(env, chatId, s);
     await tg.answerCallback(env, cq.id).catch(() => {});
     return void (await tg.sendMessage(env, chatId, ui.banAskId(s)).catch(() => {}));
   }
   if (data === "ban:list") {
-    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "bans"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     const bans = await adm.listBans(env);
     const items: Array<{ id: number; label: string; reason: string; until: string }> = [];
     for (const b of bans) {
@@ -1374,7 +1463,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     return void (await reply(env, chatId, msgId, m.text, m.kb));
   }
   if (data.startsWith("ban:dur:")) {
-    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "bans"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     const dur = adm.durationOf(data.slice("ban:dur:".length));
     if (!dur) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
     const who = (s.tmp.banName as string | undefined) || "?";
@@ -1389,7 +1478,7 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
     return;
   }
   if (data.startsWith("ban:unban:")) {
-    if (!(await adm.isAdmin(env, chatId))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
+    if (!(await adm.can(env, chatId, "bans"))) return void (await tg.answerCallback(env, cq.id, "⛔", true).catch(() => {}));
     const id = parseInt(data.slice("ban:unban:".length), 10);
     const who = await adm.userLabel(env, id);
     const r = await adm.unban(env, id, chatId);

@@ -122,15 +122,17 @@ sent.length = 0;
 await webhook(msg(B, "/admin"));
 check("کاربر عادی /admin → owner_only", (lastTo(B) || "").includes("فقط") || (lastTo(B) || "").includes("Owner"));
 
-/* ===== 3) promote admin (in-bot) ===== */
+/* ===== 3) promote admin (in-bot) — picker → confirm ===== */
 sent.length = 0;
 await webhook(cb(OWNER, 10, "adm:add"));
 check("adm:add → prompt", (lastTo(OWNER) || "").includes("فوروارد"));
 sent.length = 0;
 await webhook(msg(OWNER, "111111111"));
+check("promote: scope picker shown", (lastTo(OWNER) || "").includes("تعیین دسترسی") || (lastTo(OWNER) || "").includes("خلاصه"));
+await webhook(cb(OWNER, 30, "ar:confirm"));
 check("promote: ادمین به KV اضافه شد", (await adminsKV()).includes(A));
 check("promote: کاربر اعلان گرفت", textsTo(A).some((t) => t.includes("به‌عنوان ادمین Nika Net منصوب شدی")));
-check("promote: مالک تأیید گرفت", anyTextsTo(OWNER).some((t) => t.includes("به‌عنوان ادمین اضافه شد")));
+check("promote: مالک تأیید گرفت", anyTextsTo(OWNER).some((t) => t.includes("ذخیره شد")));
 
 /* ===== 4) admin list + demote ===== */
 sent.length = 0;
@@ -192,6 +194,7 @@ check("غیرمالک نمی‌تواند ادمین اضافه کند", (await 
 // promote A again to test "cannot ban admin" + "admin can ban"
 await webhook(cb(OWNER, 18, "adm:add"));
 await webhook(msg(OWNER, "111111111"));
+await webhook(cb(OWNER, 31, "ar:confirm"));
 check("re-promote: A دوباره ادمین شد", (await adminsKV()).includes(A));
 
 // admin can ban a regular user
@@ -245,6 +248,7 @@ check("panel: unban → ok + اعلان", lr.ok && textsTo(B).some((t) => t.incl
 // admin login + permission boundaries
 await webhook(cb(OWNER, 24, "adm:add"));
 await webhook(msg(OWNER, "111111111"));
+await webhook(cb(OWNER, 32, "ar:confirm"));
 lr = await panelRaw("/panel/api/password", { method: "POST", body: { id: A, password: "nikapass123" } });
 const adminTok = (lr.setCookie.match(/npanel=([a-f0-9-]+)/) || [])[1];
 check("panel: ورود ادمین با رمز", lr.ok && !!adminTok);

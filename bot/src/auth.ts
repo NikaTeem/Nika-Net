@@ -167,11 +167,14 @@ export async function sessionOwner(env: Env, cookieHeader: string): Promise<numb
 }
 
 // نقش کاربرِ نشست: owner / admin / null (کد تلگرام فقط مالک؛ رمز عبور مالک + ادمین‌ها)
+// دسترسی به پنل نیازمند اسکوپ `panel` است (مالک همیشه دارد).
 export async function sessionRole(env: Env, cookieHeader: string): Promise<"owner" | "admin" | null> {
   const id = await sessionOwner(env, cookieHeader);
   if (id === null) return null;
   const r = await adm.role(env, id);
-  return r === "user" ? null : r;
+  if (r === "user") return null;
+  if (r === "owner") return "owner";
+  return (await adm.can(env, id, "panel")) ? "admin" : null;
 }
 
 // خروج: حذف نشست
@@ -190,7 +193,7 @@ export async function hasPassword(env: Env): Promise<boolean> {
 // (مالک + ادمین‌ها می‌توانند با رمز عبور وارد شوند)
 export async function passwordLogin(env: Env, id: number, password: string): Promise<string | null> {
   if (!Number.isInteger(id)) return null;
-  if (!(await adm.isAdmin(env, id))) return null; // فقط مالک یا ادمین
+  if (!(await adm.can(env, id, "panel"))) return null; // فقط مالک یا ادمینِ دارای دسترسی پنل
   const fails = parseInt((await env.BOT_KV.get(PWFAIL_KEY + id)) || "0", 10) || 0;
   if (fails >= PW_MAX_TRIES) return null; // قفل موقت
   const stored = (await env.BOT_KV.get(PW_KEY)) || "";

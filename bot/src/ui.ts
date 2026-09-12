@@ -621,37 +621,118 @@ export function adminMenu(
   s: UserState,
   meta: BotMeta,
   isOwnerFlag: boolean,
+  scopes: string[],
   adminsCount: number,
   bansCount: number
 ): { text: string; kb: Kb } {
   const lang = L(s);
-  const body = [
-    lang === "fa"
-      ? "مدیریت ادمین‌ها و مسدودی‌های ربات. هر تغییری داخل خودِ ربات به کاربر اطلاع داده می‌شود."
-      : "Manage bot admins and bans. Every change is notified to the user inside the bot.",
-    "",
-    card("👥 " + (lang === "fa" ? "ادمین‌ها" : "Admins"),
-      [lang === "fa" ? `تعداد: ${fa_num(adminsCount)} نفر` : `Count: ${adminsCount}`]),
-    "",
-    card("🚫 " + (lang === "fa" ? "مسدودی‌ها" : "Bans"),
-      [lang === "fa" ? `تعداد: ${fa_num(bansCount)} مسدود فعال` : `Count: ${bansCount} active`]),
-  ].join("\n");
-  const rows: Btn[][] = [];
-  if (isOwnerFlag) {
-    rows.push([{ text: lang === "fa" ? "👑 افزودن ادمین" : "👑 Add admin", cb: "adm:add", color: "success", emoji: false }]);
+  const has = (sc: string) => isOwnerFlag || scopes.includes(sc);
+  const cards: string[] = [];
+  if (has("admins")) {
+    cards.push(card("👥 " + (lang === "fa" ? "ادمین‌ها" : "Admins"),
+      [lang === "fa" ? `تعداد: ${fa_num(adminsCount)} نفر` : `Count: ${adminsCount}`]));
   }
-  rows.push([{ text: lang === "fa" ? "👥 لیست ادمین‌ها" : "👥 Admin list", cb: "adm:list", color: "primary", emoji: false }]);
-  rows.push([{ text: lang === "fa" ? "🚫 مسدود کردن کاربر" : "🚫 Ban user", cb: "ban:new", color: "danger", emoji: false }]);
-  rows.push([{ text: lang === "fa" ? "📋 مسدودهای فعال" : "📋 Active bans", cb: "ban:list", color: "gray", emoji: false }]);
-  rows.push([{ text: lang === "fa" ? "⚙️ پنل مدیریت (وب)" : "⚙️ Admin panel (web)", url: `${meta.origin}/panel`, color: "primary", emoji: false }]);
+  if (has("bans")) {
+    cards.push(card("🚫 " + (lang === "fa" ? "مسدودی‌ها" : "Bans"),
+      [lang === "fa" ? `تعداد: ${fa_num(bansCount)} مسدود فعال` : `Count: ${bansCount} active`]));
+  }
+  if (cards.length) cards.push("");
+  cards.push(
+    lang === "fa"
+      ? "🎛 <b>دسترسی‌های تو:</b> " + (scopes.length ? scopeChips(s, scopes) : "—")
+      : "🎛 <b>Your permissions:</b> " + (scopes.length ? scopeChips(s, scopes) : "—")
+  );
+  const rows: Btn[][] = [];
+  if (has("admins")) {
+    rows.push([{ text: lang === "fa" ? "👑 افزودن ادمین" : "👑 Add admin", cb: "adm:add", color: "success", emoji: false }]);
+    rows.push([{ text: lang === "fa" ? "👥 لیست ادمین‌ها" : "👥 Admin list", cb: "adm:list", color: "primary", emoji: false }]);
+  }
+  if (has("bans")) {
+    rows.push([{ text: lang === "fa" ? "🚫 مسدود کردن کاربر" : "🚫 Ban user", cb: "ban:new", color: "danger", emoji: false }]);
+    rows.push([{ text: lang === "fa" ? "📋 مسدودهای فعال" : "📋 Active bans", cb: "ban:list", color: "gray", emoji: false }]);
+  }
+  if (has("panel")) {
+    rows.push([{ text: lang === "fa" ? "⚙️ پنل مدیریت (وب)" : "⚙️ Admin panel (web)", url: `${meta.origin}/panel`, color: "primary", emoji: false }]);
+  }
   rows.push([{ text: lang === "fa" ? "🔙 بازگشت" : "🔙 Back", cb: isOwnerFlag ? "menu:owner" : "menu:main", color: "gray", emoji: false }]);
-  return { text: makeText(lang === "fa" ? "مدیریت ربات" : "Bot admin", body, t(lang, "choose"), lang === "fa" ? "مدیریت" : "Admin", "danger"), kb: kb(rows) };
+  return { text: makeText(lang === "fa" ? "مدیریت ربات" : "Bot admin", cards.join("\n"), t(lang, "choose"), lang === "fa" ? "مدیریت" : "Admin", "danger"), kb: kb(rows) };
+}
+
+// chips of the user's own scopes, e.g. "🎧 پشتیبانی · 🚫 مسدودی‌ها"
+function scopeChips(s: UserState, scopes: string[]): string {
+  const lang = L(s);
+  return scopes.length
+    ? scopes.map((sc) => {
+        const d = adm.SCOPES_BY_ID[sc];
+        return d ? `${d.emoji} ${lang === "fa" ? d.fa : d.en}` : sc;
+      }).join(" · ")
+    : (lang === "fa" ? "هیچ" : "none");
+}
+
+export function scopePicker(
+  s: UserState,
+  opts: { name: string; scopes: string[]; isNew: boolean; grantable?: string[] }
+): { text: string; kb: Kb } {
+  const lang = L(s);
+  const on = new Set(opts.scopes);
+  const grantable = opts.grantable ? new Set(opts.grantable) : null;
+  const summary = opts.scopes.length
+    ? opts.scopes.map((sc) => {
+        const d = adm.SCOPES_BY_ID[sc];
+        return d ? `${d.emoji} ${lang === "fa" ? d.fa : d.en}` : sc;
+      }).join(" · ")
+    : (lang === "fa" ? "هیچ دسترسی — فقط عنوان ادمین" : "no permissions — title only");
+  const body = [
+    (lang === "fa"
+      ? `👤 ادمین: <b>${esc(opts.name)}</b>\n\n🎛 هر بخش را بزن تا روشن/خاموش شود:`
+      : `👤 Admin: <b>${esc(opts.name)}</b>\n\n🎛 Tap each section to toggle it:`),
+    "",
+    card("🧩 " + (lang === "fa" ? "پریست‌های آماده" : "Presets"),
+      [lang === "fa" ? "با یک لمس یک نقش کامل اعمال کن:" : "Apply a whole role with one tap:"]),
+    "",
+    card("📦 " + (lang === "fa" ? "خلاصهٔ دسترسی‌ها" : "Summary"), [summary]),
+  ].join("\n");
+
+  const rows: Btn[][] = [];
+  const presetBtns: Btn[] = [];
+  for (const p of adm.PRESETS) {
+    if (grantable && p.scopes.some((sc) => !grantable.has(sc))) continue; // preset grants more than allowed
+    presetBtns.push({ text: lang === "fa" ? p.fa : p.en, cb: `ar:preset:${p.id}`, color: "gray", emoji: false });
+    if (presetBtns.length === 2) { rows.push(presetBtns.splice(0, 2)); }
+  }
+  if (presetBtns.length) rows.push(presetBtns);
+
+  const toggleBtns: Btn[] = [];
+  for (const sc of adm.SCOPES) {
+    if (grantable && !grantable.has(sc.id)) continue; // can't grant this scope
+    const checked = on.has(sc.id);
+    toggleBtns.push({
+      text: `${checked ? "✅" : "⬜"} ${sc.emoji} ${lang === "fa" ? sc.fa : sc.en}`,
+      cb: `ar:toggle:${sc.id}`,
+      color: checked ? "success" : "gray",
+      emoji: false,
+    });
+    if (toggleBtns.length === 2) { rows.push(toggleBtns.splice(0, 2)); }
+  }
+  if (toggleBtns.length) rows.push(toggleBtns);
+
+  rows.push([
+    { text: opts.isNew
+      ? (lang === "fa" ? "✅ تأیید و افزودن ادمین" : "✅ Confirm & add admin")
+      : (lang === "fa" ? "✅ ذخیرهٔ تغییرات" : "✅ Save changes"),
+      cb: "ar:confirm", color: "success", emoji: false },
+    { text: lang === "fa" ? "❌ انصراف" : "❌ Cancel", cb: "ar:cancel", color: "danger", emoji: false },
+  ]);
+  return {
+    text: makeText(lang === "fa" ? "تعیین دسترسی ادمین" : "Set admin permissions", body, t(lang, "choose"), lang === "fa" ? "مدیریت" : "Admin", "danger"),
+    kb: kb(rows),
+  };
 }
 
 export const adminAskId = (s: UserState): string =>
   L(s) === "fa"
-    ? "👑 <b>افزودن ادمین</b>\n\nپیام کاربر موردنظر را <b>فوروارد</b> کن، یا آیدی عددی‌اش را همین‌جا بفرست.\n\n⛔ ادمین‌ها به پنل مدیریت دسترسی می‌گیرند؛ پس فقط افراد مورداعتمادت را اضافه کن."
-    : "👑 <b>Add admin</b>\n\nForward a message from the target user, or send their numeric ID here.\n\n⛔ Admins get panel access — only add people you trust.";
+    ? "👑 <b>افزودن ادمین</b>\n\nپیام کاربر موردنظر را <b>فوروارد</b> کن، یا آیدی عددی‌اش را همین‌جا بفرست.\n\nبعد از آن می‌توانی دقیقاً تعیین کنی به کدام بخش‌های ربات دسترسی داشته باشد."
+    : "👑 <b>Add admin</b>\n\nForward a message from the target user, or send their numeric ID here.\n\nThen you pick exactly which sections they can access.";
 
 export const banAskId = (s: UserState): string =>
   L(s) === "fa"
@@ -712,18 +793,23 @@ export const admAlready = (s: UserState, who: string): string =>
 
 export function adminList(
   s: UserState,
-  admins: Array<{ id: number; label: string }>,
-  isOwnerFlag: boolean
+  admins: Array<{ id: number; label: string; scopes: string[] }>,
+  canEdit: boolean
 ): { text: string; kb: Kb } {
   const lang = L(s);
   const body = admins.length
-    ? admins.map((a, i) => `${lang === "fa" ? fa_num(i + 1) : i + 1}) <b>${esc(a.label)}</b> · <code>${a.id}</code>`).join("\n")
+    ? admins.map((a, i) =>
+        `${lang === "fa" ? fa_num(i + 1) : i + 1}) <b>${esc(a.label)}</b> · <code>${a.id}</code>\n   🎛 ${scopeChips(s, a.scopes)}`
+      ).join("\n\n")
     : (lang === "fa" ? "هنوز ادمینی اضافه نشده." : "No admins yet.");
   const rows: Btn[][] = [];
-  if (isOwnerFlag) {
-    for (const a of admins) {
-      rows.push([{ text: (lang === "fa" ? "🔔 حذف " : "🔔 Remove ") + esc(a.label), cb: `adm:del:${a.id}`, color: "danger", emoji: false }]);
+  for (const a of admins) {
+    const row: Btn[] = [];
+    if (canEdit) {
+      row.push({ text: lang === "fa" ? "⚙️ دسترسی‌ها" : "⚙️ Permissions", cb: `ar:edit:${a.id}`, color: "primary", emoji: false });
+      row.push({ text: "🔔", cb: `adm:del:${a.id}`, color: "danger", emoji: false });
     }
+    if (row.length) rows.push(row);
   }
   rows.push([{ text: lang === "fa" ? "🔙 بازگشت" : "🔙 Back", cb: "menu:adm", color: "gray", emoji: false }]);
   return {
@@ -731,6 +817,17 @@ export function adminList(
     kb: kb(rows),
   };
 }
+
+export const adminScopesSaved = (s: UserState, who: string, scopes: string[]): string => {
+  const lang = L(s);
+  const chips = scopes.length ? scopeChips(s, scopes) : (lang === "fa" ? "هیچ" : "none");
+  return lang === "fa"
+    ? `✅ <b>دسترسی‌های «${esc(who)}» ذخیره شد.</b>\n🎛 ${chips}`
+    : `✅ <b>“${esc(who)}” permissions saved.</b>\n🎛 ${chips}`;
+};
+
+export const adminScopesCanceled = (s: UserState): string =>
+  L(s) === "fa" ? "↩️ انجام نشد — تغییری اعمال نشد." : "↩️ Canceled — nothing changed.";
 
 export function banList(
   s: UserState,
