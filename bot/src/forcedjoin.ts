@@ -27,6 +27,7 @@ export interface ChatMeta {
   title: string;
   type?: string;
   username?: string;
+  inviteLink?: string;   // private groups/channels without a username
   updatedAt?: number;
 }
 
@@ -49,7 +50,7 @@ export const FJ_DEFAULT: FjConfig = {
   enabled: false,
   chats: [],
   mode: "any",
-  message: "برای استفاده از ربات، ابتدا در کانال(های) زیر عضو شو 👇",
+  message: "برای استفاده از ربات، ابتدا در چت(های) زیر عضو شو 👇",
   buttonText: "✅ عضویت انجام شد — بررسی کن",
   recheckHours: 6,
   exempt: [],
@@ -177,9 +178,23 @@ export async function chatTitle(env: Env, chat: string): Promise<ChatMeta> {
     const r: any = await tg.getChat(env, chat);
     const res = r?.result;
     if (res?.title || res?.first_name) {
-      meta = { title: res.title || res.first_name, type: res.type || "", username: res.username, updatedAt: Date.now() };
+      meta = {
+        title: res.title || res.first_name,
+        type: res.type || "",
+        username: res.username,
+        inviteLink: res.invite_link || "",
+        updatedAt: Date.now(),
+      };
     }
   } catch { /* keep the raw id */ }
+  // Private chats (no username, no invite_link from getChat): ask Telegram for
+  // the primary invite link so users still get a clickable join button.
+  if (!meta.username && !meta.inviteLink) {
+    try {
+      const r: any = await tg.exportChatInviteLink(env, chat);
+      if (typeof r?.result === "string" && r.result) meta.inviteLink = r.result;
+    } catch { /* leave it empty */ }
+  }
   cfg.chatMeta[chat] = meta;
   await saveConfig(env, cfg);
   return meta;
@@ -187,6 +202,13 @@ export async function chatTitle(env: Env, chat: string): Promise<ChatMeta> {
 
 export const chatDisplay = (cfg: FjConfig, chat: string): string =>
   cfg.chatMeta[chat]?.title || chat;
+
+// Best clickable join URL for a chat: public username first, else invite link.
+export const chatJoinUrl = (meta?: ChatMeta): string | null => {
+  if (meta?.username) return `https://t.me/${meta.username}`;
+  if (meta?.inviteLink) return meta.inviteLink;
+  return null;
+};
 
 // Backfill missing cached titles so prompts/panel show real channel names.
 export async function ensureTitles(env: Env, cfg: FjConfig): Promise<FjConfig> {
@@ -452,8 +474,9 @@ export async function sendJoinPrompt(env: Env, userId: number, cfg: FjConfig, la
     const meta = cfg.chatMeta[c];
     const title = esc(meta?.title || c);
     list.push(`└ «<b>${title}</b>» ${c.startsWith("@") ? "— <code>" + esc(c) + "</code>" : ""}`);
-    if (meta?.username) {
-      rows.push([{ text: "🔗 " + title, url: `https://t.me/${meta.username}`, color: "primary", emoji: false }]);
+    const joinUrl = chatJoinUrl(meta);
+    if (joinUrl) {
+      rows.push([{ text: "🔗 " + title, url: joinUrl, color: "primary", emoji: false }]);
     }
   }
   const cond = cfg.mode === "all" ? t(L, "fj_cond_all", { n: cfg.chats.length }) : t(L, "fj_cond_any");
@@ -506,12 +529,13 @@ export async function onBotChatMember(env: Env, upd: tg.TgChatMemberUpdate): Pro
       cfg.enabled = true;
       await saveConfig(env, cfg);
       await recordEvent(env, { ev: "chat_added", uid: owner, chat: chatId, extra: meta.title });
+      const kind = meta.type === "supergroup" || meta.type === "group" ? "گروه" : "کانال";
       await tg.sendMessage(
         env, owner,
-        `🤖 ربات در کانال «<b>${esc(meta.title)}</b>» ادمین شد.\n` +
+        `🤖 ربات در ${kind === "گروه" ? "گروه" : "کانال"} «<b>${esc(meta.title)}</b>» ادمین شد.\n` +
         `✅ خودکار به عضویت اجباری اضافه شد${firstEnable ? " و عضویت اجباری <b>فعال</b> شد" : ""}.\n` +
         `برای تنظیم دقیق (شرط any/all، پیام، معاف‌ها و آمار) به پنل برو: /panel` +
-        (firstEnable ? "\n\n⛔ از حالا کاربرانی که عضو این کانال نباشند از ربات مسدود می‌شوند." : "")
+        (firstEnable ? "\n\n⛔ از حالا کاربرانی که عضو این چت نباشند از ربات مسدود می‌شوند." : "")
       ).catch(() => {});
     } else if (newStatus === "left" || newStatus === "kicked") {
       // The BOT itself was removed / demoted from the chat.
@@ -521,7 +545,7 @@ export async function onBotChatMember(env: Env, upd: tg.TgChatMemberUpdate): Pro
         cfg.chats = cfg.chats.filter((c) => c !== chatId);
         await saveConfig(env, cfg);
         await recordEvent(env, { ev: "chat_removed", uid: fromId, chat: chatId, extra: title });
-        await tg.sendMessage(env, owner, `⚠️ ربات از کانال «<b>${esc(title)}</b>» حذف شد و از لیست عضویت اجباری برداشته شد.`).catch(() => {});
+        await tg.sendMessage(env, owner, `⚠️ ربات از چت «<b>${esc(title)}</b>» حذف شد و از لیست عضویت اجباری برداشته شد.`).catch(() => {});
       }
     }
   } catch (e) {
@@ -604,8 +628,9 @@ async function notifyLeft(env: Env, userId: number, cfg: FjConfig, chat: string,
   const L: Lang = await userLang(env, userId);
   const meta = cfg.chatMeta[chat];
   const rows: tg.Btn[][] = [];
-  if (meta?.username) {
-    rows.push([{ text: "🔗 " + t(L, "fj_left_rejoin"), url: `https://t.me/${meta.username}`, color: "primary", emoji: false }]);
+  const rejoinUrl = chatJoinUrl(meta);
+  if (rejoinUrl) {
+    rows.push([{ text: "🔗 " + t(L, "fj_left_rejoin"), url: rejoinUrl, color: "primary", emoji: false }]);
   }
   rows.push([{ text: t(L, "fj_left_cta"), cb: "fj:verify", color: "success", emoji: false }]);
 

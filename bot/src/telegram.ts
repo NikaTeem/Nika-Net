@@ -130,6 +130,13 @@ export function getChat(env: Env, chatId: string | number) {
   return tgApi(env, "getChat", { chat_id: String(chatId) });
 }
 
+// Primary invite link of a supergroup/channel (bot must be admin). Used so
+// private groups without a public username still get a clickable join link.
+export function exportChatInviteLink(env: Env, chatId: string | number) {
+  return tgApi(env, "exportChatInviteLink", { chat_id: String(chatId) });
+}
+
+
 export function getUserProfilePhotos(env: Env, userId: number, limit = 1) {
   return tgApi(env, "getUserProfilePhotos", { user_id: userId, limit });
 }
