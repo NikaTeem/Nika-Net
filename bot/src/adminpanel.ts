@@ -831,9 +831,29 @@ const PANEL_HTML = `<!doctype html>
     </div>
   </div>
 </div>
+<div class="modal-overlay hidden" id="admScopeModal">
+  <div class="modal">
+    <div class="modal-h">🎛 دسترسی ادمین <button class="modal-x" id="admScopeCancel">✕</button></div>
+    <div class="modal-b">
+      <div class="modal-lbl">کاربر</div>
+      <div id="admScopeWho" style="font-size:14px;font-weight:800;margin-top:4px">—</div>
+      <div class="modal-lbl" style="margin-top:16px">پریست آماده</div>
+      <div class="reason-chips" id="admScopePresets" style="margin-top:6px"></div>
+      <div class="modal-lbl" style="margin-top:16px">بخش‌های قابل دسترسی <span class="mini">(هر کدام را بزن تا روشن/خاموش شود)</span></div>
+      <div class="reason-chips" id="admScopeChips" style="margin-top:6px"></div>
+      <div class="hint" style="margin-top:12px" id="admScopeSummary"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" id="admScopeCancel2">انصراف</button>
+      <button class="btn btn-p" id="admScopeGo">✅ ذخیره</button>
+    </div>
+  </div>
+</div>
 <script>
 (function () {
   "use strict";
+  var NIKA_SCOPES = ${JSON.stringify(adm.SCOPES)};
+  var NIKA_PRESETS = ${JSON.stringify(adm.PRESETS)};
   var $ = function (s) { return document.querySelector(s); };
   var toastTimer;
   function toast(m) {
@@ -2039,10 +2059,13 @@ const PANEL_HTML = `<!doctype html>
       td2.appendChild(idv);
       var td3 = document.createElement("td");
       var sc = document.createElement("div"); sc.className = "umeta";
-      sc.textContent = (a.scopes || []).length ? "🎛 " + a.scopes.join(" · ") : "🎛 —";
+      sc.textContent = scopeLabelList(a.scopes);
       td3.appendChild(sc);
       var td4 = document.createElement("td");
       if (hasScope("admins")) {
+        var eb = document.createElement("button"); eb.className = "btn btn-ghost btn-sm"; eb.textContent = "⚙️ دسترسی‌ها";
+        eb.onclick = function () { openScopeModal({ id: a.id, label: a.label || ("آیدی " + a.id), scopes: a.scopes || [], isNew: false }); };
+        td4.appendChild(eb);
         var rb = document.createElement("button"); rb.className = "btn btn-danger btn-sm"; rb.textContent = "🔔 حذف ادمین";
         rb.onclick = function () { setAdminById(a.id, false); };
         td4.appendChild(rb);
@@ -2050,6 +2073,15 @@ const PANEL_HTML = `<!doctype html>
       tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
       body.appendChild(tr);
     });
+  }
+
+  function scopeLabelList(scopes) {
+    if (!scopes || !scopes.length) return "🎛 —";
+    return "🎛 " + scopes.map(function (sid) {
+      var d = null;
+      (NIKA_SCOPES || []).forEach(function (s) { if (s.id === sid) d = s; });
+      return d ? d.emoji + " " + d.fa : sid;
+    }).join(" · ");
   }
 
   function fmtUntil(until) {
@@ -2099,10 +2131,22 @@ const PANEL_HTML = `<!doctype html>
     });
   }
 
-  async function setAdmin(u, on) {
-    var r = await api("/panel/api/admins", { method: "POST", body: { action: on ? "add" : "remove", id: u.id } });
-    if (r.ok) { await loadMgmt(); await loadUsers(); toast(on ? "ادمین اضافه شد ✓" : "ادمین حذف شد"); }
-    else toast(r.j.error || "خطا");
+  function setAdmin(u, on) {
+    if (!on) {
+      // حذف مستقیم
+      api("/panel/api/admins", { method: "POST", body: { action: "remove", id: u.id } }).then(function (r) {
+        if (r.ok) { loadMgmt(); loadUsers(); toast("ادمین حذف شد"); }
+        else toast(r.j.error || "خطا");
+      });
+      return;
+    }
+    // افزودن → باز کردن پیچ دسترسی
+    openScopeModal({
+      id: u.id,
+      label: ((u.name || "") + " " + (u.lastName || "")).trim() || ("آیدی " + u.id),
+      scopes: (NIKA_PRESETS || []).filter(function (p) { return p.id === "full"; }).map(function (p) { return p.scopes; })[0] || [],
+      isNew: true,
+    });
   }
 
   async function setAdminById(id, on) {
@@ -2110,6 +2154,86 @@ const PANEL_HTML = `<!doctype html>
     if (r.ok) { await loadMgmt(); await loadUsers(); toast(on ? "ادمین اضافه شد ✓" : "ادمین حذف شد"); }
     else toast(r.j.error || "خطا");
   }
+
+  /* ---------- 🎛 scope picker (web) ---------- */
+  var scopeDraft = null;
+  function defaultFullScopes() {
+    var full = [];
+    (NIKA_SCOPES || []).forEach(function (s) { if (s.id !== "admins") full.push(s.id); });
+    return full;
+  }
+  function openScopeModal(draft) {
+    scopeDraft = draft;
+    $("#admScopeWho").textContent = draft.label || ("آیدی " + draft.id);
+    renderScopePresets();
+    renderScopeChips();
+    $("#admScopeModal").classList.remove("hidden");
+  }
+  function closeScopeModal() { $("#admScopeModal").classList.add("hidden"); scopeDraft = null; }
+  function grantableIds() {
+    if (!state) return null;
+    if (state.role === "owner") return null; // owner → everything
+    return (state.grantable || []);
+  }
+  function renderScopePresets() {
+    var wrap = $("#admScopePresets");
+    wrap.innerHTML = "";
+    var g = grantableIds();
+    (NIKA_PRESETS || []).forEach(function (p) {
+      if (g && p.scopes.some(function (sc) { return g.indexOf(sc) < 0; })) return; // preset grants too much
+      var chip = document.createElement("button");
+      chip.className = "rchip";
+      chip.textContent = p.fa;
+      chip.onclick = function () {
+        scopeDraft.scopes = p.scopes.slice();
+        renderScopeChips();
+      };
+      wrap.appendChild(chip);
+    });
+  }
+  function renderScopeChips() {
+    var wrap = $("#admScopeChips");
+    wrap.innerHTML = "";
+    var g = grantableIds();
+    (NIKA_SCOPES || []).forEach(function (s) {
+      if (g && g.indexOf(s.id) < 0) return; // can't grant this scope
+      var on = scopeDraft.scopes.indexOf(s.id) >= 0;
+      var chip = document.createElement("button");
+      chip.className = "rchip" + (on ? " on" : "");
+      chip.textContent = s.emoji + " " + s.fa;
+      chip.onclick = function () {
+        var i = scopeDraft.scopes.indexOf(s.id);
+        if (i >= 0) scopeDraft.scopes.splice(i, 1);
+        else scopeDraft.scopes.push(s.id);
+        renderScopeChips();
+      };
+      wrap.appendChild(chip);
+    });
+    var sum = $("#admScopeSummary");
+    if (sum) {
+      var names = scopeDraft.scopes.map(function (sid) {
+        var d = null;
+        (NIKA_SCOPES || []).forEach(function (s) { if (s.id === sid) d = s; });
+        return d ? d.emoji + " " + d.fa : sid;
+      });
+      sum.textContent = scopeDraft.scopes.length ? ("🧩 " + names.join(" · ")) : "🧩 بدون دسترسی — فقط عنوان ادمین";
+    }
+  }
+  $("#admScopeCancel").onclick = closeScopeModal;
+  $("#admScopeCancel2").onclick = closeScopeModal;
+  $("#admScopeGo").onclick = async function () {
+    if (!scopeDraft) return;
+    var d = scopeDraft;
+    var body = d.isNew
+      ? { action: "add", id: d.id, scopes: d.scopes }
+      : { action: "set", id: d.id, scopes: d.scopes };
+    var r = await api("/panel/api/admins", { method: "POST", body: body });
+    if (r.ok) {
+      closeScopeModal();
+      await loadMgmt(); await loadUsers();
+      toast(d.isNew ? "ادمین با دسترسی‌های انتخابی اضافه شد ✓" : "دسترسی‌های ادمین ذخیره شد ✓");
+    } else toast(r.j.error || "خطا");
+  };
 
   function openBanModal(u) {
     banTarget = { id: u.id, label: ((u.name || "") + " " + (u.lastName || "")).trim() || ("آیدی " + u.id) };
@@ -2152,13 +2276,15 @@ const PANEL_HTML = `<!doctype html>
     else toast(r.j.error || "خطا");
   }
 
-  $("#admAddBtn").onclick = async function () {
+  $("#admAddBtn").onclick = function () {
     var v = $("#admAddId").value.trim();
     var id = parseInt(v, 10);
     if (!Number.isInteger(id) || id <= 0) { toast("آیدی عددی معتبر وارد کن"); return; }
-    var r = await api("/panel/api/admins", { method: "POST", body: { action: "add", id: id } });
-    if (r.ok) { $("#admAddId").value = ""; await loadMgmt(); await loadUsers(); toast("ادمین اضافه شد ✓"); }
-    else toast(r.j.error || "خطا");
+    var label = "آیدی " + id;
+    var u = users.find(function (x) { return x.id === id; });
+    if (u) label = ((u.name || "") + " " + (u.lastName || "")).trim() || label;
+    $("#admAddId").value = "";
+    openScopeModal({ id: id, label: label, scopes: defaultFullScopes(), isNew: true });
   };
 
   $("#banNewBtn").onclick = function () {
@@ -2387,6 +2513,7 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
       ok: true,
       role: panelRole,
       scopes: sessionScopes,
+      grantable: await adm.grantableScopes(env, owner),
       bot: {
         username: meta.username,
         origin: meta.origin,
@@ -2434,10 +2561,17 @@ export async function handlePanel(env: Env, req: Request, url: URL): Promise<Res
     const b = await readJson(req);
     const id = Number(b.id);
     const action = String(b.action || "");
+    const cleanScopes = (raw: unknown): adm.Scope[] | undefined => {
+      if (!Array.isArray(raw)) return undefined;
+      return raw.filter((s): s is adm.Scope => typeof s === "string" && !!adm.scopeOf(s));
+    };
     if (action === "add") {
-      const r = await adm.addAdmin(env, id, owner);
+      const r = await adm.addAdmin(env, id, owner, cleanScopes(b.scopes));
       if (!r.ok) return json({ ok: false, error: r.error }, 400);
-      if (r.changed) await adm.notifyAdminAdded(env, id);
+      if (r.changed) await adm.notifyAdminAdded(env, id, await adm.scopesOf(env, id));
+    } else if (action === "set") {
+      const r = await adm.setAdminScopes(env, id, owner, cleanScopes(b.scopes) || []);
+      if (!r.ok) return json({ ok: false, error: r.error }, 400);
     } else if (action === "remove") {
       const r = await adm.removeAdmin(env, id, owner);
       if (!r.ok) return json({ ok: false, error: r.error }, 400);

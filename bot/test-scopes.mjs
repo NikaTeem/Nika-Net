@@ -169,5 +169,31 @@ check("C still has no admins scope after S's attempt", !!recC2 && !recC2.scopes.
 await webhook(cb(C, "adm:add"));
 check("user without admins can't open adm:add", answered.length >= 0 && !textsTo(C).some((t) => t.includes("فوروارد")));
 
+/* ===== 7) web panel scope management ===== */
+const D = 555555555; // fresh admin added via the web panel
+let plr = await panelRaw("/panel/api/password", { method: "POST", body: { id: OWNER, password: "nikapass123" } });
+const oTok = (plr.setCookie.match(/npanel=([a-f0-9-]+)/) || [])[1];
+check("panel: owner login ok", plr.ok && !!oTok);
+
+plr = await panelRaw("/panel/api/admins", { method: "POST", cookie: "npanel=" + oTok, body: { action: "add", id: D, scopes: ["bans"] } });
+check("panel: add admin with scopes", plr.ok, JSON.stringify(plr.j && plr.j.error));
+const recD = await adminRec(D);
+check("panel: D stored bans-only", !!recD && JSON.stringify(recD.scopes) === JSON.stringify(["bans"]), JSON.stringify(recD && recD.scopes));
+
+plr = await panelRaw("/panel/api/admins", { cookie: "npanel=" + oTok });
+const admD = (plr.j.admins || []).find((a) => a.id === D);
+check("panel: GET admins includes scopes", !!admD && Array.isArray(admD.scopes) && admD.scopes.includes("bans"), JSON.stringify(admD));
+
+plr = await panelRaw("/panel/api/admins", { method: "POST", cookie: "npanel=" + oTok, body: { action: "set", id: D, scopes: ["bans", "panel"] } });
+check("panel: set scopes ok", plr.ok, JSON.stringify(plr.j && plr.j.error));
+const recD2 = await adminRec(D);
+check("panel: D updated to bans+panel", !!recD2 && JSON.stringify([...recD2.scopes].sort()) === JSON.stringify(["bans", "panel"].sort()), JSON.stringify(recD2 && recD2.scopes));
+
+plr = await panelRaw("/panel/api/admins", { method: "POST", cookie: "npanel=" + oTok, body: { action: "remove", id: D } });
+check("panel: remove admin ok", plr.ok && !(await adminRec(D)));
+
+plr = await panelRaw("/panel/api/state", { cookie: "npanel=" + oTok });
+check("panel: state has grantable (owner=all)", plr.ok && Array.isArray(plr.j.grantable) && plr.j.grantable.includes("admins"), JSON.stringify(plr.j && plr.j.grantable));
+
 console.log("\n===== SCOPES RESULT =====\n" + PASS.filter(([, ok]) => ok).length + "/" + PASS.length + " passed");
 process.exit(PASS.some(([, ok]) => !ok) ? 1 : 0);
