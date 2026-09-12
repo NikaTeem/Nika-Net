@@ -162,7 +162,7 @@ input::placeholder,textarea::placeholder{color:var(--faint)}
 
 /* ---------- ورود ---------- */
 #loginView{min-height:100vh;display:grid;place-items:center;padding:24px;position:relative;z-index:1}
-.login-card{width:min(410px,100%);background:var(--card);border:1px dashed var(--border-strong);
+.login-card{width:min(410px,100%);min-width:0;max-width:100%;background:var(--card);border:1px dashed var(--border-strong);
   border-radius:18px;padding:44px 34px 34px;text-align:center;backdrop-filter:blur(12px);
   box-shadow:var(--shadow); position:relative;
   animation:rise .5s ease both}
@@ -274,7 +274,7 @@ input::placeholder,textarea::placeholder{color:var(--faint)}
 .gh-card .gh-body i{font-style:normal;font-size:9.5px;color:var(--faint);font-family:var(--type);letter-spacing:.08em}
 .gh-star{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--warn);font-family:var(--type)}
 .gh-star svg{width:12px;height:12px}
-#main{padding:26px 30px;max-width:1180px;width:100%;margin:0 auto}
+#main{padding:26px 30px;max-width:1180px;width:100%;margin:0 auto;min-width:0}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap}
 .page-title{font-size:24px;font-weight:800;letter-spacing:.2px;font-family:var(--serif);color:var(--paper);
   position:relative;display:inline-block;padding-bottom:10px}
@@ -401,8 +401,31 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
 .copy-row .btn{width:auto;padding:9px 16px;font-size:12.5px}
 .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:640px){.field-grid{grid-template-columns:1fr}}
+
+/* ---------- موبایل: چیدمان بدون سرریز ---------- */
+/* grid/flex items must be allowed to shrink below their content's min-width
+   (without this, a wide table or button row pushes the whole page sideways) */
+@media(max-width:640px){
+  .card{min-width:0}
+  .card-title{flex-wrap:wrap;row-gap:8px}
+  .card-title>span{min-width:0}
+  .card-title>span[style*="display:flex"],.card-title .row-actions,.card-title>span:last-child{flex-wrap:wrap}
+  .topbar{gap:10px}
+  .page-title{font-size:20px}
+  /* scanner rows: let IP / latency shrink instead of forcing a wider page */
+  .scan-row{gap:7px;padding:8px 10px}
+  .scan-ip{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1}
+  .scan-port{flex:none}
+  .scan-latbar{min-width:24px}
+  .scan-ms{min-width:0;white-space:nowrap;flex:none}
+  /* relay rows (domain names can be long) */
+  .scan-row code.scan-ip{max-width:46vw}
+  /* tables: keep them scrollable inside their wrapper, never wider than screen */
+  table{min-width:0}
+  td,th{padding:10px 8px}
+}
 .modal-back{position:fixed;inset:0;background:rgba(8,7,5,.78);backdrop-filter:blur(8px);display:grid;place-items:center;z-index:50;padding:20px}
-.modal{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--bg-soft);border:1px dashed var(--border-strong);border-radius:18px;padding:26px;box-shadow:var(--shadow);position:relative}
+.modal{width:min(560px,100%);min-width:0;max-width:100%;max-height:88vh;overflow:auto;background:var(--bg-soft);border:1px dashed var(--border-strong);border-radius:18px;padding:26px;box-shadow:var(--shadow);position:relative}
 .modal::before{content:"";position:absolute;top:-11px;right:50%;transform:translateX(50%) rotate(2deg);width:110px;height:24px;border-radius:3px;
   background:linear-gradient(rgba(201,163,91,.3),rgba(201,163,91,.2));border:1px solid rgba(201,163,91,.32)}
 .modal h3{font-size:18px;font-weight:700;margin-bottom:16px;font-family:var(--serif);color:var(--paper);padding-bottom:10px;border-bottom:1px dashed var(--border-strong)}
@@ -556,7 +579,7 @@ pre.code{background:var(--bg-soft);border:1px dashed var(--border-strong);border
 </div>
 
 <!-- ============ برنامه ============ -->
-<div id="appView" class="hidden">
+<div id="appView" class="hidden" style="display:none">
   <aside id="sidebar">
     <div class="brand">
       <div class="logo"><div class="av"></div></div>
@@ -1239,8 +1262,19 @@ async function checkSession() {
   }
 }
 
-function showLogin() { $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); }
-function showApp() { $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden"); }
+// View switching is belt-and-suspenders: we toggle BOTH the `.hidden` class and
+// inline `display`, so the two views can never be visible at the same time even
+// if the stylesheet is late, truncated, or overridden on a mobile browser.
+function showLogin() {
+  const app = $("#appView"), log = $("#loginView");
+  app.classList.add("hidden"); app.style.display = "none";
+  log.classList.remove("hidden"); log.style.display = "";
+}
+function showApp() {
+  const log = $("#loginView"), app = $("#appView");
+  log.classList.add("hidden"); log.style.display = "none";
+  app.classList.remove("hidden"); app.style.display = "";
+}
 
 /* ---------- auth ---------- */
 async function doLogin() {
