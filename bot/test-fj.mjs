@@ -191,5 +191,23 @@ await webhook({ update_id: 10, chat_member: {
 } });
 check("ANY: warned once out of both", sent.some((s) => s.text && s.text.includes("خارج شدی")));
 
+console.log("—— 10. owner promotes bot in a 2nd chat → mode flips to ALL ——");
+kv.put("fj:config", JSON.stringify({
+  enabled: true, chats: [CH], mode: "any", message: "join plz", buttonText: "verify",
+  recheckHours: 0, exempt: [], chatMeta: { [CH]: { title: "CH", username: "u1", updatedAt: Date.now() } },
+  applyTo: "all", legacy: [], verifyMessage: "", promptCooldownMin: 0,
+}));
+botStatus[CH] = "administrator"; botStatus[GR] = "administrator";
+await webhook({ update_id: 11, my_chat_member: {
+  chat: { id: GR, type: "supergroup", title: "گروه رسمی" },
+  from: { id: OWNER }, date: Date.now(),
+  old_chat_member: { status: "left" },
+  new_chat_member: { status: "administrator" },
+} });
+const cfgAfterSecond = JSON.parse(await kv.get("fj:config"));
+check("group auto-added", cfgAfterSecond.chats.includes(GR), JSON.stringify(cfgAfterSecond.chats));
+check("mode forced to ALL", cfgAfterSecond.mode === "all", JSON.stringify(cfgAfterSecond.mode));
+check("owner told ALL is required", sent.some((s) => s.text && s.text.includes("«همه»")), JSON.stringify(sent.map((s) => s.text)));
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail ? 1 : 0);

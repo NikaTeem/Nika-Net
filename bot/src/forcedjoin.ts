@@ -49,7 +49,7 @@ export interface FjConfig {
 export const FJ_DEFAULT: FjConfig = {
   enabled: false,
   chats: [],
-  mode: "any",
+  mode: "all",
   message: "برای استفاده از ربات، ابتدا در چت(های) زیر عضو شو 👇",
   buttonText: "✅ عضویت انجام شد — بررسی کن",
   recheckHours: 6,
@@ -526,6 +526,9 @@ export async function onBotChatMember(env: Env, upd: tg.TgChatMemberUpdate): Pro
       if (!cfg.chats.includes(chatId)) cfg.chats.push(chatId);
       cfg.chatMeta[chatId] = meta;
       const firstEnable = !cfg.enabled && cfg.chats.length > 0;
+      // With 2+ required chats the default intent is "must join ALL of them".
+      const forcedAll = cfg.chats.length >= 2 && cfg.mode !== "all";
+      if (forcedAll) cfg.mode = "all";
       cfg.enabled = true;
       await saveConfig(env, cfg);
       await recordEvent(env, { ev: "chat_added", uid: owner, chat: chatId, extra: meta.title });
@@ -534,6 +537,7 @@ export async function onBotChatMember(env: Env, upd: tg.TgChatMemberUpdate): Pro
         env, owner,
         `🤖 ربات در ${kind === "گروه" ? "گروه" : "کانال"} «<b>${esc(meta.title)}</b>» ادمین شد.\n` +
         `✅ خودکار به عضویت اجباری اضافه شد${firstEnable ? " و عضویت اجباری <b>فعال</b> شد" : ""}.\n` +
+        (forcedAll ? "⚙️ شرط عضویت روی <b>«همه»</b> تنظیم شد — کاربر باید در <b>همهٔ چت‌های لیست</b> عضو باشه.\n" : "") +
         `برای تنظیم دقیق (شرط any/all، پیام، معاف‌ها و آمار) به پنل برو: /panel` +
         (firstEnable ? "\n\n⛔ از حالا کاربرانی که عضو این چت نباشند از ربات مسدود می‌شوند." : "")
       ).catch(() => {});
