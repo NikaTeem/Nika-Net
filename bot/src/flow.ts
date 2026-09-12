@@ -416,6 +416,17 @@ async function handleMessage(env: Env, msg: tg.TgMessage): Promise<void> {
     return await showAdminMenu(env, chatId, s, msg.message_id);
   }
 
+  // ➕ افزودن ربات به گروه — فقط مالک (ادمین با تیک‌های آماده)
+  if (text === "/group" || text.toLowerCase() === "group") {
+    const s = await st.getState(env, chatId);
+    if (!(await isOwner(env, chatId))) {
+      return void (await tg.sendMessage(env, chatId, t(L(s), "owner_only")));
+    }
+    const meta = await fj.botMeta(env);
+    const m = ui.fjGroupMenu(s, meta.username);
+    return void (await tg.sendMessage(env, chatId, m.text, m.kb));
+  }
+
   // quick reply keyboard labels
   const rl = ui.REPLY_LABELS[text];
   if (rl) {
@@ -1456,6 +1467,19 @@ async function handleCallback(env: Env, cq: tg.TgCallbackQuery): Promise<void> {
   }
 
   /* ---------- forced join (owner) ---------- */
+  if (data === "fj:group") {
+    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const meta = await fj.botMeta(env);
+    const m = ui.fjGroupMenu(s, meta.username);
+    await tg.answerCallback(env, cq.id).catch(() => {});
+    return void (await reply(env, chatId, msgId, m.text, m.kb));
+  }
+  if (data === "fj:setrights") {
+    if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
+    const ok = await fj.setGroupDefaultRights(env);
+    await tg.answerCallback(env, cq.id, ok ? t(L(s), "fj_group_rights_ok") : t(L(s), "fj_group_rights_fail"), true).catch(() => {});
+    return;
+  }
   if (data === "fj:setchat") {
     if (!(await isOwner(env, chatId))) return void (await tg.answerCallback(env, cq.id).catch(() => {}));
     s.state = "await_fj_chat";

@@ -2,6 +2,7 @@
 
 import { Env } from "./types";
 import * as tg from "./telegram";
+import * as fj from "./forcedjoin";
 import { handleUpdate, broadcastAll, announceLatest, handleScheduled } from "./flow";
 import { handlePanel } from "./adminpanel";
 
@@ -35,6 +36,8 @@ export default {
       if (secret !== env.WEBHOOK_SECRET) return new Response("unauthorized", { status: 401 });
       const update = (await req.json()) as tg.TgUpdate;
       ctx.waitUntil(handleUpdate(env, update));
+      // keep the bot's default group admin rights (pre-ticked checkboxes) in place
+      ctx.waitUntil(fj.ensureGroupDefaultRights(env));
       return new Response("ok");
     }
 

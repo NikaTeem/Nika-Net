@@ -34,6 +34,7 @@ let botStatus = {};   // chatId -> "administrator" | "left" | ...
 let sent = [];        // sendMessage payloads
 let answered = [];    // answerCallbackQuery payloads
 let edited = [];
+let rightsCalls = []; // setMyDefaultAdministratorRights payloads
 
 globalThis.fetch = async (url, init = {}) => {
   const u = String(url);
@@ -44,6 +45,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (method === "sendMessage") { sent.push(body); return json({ ok: true, result: { message_id: 1 } }); }
   if (method === "answerCallbackQuery") { answered.push(body); return json({ ok: true }); }
   if (method === "editMessageText") { edited.push(body); return json({ ok: true }); }
+  if (method === "setMyDefaultAdministratorRights") { rightsCalls.push(body); return json({ ok: true, result: true }); }
   if (method === "getMe") return json({ ok: true, result: { id: 999, username: "NikaLauncherBot" } });
   if (method === "getChat") {
     const cid = String(body.chat_id);
@@ -86,7 +88,7 @@ let pending = [];
 const ctx = { waitUntil: (p) => pending.push(p) };
 
 async function webhook(update) {
-  sent = []; answered = []; edited = [];
+  sent = []; answered = []; edited = []; rightsCalls = [];
   const req = new Request("https://x/webhook", {
     method: "POST",
     headers: { "X-Telegram-Bot-Api-Secret-Token": "sec", "content-type": "application/json" },
@@ -208,6 +210,22 @@ const cfgAfterSecond = JSON.parse(await kv.get("fj:config"));
 check("group auto-added", cfgAfterSecond.chats.includes(GR), JSON.stringify(cfgAfterSecond.chats));
 check("mode forced to ALL", cfgAfterSecond.mode === "all", JSON.stringify(cfgAfterSecond.mode));
 check("owner told ALL is required", sent.some((s) => s.text && s.text.includes("«همه»")), JSON.stringify(sent.map((s) => s.text)));
+
+console.log("—— 11. /group section (owner-only) + pre-ticked admin rights ——");
+// non-owner (a valid member) can't open it
+chatMembers[CH + ":" + USER] = "member";
+chatMembers[GR + ":" + USER] = "member";
+await webhook({ update_id: 12, message: { message_id: 12, chat: { id: USER, type: "private" }, from: { id: USER, first_name: "T" }, text: "/group" } });
+check("non-owner blocked from /group", sent.some((s) => s.text && s.text.includes("سازنده")), JSON.stringify(sent.map((s) => s.text)));
+// owner gets the section with the startgroup deep link
+await webhook({ update_id: 13, message: { message_id: 13, chat: { id: OWNER, type: "private" }, from: { id: OWNER, first_name: "O" }, text: "/group" } });
+check("owner sees group section", sent.some((s) => s.text && s.text.includes("افزودن ربات به گروه")), JSON.stringify(sent.map((s) => s.text).slice(0, 2)));
+check("startgroup deep link with pre-ticked invite_users", sent.some((s) => JSON.stringify(s).includes("?startgroup&admin=invite_users")), JSON.stringify(sent.map((s) => s.reply_markup)));
+// owner taps "set default checkboxes"
+await webhook({ update_id: 14, callback_query: { id: "cq4", from: { id: OWNER, first_name: "O" }, message: { message_id: 20, chat: { id: OWNER } }, data: "fj:setrights" } });
+check("default rights API called", rightsCalls.length > 0, JSON.stringify(rightsCalls));
+check("rights = only invite_users", rightsCalls.some((b) => b.rights && b.rights.can_invite_users === true && !b.rights.can_delete_messages && !b.rights.can_restrict_members), JSON.stringify(rightsCalls));
+check("answer confirms pre-ticked", answered.some((a) => a.text && a.text.includes("تیک")), JSON.stringify(answered));
 
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail ? 1 : 0);

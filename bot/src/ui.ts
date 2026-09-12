@@ -605,6 +605,7 @@ export function ownerMenu(s: UserState, meta: BotMeta): { text: string; kb: Kb }
       url: `https://t.me/${meta.username}?startchannel&admin=post_messages+edit_messages+delete_messages+invite_users+restrict_members+promote_members+change_info`,
       color: "primary", emoji: false,
     }],
+    [{ text: t(lang, "fj_group_t"), cb: "fj:group", color: "success", emoji: false }],
     [{ text: t(lang, "o_fj_set"), cb: "fj:setchat", color: "success", emoji: false }],
     [{ text: t(lang, "o_fj_status"), cb: "fj:status", color: "gray", emoji: false }],
     [{ text: lang === "fa" ? "👑 مدیریت ادمین‌ها و مسدودی‌ها" : "👑 Admins & bans", cb: "menu:adm", color: "danger", emoji: false }],
@@ -773,6 +774,27 @@ export function fjStatusMenu(s: UserState, cfg: FjView): { text: string; kb: Kb 
     [{ text: t(lang, "back"), cb: "menu:owner", color: "gray", emoji: false }],
   ];
   return { text: makeText(t(lang, "o_fj_status"), lines.join("\n"), t(lang, "choose"), t(lang, "o_crumb"), "owner"), kb: kb(rows) };
+}
+
+/* ============================ add bot to group (owner) ============================ */
+
+export function fjGroupMenu(s: UserState, username: string): { text: string; kb: Kb } {
+  const lang = L(s);
+  const link = `https://t.me/${username}?startgroup&admin=invite_users`;
+  const body = [
+    t(lang, "fj_group_desc"),
+    "",
+    card("🛡 " + (lang === "fa" ? "دسترسی‌ها" : "Permissions"),
+      [lang === "fa"
+        ? "✅ «دعوت کاربران» — برای ساخت لینک عضویتِ گروه‌های خصوصی\n🚫 بقیه (حذف پیام، بن، پین، تغییر اطلاعات و…) خاموش"
+        : "✅ “Invite users” — needed to generate join links for private groups\n🚫 Everything else (delete, ban, pin, change info…) stays off"]),
+  ].join("\n");
+  const rows: Btn[][] = [
+    [{ text: t(lang, "fj_group_add"), url: link, color: "success", emoji: false }],
+    [{ text: t(lang, "fj_group_rights"), cb: "fj:setrights", color: "primary", emoji: false }],
+    [{ text: t(lang, "back"), cb: "menu:owner", color: "gray", emoji: false }],
+  ];
+  return { text: makeText(t(lang, "fj_group_t"), body, t(lang, "choose"), t(lang, "o_crumb"), "owner"), kb: kb(rows) };
 }
 
 /* ============================ panels 🗂 ============================ */

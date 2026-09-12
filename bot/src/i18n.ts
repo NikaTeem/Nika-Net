@@ -187,6 +187,12 @@ export const S: Record<Lang, Dict> = {
     fj_left_rejoin: "عضویت مجدد",
     fj_left_cta: "✅ دوباره عضو شدم — بررسی کن",
     fj_welcome: "✅ عضویتت تأیید شد — خوش آمدی! حالا می‌توانی از ربات استفاده کنی. 🎉",
+    fj_group_t: "افزودن ربات به گروه",
+    fj_group_desc: "با یک لمس ربات را به گروهت اضافه کن؛ صفحهٔ انتخاب گروه باز می‌شود و بعدش صفحهٔ دسترسی‌ها می‌آید که <b>فقط «دعوت کاربران» از قبل تیک خورده</b> — بقیهٔ دسترسی‌ها خاموش می‌مانند. بعد از تأیید، ربات خودکار ادمین می‌شود و گروه به عضویت اجباری اضافه می‌شود.",
+    fj_group_add: "➕ افزودن به گروه (ادمین با تیک‌های آماده)",
+    fj_group_rights: "⚙️ تنظیم تیک‌های پیش‌فرض",
+    fj_group_rights_ok: "✅ تیک‌های پیش‌فرض تنظیم شد: فقط «دعوت کاربران». دفعهٔ بعد که ربات را ادمین کنی، خودش از قبل تیک خورده.",
+    fj_group_rights_fail: "⚠️ تنظیم نشد. دوباره تلاش کن.",
 
     // ── HYPER ✨: صدای پنل، سهمیه، ماتریس، WARP، قایم‌سازی، اپراتور، DoH، Fragment، نقشه‌راه، تور، متن‌ها، قفل، اشتراک ──
     tools_btn: "🧰 ابزارها",
@@ -482,6 +488,12 @@ export const S: Record<Lang, Dict> = {
     fj_left_rejoin: "Rejoin",
     fj_left_cta: "✅ I rejoined — verify",
     fj_welcome: "✅ Membership verified — welcome! You can now use the bot. 🎉",
+    fj_group_t: "Add bot to a group",
+    fj_group_desc: "Add the bot to your group with one tap; the group picker opens, then the permissions screen comes up with <b>only “invite users” pre-ticked</b> — everything else stays off. After you confirm, the bot becomes admin and the group is auto-added to forced join.",
+    fj_group_add: "➕ Add to group (admin, pre-ticked)",
+    fj_group_rights: "⚙️ Set default checkboxes",
+    fj_group_rights_ok: "✅ Default checkboxes set: only “invite users”. Next time you add the bot as admin it will already be pre-ticked.",
+    fj_group_rights_fail: "⚠️ Not set. Please try again.",
 
     // ── HYPER ✨ (English) ──
     tools_btn: "🧰 Tools",

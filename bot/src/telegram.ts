@@ -136,6 +136,12 @@ export function exportChatInviteLink(env: Env, chatId: string | number) {
   return tgApi(env, "exportChatInviteLink", { chat_id: String(chatId) });
 }
 
+// Default admin rights SUGGESTED when a user adds the bot as admin to a
+// group/channel — these are the checkboxes that come pre-ticked in Telegram.
+export function setMyDefaultAdministratorRights(env: Env, rights: Record<string, boolean>, forChannels = false) {
+  return tgApi(env, "setMyDefaultAdministratorRights", { rights, for_channels: forChannels });
+}
+
 
 export function getUserProfilePhotos(env: Env, userId: number, limit = 1) {
   return tgApi(env, "getUserProfilePhotos", { user_id: userId, limit });

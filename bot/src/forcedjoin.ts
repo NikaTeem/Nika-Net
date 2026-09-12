@@ -689,3 +689,39 @@ export async function setOrigin(env: Env, origin: string): Promise<void> {
 
 export const adminDeepLink = (username: string) =>
   `https://t.me/${username}?startchannel&admin=post_messages+edit_messages+delete_messages+invite_users+restrict_members+promote_members+change_info`;
+
+// Group deep link: opens the group picker and, on confirm, adds the bot as
+// ADMIN with ONLY "invite users" pre-ticked (bare minimum — needed so the bot
+// can export an invite link for private groups). Everything else stays off.
+export const groupAdminDeepLink = (username: string) =>
+  `https://t.me/${username}?startgroup&admin=invite_users`;
+
+/* ---------- default admin rights (pre-ticked checkboxes) ---------- */
+const RIGHTS_KEY = "fj:rights:set";
+
+// Tell Telegram to pre-tick ONLY "invite users" when the bot is added as an
+// admin to a group (applies to manual adds too, not just the deep link).
+export async function setGroupDefaultRights(env: Env): Promise<boolean> {
+  try {
+    const r: any = await tg.setMyDefaultAdministratorRights(env, {
+      is_anonymous: false,
+      can_invite_users: true,
+    }, false);
+    if (r?.ok) {
+      await env.BOT_KV.put(RIGHTS_KEY, String(Date.now()), { expirationTtl: 30 * 86400 }).catch(() => {});
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// One-time (per 30d) auto-set at webhook time so the defaults are always safe.
+export async function ensureGroupDefaultRights(env: Env): Promise<void> {
+  try {
+    if (await env.BOT_KV.get(RIGHTS_KEY)) return;
+  } catch { /* ignore */ }
+  await setGroupDefaultRights(env);
+}
+
