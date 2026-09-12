@@ -1,17 +1,23 @@
 // Nika Net Launcher — forced join (عضویت اجباری) engine.
 //
 // Users must join the configured channel(s)/group(s) before they can use the
-// bot. Membership is checked via Telegram getChatMember (the bot must be an
-// admin of the target chat). Results are cached in KV for `recheckHours` to
-// keep the bot fast.
+// bot. Membership is verified via Telegram getChatMember (the bot must be an
+// admin of the target chat). Results are cached in KV (`recheckHours`) to keep
+// the bot fast, with a short negative cache to absorb spam without hammering
+// the API — both caches are always bypassed on the explicit "verify" action.
 //
 // Smart extras:
 //   • real channel titles via getChat (cached in `chatMeta`)
 //   • auto-add / auto-remove chats when the bot is promoted / demoted
-//     (my_chat_member updates)
-//   • real analytics: blocked / verified counters, 7-day series, event log
+//     (my_chat_member updates — owner-only)
+//   • leave / join detection for users (chat_member updates): when a member
+//     leaves (or is kicked) from a required chat, the bot clears their join
+//     cache and DMs them a "you left — rejoin to continue" notice; when they
+//     rejoin, the cache is cleared so the next check is live again.
+//   • real analytics: blocked / verified / left / joined counters, 7-day
+//     series and a rolling event log
 //   • anti-spam prompt cooldown, "new users only" grandfathering,
-//     custom verify welcome message.
+//     custom verify welcome message, mode-aware prompt (ALL / ANY).
 
 import { Env } from "./types";
 import * as tg from "./telegram";
@@ -119,6 +125,11 @@ export function normalizeChat(raw: string): string | null {
   return null;
 }
 
+/* ---------- membership status helpers ---------- */
+export const isJoinedStatus = (status: string, isMember?: boolean): boolean =>
+  status === "creator" || status === "administrator" || status === "member" ||
+  (status === "restricted" && !!isMember);
+
 /* ---------- membership ---------- */
 export interface ChatCheck {
   chat: string;
@@ -131,9 +142,7 @@ export async function checkChat(env: Env, userId: number, chat: string): Promise
   try {
     const r: any = await tg.getChatMember(env, chat, userId);
     const status: string = r?.result?.status || "unknown";
-    const ok =
-      status === "creator" || status === "administrator" || status === "member" ||
-      (status === "restricted" && !!r?.result?.is_member);
+    const ok = isJoinedStatus(status, r?.result?.is_member);
     return { chat, ok, status };
   } catch (e: any) {
     return { chat, ok: false, status: "error", error: String(e?.message || e) };
@@ -215,23 +224,48 @@ export async function removeChat(env: Env, chat: string): Promise<FjConfig> {
   return await saveConfig(env, cfg);
 }
 
-/* ---------- membership (cached) ---------- */
-export async function isJoined(env: Env, userId: number, cfg: FjConfig): Promise<boolean> {
-  const cacheKey = "fj:ok:" + userId;
-  if (cfg.recheckHours > 0) {
-    try {
-      const raw = await env.BOT_KV.get(cacheKey);
-      if (raw) {
-        const c = JSON.parse(raw) as { at: number; chats: string[] };
-        if (Date.now() - c.at < cfg.recheckHours * 3600_000 && JSON.stringify(c.chats) === JSON.stringify(cfg.chats)) {
-          return true;
+/* ---------- membership cache keys ---------- */
+const okKey = (id: number) => "fj:ok:" + id;
+const noKey = (id: number) => "fj:no:" + id;
+const NEG_TTL_MS = 60_000; // negative cache lives 60s (only used when recheckHours > 0)
+
+export async function clearJoinCache(env: Env, userId: number): Promise<void> {
+  await env.BOT_KV.delete(okKey(userId)).catch(() => {});
+  await env.BOT_KV.delete(noKey(userId)).catch(() => {});
+}
+
+const sameChats = (a: string[] | undefined, b: string[]): boolean => {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+};
+
+// Live membership evaluation + cache handling.
+// `live = true` forces a real getChatMember round-trip (verify button / tests).
+export async function isJoined(env: Env, userId: number, cfg: FjConfig, opts?: { live?: boolean }): Promise<boolean> {
+  if (!cfg.chats.length) return true; // nothing to check → pass
+  if (!opts?.live) {
+    // positive cache (membership is sticky for recheckHours)
+    if (cfg.recheckHours > 0) {
+      try {
+        const raw = await env.BOT_KV.get(okKey(userId));
+        if (raw) {
+          const c = JSON.parse(raw) as { at: number; chats: string[] };
+          if (Date.now() - c.at < cfg.recheckHours * 3600_000 && sameChats(c.chats, cfg.chats)) return true;
         }
-      }
-    } catch { /* ignore */ }
+      } catch { /* ignore */ }
+      // short negative cache (spam absorption) — never older than 60s
+      try {
+        const raw = await env.BOT_KV.get(noKey(userId));
+        if (raw) {
+          const c = JSON.parse(raw) as { at: number; chats: string[] };
+          if (Date.now() - c.at < NEG_TTL_MS && sameChats(c.chats, cfg.chats)) return false;
+        }
+      } catch { /* ignore */ }
+    }
   }
+
   let ok = false;
   if (cfg.mode === "all") {
-    ok = cfg.chats.length > 0;
+    ok = true;
     for (const ch of cfg.chats) {
       const r = await checkChat(env, userId, ch);
       if (!r.ok) { ok = false; break; }
@@ -242,34 +276,55 @@ export async function isJoined(env: Env, userId: number, cfg: FjConfig): Promise
       if (r.ok) { ok = true; break; }
     }
   }
-  if (ok && cfg.recheckHours > 0) {
-    await env.BOT_KV.put(cacheKey, JSON.stringify({ at: Date.now(), chats: cfg.chats }), {
-      expirationTtl: Math.max(60, cfg.recheckHours * 3600),
-    }).catch(() => {});
+
+  // persist (best-effort; KV write failures must never break the gate)
+  const key = ok ? okKey(userId) : noKey(userId);
+  if (cfg.recheckHours > 0 || !ok) {
+    try {
+      const raw = await env.BOT_KV.get(key);
+      if (raw) {
+        const c = JSON.parse(raw) as { at: number };
+        if (Date.now() - c.at < (ok ? cfg.recheckHours * 3600_000 : NEG_TTL_MS)) return ok; // already fresh
+      }
+    } catch { /* ignore */ }
+    const ttl = ok ? Math.max(60, cfg.recheckHours * 3600) : Math.max(60, Math.ceil(NEG_TTL_MS / 1000));
+    await env.BOT_KV.put(key, JSON.stringify({ at: Date.now(), chats: cfg.chats }), { expirationTtl: ttl }).catch(() => {});
   }
   return ok;
+}
+
+// Which required chats is the user missing? (live, for the verify button)
+export async function missingChats(env: Env, userId: number, cfg: FjConfig): Promise<string[]> {
+  if (!cfg.chats.length) return [];
+  const out: string[] = [];
+  for (const ch of cfg.chats) {
+    const r = await checkChat(env, userId, ch);
+    if (!r.ok) out.push(ch);
+  }
+  if (cfg.mode === "all") return out;
+  return out.length === cfg.chats.length ? cfg.chats : []; // ANY → missing only if in none
 }
 
 // cheap "is this user already known-joined?" for the panel (no API calls)
 export async function isCachedJoined(env: Env, userId: number, cfg: FjConfig): Promise<boolean> {
   try {
-    const raw = await env.BOT_KV.get("fj:ok:" + userId);
+    const raw = await env.BOT_KV.get(okKey(userId));
     if (!raw) return false;
     const c = JSON.parse(raw) as { at: number; chats: string[] };
-    return JSON.stringify(c.chats) === JSON.stringify(cfg.chats);
+    return sameChats(c.chats, cfg.chats);
   } catch {
     return false;
   }
 }
 
 /* ---------- analytics (all real, no fake data) ---------- */
-interface StatCounters { blocked: number; verified: number }
+interface StatCounters { blocked: number; verified: number; left: number; joined: number }
 const STATS_KEY = "fj:stats";
 const LOG_KEY = "fj:log";
 
 export interface FjEvent {
   t?: number;
-  ev: "blocked" | "verified" | "chat_added" | "chat_removed" | "exempted" | "unexempted";
+  ev: "blocked" | "verified" | "left" | "joined" | "chat_added" | "chat_removed" | "exempted" | "unexempted";
   uid?: number;
   chat?: string;
   extra?: string;
@@ -278,7 +333,9 @@ export interface FjEvent {
 export interface FjStats {
   blocked: number;
   verified: number;
-  days: { date: string; label: string; blocked: number; verified: number }[];
+  left: number;
+  joined: number;
+  days: { date: string; label: string; blocked: number; verified: number; left: number; joined: number }[];
   log: FjEvent[];
 }
 
@@ -289,11 +346,16 @@ function dayKey(d: Date): string {
 async function getCounters(env: Env): Promise<StatCounters> {
   try {
     const raw = await env.BOT_KV.get(STATS_KEY);
-    if (!raw) return { blocked: 0, verified: 0 };
+    if (!raw) return { blocked: 0, verified: 0, left: 0, joined: 0 };
     const j = JSON.parse(raw);
-    return { blocked: Number(j.blocked) || 0, verified: Number(j.verified) || 0 };
+    return {
+      blocked: Number(j.blocked) || 0,
+      verified: Number(j.verified) || 0,
+      left: Number(j.left) || 0,
+      joined: Number(j.joined) || 0,
+    };
   } catch {
-    return { blocked: 0, verified: 0 };
+    return { blocked: 0, verified: 0, left: 0, joined: 0 };
   }
 }
 
@@ -302,18 +364,22 @@ export async function recordEvent(env: Env, ev: FjEvent): Promise<void> {
   const c = await getCounters(env);
   if (ev.ev === "blocked") c.blocked++;
   else if (ev.ev === "verified") c.verified++;
+  else if (ev.ev === "left") c.left++;
+  else if (ev.ev === "joined") c.joined++;
   await env.BOT_KV.put(STATS_KEY, JSON.stringify(c)).catch(() => {});
 
   // per-day unique buckets (chart + "blocked today")
-  if (ev.ev === "blocked" || ev.ev === "verified") {
+  if (ev.ev === "blocked" || ev.ev === "verified" || ev.ev === "left" || ev.ev === "joined") {
     const dk = "fj:day:" + dayKey(new Date());
     try {
       const raw = await env.BOT_KV.get(dk);
-      const day = raw ? JSON.parse(raw) : { blocked: [], verified: [] };
-      const arr = ev.ev === "blocked" ? day.blocked : day.verified;
+      const day = raw ? JSON.parse(raw) : { blocked: [], verified: [], left: [], joined: [] };
+      const arr = day[ev.ev];
       if (Array.isArray(arr) && ev.uid !== undefined && !arr.includes(ev.uid)) arr.push(ev.uid);
-      if (day.blocked.length > 2000) day.blocked = day.blocked.slice(-2000);
-      if (day.verified.length > 2000) day.verified = day.verified.slice(-2000);
+      for (const k of ["blocked", "verified", "left", "joined"]) {
+        if (!Array.isArray(day[k])) day[k] = [];
+        if (day[k].length > 2000) day[k] = day[k].slice(-2000);
+      }
       await env.BOT_KV.put(dk, JSON.stringify(day), { expirationTtl: 32 * 86400 }).catch(() => {});
     } catch { /* ignore */ }
   }
@@ -332,25 +398,22 @@ const FA_DAYS = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارش�
 
 export async function stats(env: Env, days = 7): Promise<FjStats> {
   const c = await getCounters(env);
-  const out: FjStats = { blocked: c.blocked, verified: c.verified, days: [], log: [] };
+  const out: FjStats = { blocked: c.blocked, verified: c.verified, left: c.left, joined: c.joined, days: [], log: [] };
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400_000);
     const dk = "fj:day:" + dayKey(d);
-    let blocked = 0, verified = 0;
+    let blocked = 0, verified = 0, left = 0, joined = 0;
     try {
       const raw = await env.BOT_KV.get(dk);
       if (raw) {
         const j = JSON.parse(raw);
         blocked = (j.blocked || []).length;
         verified = (j.verified || []).length;
+        left = (j.left || []).length;
+        joined = (j.joined || []).length;
       }
     } catch { /* ignore */ }
-    out.days.push({
-      date: dk,
-      label: FA_DAYS[d.getDay()],
-      blocked,
-      verified,
-    });
+    out.days.push({ date: dk, label: FA_DAYS[d.getDay()], blocked, verified, left, joined });
   }
   try {
     const raw = await env.BOT_KV.get(LOG_KEY);
@@ -393,10 +456,12 @@ export async function sendJoinPrompt(env: Env, userId: number, cfg: FjConfig, la
       rows.push([{ text: "🔗 " + title, url: `https://t.me/${meta.username}`, color: "primary", emoji: false }]);
     }
   }
+  const cond = cfg.mode === "all" ? t(L, "fj_cond_all", { n: cfg.chats.length }) : t(L, "fj_cond_any");
   const text =
     `🔒 <b>${t(L, "fj_gate_title")}</b>\n\n` +
     `${cfg.message}\n\n` +
     `📌 <b>${t(L, "fj_gate_list")}:</b>\n${list.join("\n")}\n\n` +
+    `ℹ️ ${cond}\n\n` +
     t(L, "fj_gate_after");
   rows.push([{ text: cfg.buttonText, cb: "fj:verify", color: "success", emoji: false }]);
   await tg.sendMessage(env, userId, text, tg.kb(rows)).catch(() => {});
@@ -404,22 +469,26 @@ export async function sendJoinPrompt(env: Env, userId: number, cfg: FjConfig, la
   await recordEvent(env, { ev: "blocked", uid: userId });
 }
 
-// Re-check membership on the "verify" button and answer the callback.
+// Re-check membership LIVE on the "verify" button and answer the callback.
+// On success the positive cache is refreshed; on failure the user is told
+// exactly which chat(s) they are still missing.
 export async function verifyAndAnswer(
   env: Env, userId: number, cfg: FjConfig, cqId: string, lang: "fa" | "en"
 ): Promise<boolean> {
-  const joined = await isJoined(env, userId, cfg);
+  const joined = await isJoined(env, userId, cfg, { live: true });
   if (joined) {
     await recordEvent(env, { ev: "verified", uid: userId });
     await tg.answerCallback(env, cqId, t(lang, "fj_verify_ok"), false).catch(() => {});
     return true;
   }
-  await tg.answerCallback(env, cqId, t(lang, "fj_verify_fail"), true).catch(() => {});
+  const missing = await missingChats(env, userId, cfg);
+  const names = missing.length ? missing.map((c) => chatDisplay(cfg, c)).join("، ") : "";
+  await tg.answerCallback(env, cqId, names ? t(lang, "fj_verify_missing", { chats: names }) : t(lang, "fj_verify_fail"), true).catch(() => {});
   return false;
 }
 
-/* ---------- auto add/remove via my_chat_member ---------- */
-export async function onBotChatMember(env: Env, upd: any): Promise<void> {
+/* ---------- bot's own membership (my_chat_member) ---------- */
+export async function onBotChatMember(env: Env, upd: tg.TgChatMemberUpdate): Promise<void> {
   try {
     const chat = upd?.chat;
     const chatId = String(chat?.id ?? "");
@@ -444,7 +513,8 @@ export async function onBotChatMember(env: Env, upd: any): Promise<void> {
         `برای تنظیم دقیق (شرط any/all، پیام، معاف‌ها و آمار) به پنل برو: /panel` +
         (firstEnable ? "\n\n⛔ از حالا کاربرانی که عضو این کانال نباشند از ربات مسدود می‌شوند." : "")
       ).catch(() => {});
-    } else if ((newStatus === "left" || newStatus === "kicked")) {
+    } else if (newStatus === "left" || newStatus === "kicked") {
+      // The BOT itself was removed / demoted from the chat.
       const cfg = await getConfig(env);
       if (cfg.chats.includes(chatId)) {
         const title = cfg.chatMeta[chatId]?.title || chatId;
@@ -457,6 +527,106 @@ export async function onBotChatMember(env: Env, upd: any): Promise<void> {
   } catch (e) {
     console.error("onBotChatMember error", e);
   }
+}
+
+/* ---------- users' membership (chat_member) — join / leave ---------- */
+// `chat_member` fires when ANY member's status changes in a chat the bot is an
+// admin of. This is how the bot learns that a user LEFT (or was kicked from)
+// a required channel/group — and immediately:
+//   1. clears that user's join cache (so the next interaction re-gates them)
+//   2. DMs them a "you left — rejoin to keep using the bot" notice
+//   3. records the event for the analytics feed.
+// When the user rejoins, the cache is cleared again so the next check is live.
+export async function onUserChatMember(env: Env, upd: tg.TgChatMemberUpdate): Promise<void> {
+  try {
+    const chatId = String(upd?.chat?.id ?? "");
+    if (!chatId) return;
+    const cfg = await getConfig(env);
+    // Only care about chats that are actually part of forced-join.
+    if (!cfg.enabled || !cfg.chats.includes(chatId)) return;
+
+    const user = upd?.new_chat_member?.user ?? upd?.old_chat_member?.user;
+    const userId = user?.id;
+    if (!userId) return;
+    const owner = await ownerId(env);
+    if (userId === owner || cfg.exempt.includes(userId)) return; // never bug exempt people
+
+    const oldJoined = isJoinedStatus(upd?.old_chat_member?.status || "", upd?.old_chat_member?.is_member);
+    const newJoined = isJoinedStatus(upd?.new_chat_member?.status || "", upd?.new_chat_member?.is_member);
+    const title = cfg.chatMeta[chatId]?.title || chatId;
+
+    if (oldJoined && !newJoined) {
+      // user LEFT or was kicked/banned
+      await clearJoinCache(env, userId);
+      // In ANY mode the user may still be fine in another chat — only warn when
+      // this leave actually breaks their access (they are now in none).
+      let stillFine = false;
+      if (cfg.mode === "any") {
+        stillFine = await isJoined(env, userId, cfg, { live: true });
+      }
+      if (!stillFine) {
+        await notifyLeft(env, userId, cfg, chatId, title);
+        await recordEvent(env, { ev: "left", uid: userId, chat: chatId, extra: title });
+      }
+    } else if (!oldJoined && newJoined) {
+      // user (re)joined — invalidate caches so the next check is live, and
+      // reset the leave-warning flap guard so a future leave warns again.
+      await clearJoinCache(env, userId);
+      await env.BOT_KV.delete("fj:left:" + userId + ":" + chatId).catch(() => {});
+      await recordEvent(env, { ev: "joined", uid: userId, chat: chatId, extra: title });
+    }
+  } catch (e) {
+    console.error("onUserChatMember error", e);
+  }
+}
+
+// DM the user that they left a required chat. Anti-flap: at most one notice per
+// user+chat per 5 minutes (leave/rejoin loops), and only for known bot users.
+async function notifyLeft(env: Env, userId: number, cfg: FjConfig, chat: string, title: string): Promise<void> {
+  // Only notify users who actually use the bot (they have a stored state).
+  let known = false;
+  try { known = !!(await env.BOT_KV.get("u:" + userId)); } catch { known = false; }
+  if (!known) return;
+
+  // dedupe window
+  const dk = "fj:left:" + userId + ":" + chat;
+  try {
+    const last = await env.BOT_KV.get(dk);
+    if (last && Date.now() - parseInt(last, 10) < 5 * 60_000) return;
+  } catch { /* ignore */ }
+
+  let firstName = "";
+  try {
+    const raw = await env.BOT_KV.get("u:meta:" + userId);
+    if (raw) firstName = (JSON.parse(raw).firstName as string) || "";
+  } catch { /* ignore */ }
+
+  const L: Lang = await userLang(env, userId);
+  const meta = cfg.chatMeta[chat];
+  const rows: tg.Btn[][] = [];
+  if (meta?.username) {
+    rows.push([{ text: "🔗 " + t(L, "fj_left_rejoin"), url: `https://t.me/${meta.username}`, color: "primary", emoji: false }]);
+  }
+  rows.push([{ text: t(L, "fj_left_cta"), cb: "fj:verify", color: "success", emoji: false }]);
+
+  const greet = firstName ? `${esc(firstName)} عزیز، ` : "";
+  const text =
+    `🚪 <b>${t(L, "fj_left_title")}</b>\n\n` +
+    greet + t(L, "fj_left_body", { chat: esc(title) }) +
+    `\n\n${t(L, "fj_left_hint")}`;
+  await tg.sendMessage(env, userId, text, tg.kb(rows)).catch(() => {});
+  await env.BOT_KV.put(dk, String(Date.now()), { expirationTtl: 600 }).catch(() => {});
+}
+
+async function userLang(env: Env, userId: number): Promise<Lang> {
+  try {
+    const raw = await env.BOT_KV.get("u:" + userId);
+    if (raw) {
+      const s = JSON.parse(raw) as { lang?: string };
+      if (s.lang === "en") return "en";
+    }
+  } catch { /* ignore */ }
+  return "fa";
 }
 
 /* ---------- owner id ---------- */

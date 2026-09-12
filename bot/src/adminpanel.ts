@@ -531,6 +531,7 @@ const PANEL_HTML = `<!doctype html>
         <div class="legend">
           <span><span class="dot-leg" style="background:var(--rose)"></span>مسدودشده</span>
           <span><span class="dot-leg" style="background:var(--green)"></span>تأیید عضویت</span>
+          <span><span class="dot-leg" style="background:#d0a24a"></span>خروج از عضویت</span>
         </div>
       </div>
       <div class="card">
@@ -1504,6 +1505,8 @@ const PANEL_HTML = `<!doctype html>
     var map = {
       blocked: ["🚫", "مسدود شد", "rose"],
       verified: ["✅", "تأیید عضویت", "green"],
+      left: ["🚪", "خروج از عضویت", "amber"],
+      joined: ["🙋", "عضویت (ورود)", "cyan"],
       chat_added: ["➕", "افزودن کانال", "cyan"],
       chat_removed: ["➖", "حذف کانال", "amber"],
       exempted: ["🛡", "معاف شد", "amber"],
@@ -1526,8 +1529,8 @@ const PANEL_HTML = `<!doctype html>
     var iw = W - padL - padR, ih = H - padT - padB;
     var n = days.length || 1;
     var max = 1;
-    days.forEach(function (d) { max = Math.max(max, d.blocked, d.verified); });
-    var allZero = max <= 1 && days.every(function (d) { return !d.blocked && !d.verified; });
+    days.forEach(function (d) { max = Math.max(max, d.blocked, d.verified, d.left); });
+    var allZero = max <= 1 && days.every(function (d) { return !d.blocked && !d.verified && !d.left; });
     if (allZero) { svg.innerHTML = ""; return; }
 
     function px(i) { return padL + (n === 1 ? iw / 2 : i * (iw / (n - 1))); }
@@ -1552,7 +1555,7 @@ const PANEL_HTML = `<!doctype html>
       return smooth(pts) + " L" + pts[pts.length - 1][0].toFixed(1) + " " + base + " L" + pts[0][0].toFixed(1) + " " + base + " Z";
     }
 
-    var pb = pts("blocked"), pv = pts("verified");
+    var pb = pts("blocked"), pv = pts("verified"), pl = pts("left");
     var grid = "";
     for (var g = 0; g <= 3; g++) {
       var y = padT + (ih / 3) * g;
@@ -1569,15 +1572,19 @@ const PANEL_HTML = `<!doctype html>
       '<defs>' +
       '<linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(192,86,74,.5)"/><stop offset="1" stop-color="rgba(192,86,74,0)"/></linearGradient>' +
       '<linearGradient id="gV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(185,180,166,.5)"/><stop offset="1" stop-color="rgba(185,180,166,0)"/></linearGradient>' +
+      '<linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(208,162,74,.45)"/><stop offset="1" stop-color="rgba(208,162,74,0)"/></linearGradient>' +
       "</defs>" +
       grid + xl +
       '<path d="' + area(pb) + '" fill="url(#gR)"/>' +
       '<path d="' + area(pv) + '" fill="url(#gV)"/>' +
+      '<path d="' + area(pl) + '" fill="url(#gL)"/>' +
       '<path d="' + smooth(pb) + '" fill="none" stroke="#c0564a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path d="' + smooth(pv) + '" fill="none" stroke="#b9b4a6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="' + smooth(pl) + '" fill="none" stroke="#d0a24a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>' +
       '<line id="guide" y1="' + padT + '" y2="' + (padT + ih) + '" stroke="rgba(185,180,166,.3)" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>' +
       '<circle id="dotR" r="4" fill="#c0564a" stroke="#14120f" stroke-width="1.5" opacity="0"/>' +
-      '<circle id="dotV" r="4" fill="#b9b4a6" stroke="#14120f" stroke-width="1.5" opacity="0"/>';
+      '<circle id="dotV" r="4" fill="#b9b4a6" stroke="#14120f" stroke-width="1.5" opacity="0"/>' +
+      '<circle id="dotL" r="4" fill="#d0a24a" stroke="#14120f" stroke-width="1.5" opacity="0"/>';
 
     var tip = $("#chartTip");
     svg.addEventListener("mousemove", function (ev) {
@@ -1589,11 +1596,13 @@ const PANEL_HTML = `<!doctype html>
       $("#guide").setAttribute("x1", x); $("#guide").setAttribute("x2", x); $("#guide").setAttribute("opacity", "1");
       $("#dotR").setAttribute("cx", x); $("#dotR").setAttribute("cy", py(d.blocked)); $("#dotR").setAttribute("opacity", d.blocked > 0 ? "1" : "0");
       $("#dotV").setAttribute("cx", x); $("#dotV").setAttribute("cy", py(d.verified)); $("#dotV").setAttribute("opacity", d.verified > 0 ? "1" : "0");
+      $("#dotL").setAttribute("cx", x); $("#dotL").setAttribute("cy", py(d.left)); $("#dotL").setAttribute("opacity", d.left > 0 ? "1" : "0");
       var lp = (i / (n - 1)) * (rect.width - 160);
       var left = Math.max(0, Math.min(rect.width - 160, lp));
       tip.innerHTML = '<div style="font-weight:800;color:var(--text);margin-bottom:4px">' + (d.label || "") + '</div>' +
         '<div class="row"><span><span class="dot-leg" style="background:var(--rose)"></span>مسدود</span><b>' + faNum(d.blocked) + '</b></div>' +
-        '<div class="row"><span><span class="dot-leg" style="background:var(--green)"></span>تأیید</span><b>' + faNum(d.verified) + '</b></div>';
+        '<div class="row"><span><span class="dot-leg" style="background:var(--green)"></span>تأیید</span><b>' + faNum(d.verified) + '</b></div>' +
+        '<div class="row"><span><span class="dot-leg" style="background:#d0a24a"></span>خروج</span><b>' + faNum(d.left) + '</b></div>';
       tip.style.left = left + "px";
       tip.style.top = "6px";
       tip.style.opacity = "1";
@@ -1602,6 +1611,7 @@ const PANEL_HTML = `<!doctype html>
       $("#guide").setAttribute("opacity", "0");
       $("#dotR").setAttribute("opacity", "0");
       $("#dotV").setAttribute("opacity", "0");
+      $("#dotL").setAttribute("opacity", "0");
       tip.style.opacity = "0";
     });
   }

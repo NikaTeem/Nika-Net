@@ -178,6 +178,14 @@ export const S: Record<Lang, Dict> = {
     fj_gate_after: "بعد از عضویت، دکمهٔ زیر را بزن تا بازرسی انجام شود 👇",
     fj_verify_ok: "✅ عضویت تأیید شد — خوش آمدی!",
     fj_verify_fail: "⛔ هنوز عضو نشدی! اول عضو شو بعد دوباره بزن.",
+    fj_verify_missing: "⛔ هنوز عضو «{chats}» نیستی! اول عضو شو بعد دوباره بزن.",
+    fj_cond_all: "باید در <b>همهٔ {n} کانال/گروه بالا</b> عضو باشی.",
+    fj_cond_any: "باید در <b>حداقل یکی</b> از کانال/گروه‌های بالا عضو باشی.",
+    fj_left_title: "خروج از عضویت",
+    fj_left_body: "از «{chat}» خارج شدی (یا حذف شدی). برای اینکه بتونی دوباره از ربات استفاده کنی باید دوباره عضو کانال/گروه‌های لازم بشی.",
+    fj_left_hint: "بعد از عضویت مجدد، دکمهٔ زیر را بزن تا بازرسی انجام شود 👇",
+    fj_left_rejoin: "عضویت مجدد",
+    fj_left_cta: "✅ دوباره عضو شدم — بررسی کن",
     fj_welcome: "✅ عضویتت تأیید شد — خوش آمدی! حالا می‌توانی از ربات استفاده کنی. 🎉",
 
     // ── HYPER ✨: صدای پنل، سهمیه، ماتریس، WARP، قایم‌سازی، اپراتور، DoH، Fragment، نقشه‌راه، تور، متن‌ها، قفل، اشتراک ──
@@ -465,6 +473,14 @@ export const S: Record<Lang, Dict> = {
     fj_gate_after: "After joining, tap the button below to verify 👇",
     fj_verify_ok: "✅ Verified — welcome!",
     fj_verify_fail: "⛔ Not joined yet! Join first, then tap again.",
+    fj_verify_missing: "⛔ You're still not in \"{chats}\"! Join first, then tap again.",
+    fj_cond_all: "You must join <b>all {n} channel(s)/group(s) above</b>.",
+    fj_cond_any: "You must join <b>at least one</b> of the channels/groups above.",
+    fj_left_title: "Membership ended",
+    fj_left_body: "You left (or were removed from) \"{chat}\". To keep using the bot you must rejoin the required channel(s)/group(s).",
+    fj_left_hint: "After rejoining, tap the button below to verify 👇",
+    fj_left_rejoin: "Rejoin",
+    fj_left_cta: "✅ I rejoined — verify",
     fj_welcome: "✅ Membership verified — welcome! You can now use the bot. 🎉",
 
     // ── HYPER ✨ (English) ──

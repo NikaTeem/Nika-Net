@@ -5,12 +5,13 @@ export interface TgUser { id: number; first_name?: string; last_name?: string; u
 export interface TgChat { id: number; type?: string }
 export interface TgMessage { message_id: number; chat: TgChat; from?: TgUser; text?: string }
 export interface TgCallbackQuery { id: string; from: TgUser; message?: TgMessage; data?: string }
+export interface TgChatMemberStatus { status: string; user?: TgUser; is_member?: boolean }
 export interface TgChatMemberUpdate {
   chat: TgChat & { title?: string; username?: string };
   from?: TgUser;
   date?: number;
-  old_chat_member?: { status: string };
-  new_chat_member?: { status: string };
+  old_chat_member?: TgChatMemberStatus;
+  new_chat_member?: TgChatMemberStatus;
 }
 export interface TgUpdate { update_id: number; message?: TgMessage; callback_query?: TgCallbackQuery; my_chat_member?: TgChatMemberUpdate; chat_member?: TgChatMemberUpdate }
 

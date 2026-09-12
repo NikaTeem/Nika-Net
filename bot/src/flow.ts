@@ -118,7 +118,7 @@ export async function handleUpdate(env: Env, update: tg.TgUpdate): Promise<void>
   try {
     if (update.callback_query) return await handleCallback(env, update.callback_query);
     if (update.my_chat_member) return await fj.onBotChatMember(env, update.my_chat_member);
-    if (update.chat_member) return await fj.onBotChatMember(env, update.chat_member);
+    if (update.chat_member) return await fj.onUserChatMember(env, update.chat_member);
     if (update.message) return await handleMessage(env, update.message);
   } catch (e) {
     console.error("update error", e);
